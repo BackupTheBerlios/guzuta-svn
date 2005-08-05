@@ -1,0 +1,633 @@
+#! /usr/bin/env python
+# -*- coding: UTF-8 -*
+# vim: set foldmethod=marker:
+
+# TODO: find a way to install/remove a pkg and update the database and show the
+# text in a popup window
+
+# imports {{{
+import pygtk
+pygtk.require('2.0')
+import gtk
+if gtk.pygtk_version < (2,3,90):
+  raise SystemExit
+import gobject
+import pango
+import gtk.glade
+import sys, os, posix
+import re
+#import gksu
+
+from guzuta import *
+# }}}
+
+# def xor_two_dicts(a, b): {{{
+def xor_two_dicts(a, b):
+  ret = {}
+  not_ret = {}
+
+  # if key,value exist in both dicts, scrap
+  # else put it in ret
+  for key, value in a.iteritems():
+    try:
+      b[key]
+      not_ret[key] = value
+    except KeyError:
+      ret[key] = value
+
+  for key, value in b.iteritems():
+    try:
+      not_ret[key]
+    except KeyError:
+      try:
+        a[key]
+      except KeyError:
+        ret[key] = value
+
+  return ret
+# }}}
+    
+# class gui: {{{
+class gui:
+  # def __setup_pkg_treeview__(self): {{{
+  def __setup_pkg_treeview__(self):
+    # checked, name, version, description 
+    self.liststore = gtk.ListStore('gboolean', str, str, str)
+
+    self.textrenderer = gtk.CellRendererText()
+    self.togglerenderer = gtk.CellRendererToggle()
+    self.togglerenderer.set_active(True)
+
+    self.togglerenderer.connect('toggled', self.toggled)
+
+    self.emptycolumn = gtk.TreeViewColumn('Status')
+    self.emptycolumn.set_sort_column_id(0)
+    self.emptycolumn.pack_start(self.togglerenderer)
+    self.emptycolumn.set_attributes(self.togglerenderer, active=0)
+    
+    #self.repositorycolumn = gtk.TreeViewColumn('Repository')
+    #self.repositorycolumn.set_sort_column_id(1)
+    #self.repositorycolumn.pack_start(self.textrenderer)
+    #self.repositorycolumn.set_attributes(self.textrenderer, text=1)
+    
+    self.namecolumn = gtk.TreeViewColumn('Name')
+    self.namecolumn.set_sort_column_id(1)
+    self.namecolumn.pack_start(self.textrenderer)
+    self.namecolumn.set_attributes(self.textrenderer, text=1)
+    
+    self.installedversioncolumn = gtk.TreeViewColumn('Installed')
+    self.installedversioncolumn.set_sort_column_id(2)
+    self.installedversioncolumn.pack_start(self.textrenderer)
+    self.installedversioncolumn.set_attributes(self.textrenderer, text=2)
+    
+    self.availableversioncolumn = gtk.TreeViewColumn('Available')
+    self.availableversioncolumn.set_sort_column_id(3)
+    self.availableversioncolumn.pack_start(self.textrenderer)
+    self.availableversioncolumn.set_attributes(self.textrenderer, text=3)
+    
+    #self.packagercolumn = gtk.TreeViewColumn('Packager')
+    #self.packagercolumn.set_sort_column_id(5)
+    #self.packagercolumn.pack_start(self.textrenderer)
+    #self.packagercolumn.set_attributes(self.textrenderer, text=5)
+
+    self.treeview.append_column(self.emptycolumn)
+    #self.treeview.append_column(self.repositorycolumn)
+    self.treeview.append_column(self.namecolumn)
+    self.treeview.append_column(self.installedversioncolumn)
+    self.treeview.append_column(self.availableversioncolumn)
+
+    # positions are as follows:
+    # name, version, description
+    for k,v in self.local_pkgs.iteritems():
+      #self.liststore.append([False, k, v[1], v[2]])
+
+      #available version
+      try:
+        available_version = self.pkgs[k][1]
+      except KeyError:
+        # pkg was installed separately)
+        available_version = '--'
+        
+      self.liststore.append([False, k, v[1], available_version])
+    #for i in range(2):
+    #  self.liststore.append([False, 'a', 'b', 'c'])
+  
+    self.treeview.set_model(self.liststore)
+  # }}}
+  
+  # def __setup_repo_treeview__(self): {{{
+  def __setup_repo_treeview__(self):
+    self.liststore_repos = gtk.ListStore(str)
+
+    self.textrenderer_repos = gtk.CellRendererText()
+    self.textrenderer_repos.set_property('weight', 400)
+
+    self.repocolumn = gtk.TreeViewColumn('Repositories')
+    self.repocolumn.set_sort_column_id(1)
+    self.repocolumn.pack_start(self.textrenderer_repos)
+    self.repocolumn.set_attributes(self.textrenderer_repos, text=0)
+    
+    self.treeview_repos.append_column(self.repocolumn)
+
+    self.liststore_repos.append(['All'])
+    self.liststore_repos.append(['Installed'])
+    self.liststore_repos.append(['Not installed'])
+
+    for repo,v in self.pkgs_by_repo.iteritems():
+      repo = repo.capitalize()
+      self.liststore_repos.append([repo])
+    
+    self.treeview_repos.set_model(self.liststore_repos)
+  # }}}
+
+  # def __init__(self, read_pipe = None, write_pipe = None): {{{
+  def __init__(self, read_pipe = None, write_pipe = None):
+    # signals !!!
+    self.glade_file = 'pycman2.glade'
+    signals_dict = {\
+#    'on_treeview_row_activated': self.row_activated,
+    'on_treeview_cursor_changed': self.cursor_changed,
+    'on_treeview_select_cursor_row': self.select_cursor_row,
+    'on_treeview_repos_cursor_changed': self.cursor_changed,
+    'on_treeview_repos_select_cursor_row': self.select_cursor_row,
+    'on_mainwindow_delete_event': self.delete_event,
+    'on_mainwindow_destroy': self.destroy,
+    'on_update_db_popup_delete_event': self.on_update_db_popup_delete_event,
+    'on_update_db_popup_destroy': self.destroy,
+    'on_quit_activate': self.on_quit_activate,
+    'on_update_db_clicked': self.on_update_db_clicked,
+    #'on_okbutton_clicked': self.on_okbutton_clicked,
+    'on_install_pkg_clicked': self.on_install_pkg_clicked,
+    'on_remove_pkg_clicked': self.on_remove_pkg_clicked,
+    #'on_okbutton2_clicked': self.on_okbutton2_clicked,
+    'on_install_pkg_popup_delete_event': self.on_install_pkg_popup_delete_event,
+    'on_install_pkg_popup_destroy': self.on_install_pkg_popup_destroy,
+    'on_search_clicked': self.on_search_clicked,
+    'on_clear_clicked': self.on_clear_clicked
+    }
+    # end signals
+    #self.pacman = pacman(self)
+    self.treeview = None
+    self.uid = posix.getuid()
+    self.pkgs = {}
+    self.local_pkg_info = {}
+    self.remote_pkg_info = {}
+    self.not_installed = {}
+
+    self.shell = shell(command_line = None, interactive = True)
+    self.populate_pkg_lists()
+    # pid of pacman process
+    self.pid = 0
+
+    self.all_widgets = gtk.glade.XML(self.glade_file)
+    self.textview = self.all_widgets.get_widget("textview")
+    self.main_window = self.all_widgets.get_widget("mainwindow")
+    #self.open_menu_item = self.all_widgets.get_widget('open1')
+    # checkbox, name, version, packager, description
+    self.treeview = self.all_widgets.get_widget('treeview')
+    self.treeview_repos = self.all_widgets.get_widget('treeview_repos')
+    self.vbox2 = self.all_widgets.get_widget('vbox2')
+    self.quit_item = self.all_widgets.get_widget('quit')
+    self.update_db = self.all_widgets.get_widget('update_db')
+    self.search_entry = self.all_widgets.get_widget('search_entry')
+    
+    #self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
+    #self.update_db_popup.hide()
+    #self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
+    #self.install_pkg_popup.hide()
+
+    #self.treemodel = self.treeview.get_model()
+    
+    #self.information_frame = self.all_widgets.get_widget("information_frame")
+    self.information_text = self.all_widgets.get_widget('information_text')
+
+    #self.information_frame = gtk.Frame('ahaha')
+    #self.vbox2.pack_end(self.information_frame)
+
+    self.__setup_pkg_treeview__()
+    self.__setup_repo_treeview__()
+
+    self.main_window.show_all()
+
+    self.all_widgets.signal_autoconnect(signals_dict)
+
+    gtk.main()
+  # }}}
+
+  # def populate_local_pkg_list(self): {{{
+  def populate_local_pkg_list(self):
+    self.local_pkgs = self.shell.local_search()
+  # }}}
+  
+  # def populate_pkgs_by_repo(self): {{{
+  def populate_pkgs_by_repo(self):
+    (self.pkgs_by_repo, self.pkgs) = self.shell.repofiles()
+  # }}}
+
+  # def populate_pkg_lists(self): {{{
+  def populate_pkg_lists(self):
+    self.populate_local_pkg_list()
+    self.populate_pkgs_by_repo()
+  # }}}
+
+  # def set_shell(self, shell): {{{
+  def set_shell(self, shell):
+    self.shell = shell
+  # }}}
+
+  # def toggled(self, toggle_renderer, path): {{{
+  def toggled(self, toggle_renderer, path):
+    # get iter from model
+    iter = self.liststore.get_iter_from_string(path)
+    # get value
+    checked = self.liststore.get_value(iter, 0)
+    # toggle it
+    checked = not checked
+    # set value
+    self.liststore.set_value(iter, 0, checked)
+  # }}}
+  
+  # def row_activated(self, treeview, path, column): {{{
+  #def row_activated(self, treeview, path, column):
+  #  print 'row!'
+  #  print 'treeview :',treeview
+  #  print 'path :',path
+  #  print 'column :',column
+  # }}}
+
+  # def __add_pkg_info_markuped_to_text_buffer__(self, text_buffer, {{{
+  # lines, installed = True):
+  def __add_pkg_info_markuped_to_text_buffer__(self, text_buffer, lines,
+      installed = True):
+    iterator = text_buffer.get_iter_at_offset(0)
+    table = text_buffer.get_tag_table()
+    tag = table.lookup('bold')
+    if tag == None:
+      tag = text_buffer.create_tag('bold', weight=pango.WEIGHT_BOLD)
+    
+    if not installed:
+      text_buffer.insert_with_tags_by_name(iterator,
+          'Package not installed!\n\n', 'bold')
+      
+    pattern = ':'
+
+    # add text accordingly, 'bolding' the 'Name    :', etc
+    for line in lines:
+      if line != '':
+        match_object = re.search(pattern, line)
+        
+        if match_object != None:
+          text_buffer.insert_with_tags_by_name(iterator,
+              line[:match_object.start()+1], 'bold')
+          text_buffer.insert(iterator, line[match_object.start()+1:] + '\n')
+        else:
+          text_buffer.insert(iterator, line + '\n')
+  # }}}
+
+  # def cursor_changed(self, treeview): {{{
+  def cursor_changed(self, treeview):
+    selection = treeview.get_selection()
+    treemodel, iter = selection.get_selected()
+    info = ''
+    if not iter:
+      return
+
+    if treeview == self.treeview:
+      # treeview of pkgs
+      name = treemodel.get_value(iter, 1)
+      
+      try:
+        info = self.local_pkg_info[name]
+      except KeyError:
+        info = self.shell.local_info(name)
+        self.local_pkg_info[name] = info
+      
+      buffer = gtk.TextBuffer()
+      self.information_text.set_buffer(buffer)
+
+      if info == None:
+        try:
+          remote_info = self.remote_pkg_info[name]
+        except KeyError:
+          remote_info = self.shell.info(name)
+          self.remote_pkg_info[name] = remote_info
+        
+        self.__add_pkg_info_markuped_to_text_buffer__(buffer, remote_info,
+            installed = False)
+      else:
+        self.__add_pkg_info_markuped_to_text_buffer__(buffer, info)
+
+    else: # treeview of repos
+      repo = treemodel.get_value(iter, 0)
+      # fill treeview with pkgs from 'repo'
+      self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
+  # }}}
+
+  # def __fill_treeview_with_pkgs_from_repo__(self, repo): {{{
+  def __fill_treeview_with_pkgs_from_repo__(self, repo):
+    self.liststore = gtk.ListStore('gboolean', str, str, str)
+
+    if repo != 'all' and repo != 'installed' and repo != 'not installed':
+      # current, extra, community {{{
+      for v in self.pkgs_by_repo[repo]:
+        
+        name = v[0] # name
+        try:
+          # repo, version, description
+          installed_version = self.local_pkgs[name][1]
+        except KeyError:
+          # not installed
+          #try:
+          #  self.not_installed[name]
+          #except KeyError:
+          #  self.not_installed[name] = None
+          installed_version = '--'
+        
+        self.liststore.append([False, v[0], installed_version, v[1]])
+      self.treeview.set_model(self.liststore)
+      # }}}
+    elif repo == 'installed':
+      # installed {{{
+      for name, v in self.local_pkgs.iteritems():
+        #available version
+        try:
+          available_version = self.pkgs[name][1]
+        except KeyError:
+          # pkg was installed separately
+          available_version = '--'
+          
+        self.liststore.append([False, name, v[1], available_version])
+      self.treeview.set_model(self.liststore)
+      # }}}
+    elif repo == 'all':
+      # all {{{
+      # community, extra, current
+      for repo,v in self.pkgs_by_repo.iteritems():
+        for pkg in v:
+
+          name = pkg[0] # name
+          try:
+            installed_version = self.local_pkgs[name][1]
+          except KeyError:
+            #try:
+            #  self.not_installed[name]
+            #except KeyError:
+            #  self.not_installed[name] = None
+            installed_version = '--'
+
+          self.liststore.append([False, pkg[0], installed_version, pkg[1]])
+      self.treeview.set_model(self.liststore)
+      # }}}
+    else:
+      # not installed {{{
+      not_installed = xor_two_dicts(self.local_pkgs, self.pkgs)
+      # pkg: repo, version
+      for name, v in not_installed.iteritems():
+        self.liststore.append([False, name, '--', v[1]])
+      self.treeview.set_model(self.liststore)
+      # }}}
+  # }}}
+
+  # def select_cursor_row(self, treeview, start_editing): {{{
+  def select_cursor_row(self, treeview, start_editing):
+    #print 'select_cursor_row'
+    print treeview
+    print start_editing
+    print treeview.get_cursor()
+  # }}}
+
+  # def on_quit_activate(self, menuitem): {{{
+  def on_quit_activate(self, menuitem):
+    gtk.main_quit()
+  # }}}
+
+  # def destroy(self, widget, data=None): {{{
+  def destroy(self, widget, data=None):
+    if widget == self.main_window:
+      gtk.main_quit()
+    else:
+      self.update_db_popup.hide()
+      return False
+  # }}}
+
+  # def on_install_pkg_popup_destroy(self, widget, data=None): {{{
+  def on_install_pkg_popup_destroy(self, widget, data=None):
+    self.install_pkg_popup.hide()
+    return False
+  # }}}
+
+  # def delete_event(self, widget, event, data=None): {{{
+  def delete_event(self, widget, event, data=None):
+    return False
+  # }}}
+  
+  # def on_install_pkg_popup_delete_event(self, widget, event, data=None): {{{
+  def on_install_pkg_popup_delete_event(self, widget, event, data=None):
+    return False
+  # }}}
+
+  # def __is_root__(self): {{{
+  def __is_root__(self):
+    uid = posix.getuid()
+    return uid == 0
+  # }}}
+
+  # def on_update_db_clicked(self, button): {{{
+  def on_update_db_clicked(self, button):
+    #self.update_db_popup.show_now()
+    #self.update_db_popup.show_all()
+    #self.all_widgets.get_widget('vbox3').show_now()
+    #self.all_widgets.get_widget('button2').show_now()
+    #self.all_widgets.get_widget('expander1').show_now()
+    #self.all_widgets.get_widget('label2').show_now()
+    #self.all_widgets.get_widget('output').show_now()
+    
+    if button == self.update_db and self.__is_root__():
+      ret, ret_err = self.shell.updatedb()
+      #print ret, ret_err
+      #self.shell.get_read_pipe()
+      self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
+      #self.update_db_popup.show()
+      response = self.update_db_popup.run()
+
+      self.update_db_popup.hide()
+
+      return
+      #self.update_db_popup.destroy()
+    else:
+      # display a warning window?? switch to root?? gksu???
+      print 'not root!'
+  # }}}
+
+  # def on_okbutton_clicked(self, button): {{{
+  def on_okbutton_clicked(self, button):
+    self.update_db_popup.hide()
+  # }}}
+  
+  # def on_okbutton2_clicked(self, button): {{{
+  def on_okbutton2_clicked(self, button):
+    self.install_pkg_popup.hide()
+  # }}}
+
+  # def get_all_selected_packages(tree_model): {{{
+  # TODO: put outside of class
+  def get_all_selected_packages(self, tree_model):
+    n = len(tree_model)
+    
+    names = []
+    for i in range(n):
+      if tree_model[i][0]:
+        names.append(tree_model[i][1])
+
+    return names
+  # }}}
+      
+  # def refresh_pkgs_treeview(self): {{{
+  def refresh_pkgs_treeview(self):
+    selection = self.treeview_repos.get_selection()
+    treemodel, iter = selection.get_selected()
+    repo = treemodel.get_value(iter, 0)
+    # fill treeview with pkgs from 'repo'
+    self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
+  # }}}
+
+  # def on_install_pkg_clicked(self, button): {{{
+  def on_install_pkg_clicked(self, button):
+    self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
+    #self.install_pkg_popup.show()
+    pkgs_to_install = self.get_all_selected_packages(self.liststore)
+
+    if pkgs_to_install == []:
+      return
+    
+    self.shell.install_packages(pkgs_to_install)
+    
+    response = self.install_pkg_popup.run()
+
+    self.install_pkg_popup.hide()
+
+    # for installed_pkg in pkgs_to_install: {{{
+    for installed_pkg in pkgs_to_install:
+      # get repo, version, description in local search 
+      # and put it in self.local_pkgs and put info in
+      # self.local_pkg_info
+      info = self.remote_pkg_info[installed_pkg]
+      self.local_pkg_info[installed_pkg] = info
+      n = len(info)
+      repo = ''
+      version = ''
+      description = ''
+
+      for i in range(n):
+        line = info[i]
+        if line.startswith('Repository'):
+          # format: Repository whitespace: repo
+          pos = line.index(':')
+          repo = line[pos+1:].strip()
+        elif line.startswith('Version'):
+          version = line[line.index(':')+1:].strip()
+        elif line.startswith('Description'):
+          description = line[line.index(':')+1:].strip()
+          
+          try:
+            info[i+1].index(':')
+          except ValueError:
+            # no ':' found
+            description = description + ' ' + info[i+1].strip()
+            # skip next iteration
+            i = i+1
+        else:
+          pass
+      self.local_pkgs[installed_pkg] = (repo, version, description)
+    # }}}
+
+    self.refresh_pkgs_treeview()
+  # }}}
+
+  # def on_remove_pkg_clicked(self, button): {{{
+  def on_remove_pkg_clicked(self, button):
+    self.remove_pkg_popup = self.all_widgets.get_widget('remove_pkg_popup')
+    pkgs_to_remove = self.get_all_selected_packages(self.liststore)
+
+    if pkgs_to_remove == []:
+      return
+
+    (exit_status, dependencies, out) = self.shell.remove_packages(pkgs_to_remove)
+
+    if exit_status != 0:
+      # error ocurred
+      self.remove_pkg_error = self.all_widgets.get_widget('remove_pkg_error')
+      self.remove_dependencies_broken =\
+      self.all_widgets.get_widget('remove_dependencies_broken')
+     
+      #for dep in dependencies:
+      self.remove_dependencies_broken.set_text(out.rstrip())
+      response = self.remove_pkg_error.run()
+      self.remove_pkg_error.hide()
+    else:
+      response = self.remove_pkg_popup.run()
+
+      self.remove_pkg_popup.hide()
+
+      # for removed_pkg in pkgs_to_remove: {{{
+      for removed_pkg in pkgs_to_remove:
+        # unset self.local_pkg_info and self.local_pkgs
+        del self.local_pkg_info[removed_pkg]
+        del self.local_pkgs[removed_pkg]
+      # }}}
+
+      self.refresh_pkgs_treeview()
+  # }}}
+  
+  # def on_update_db_popup_delete_event(self, widget, event, data=None): {{{
+  def on_update_db_popup_delete_event(self, widget, event, data=None):
+    self.update_db_popup.hide()
+    self.update_db_popup.destroy()
+    return True
+  # }}}
+
+  # def on_search_clicked(self): {{{
+  def on_search_clicked(self, button):
+    self.liststore = gtk.ListStore('gboolean', str, str, str)
+
+    regexp = re.compile(self.search_entry.get_text())
+    
+    # search current, extra, community
+    # self.pkgs_by_repo: dict of repos with lists of pairs with
+    # (name, version)
+    for repo, repo_list in self.pkgs_by_repo.iteritems():
+      for pkg_info in repo_list:
+        match = regexp.match(pkg_info[0]) # name
+
+        if match:
+          try:
+            available_version = self.pkgs[pkg_info[0]][1]
+          except KeyError:
+            available_version = '--'
+          self.liststore.append([False, pkg_info[0], pkg_info[1], available_version])
+        
+    self.treeview.set_model(self.liststore)
+  # }}}
+
+  # def on_clear_clicked(self): {{{
+  def on_clear_clicked(self, button):
+    # clear the search_entry
+    self.search_entry.set_text('')
+
+    # set the pkg treemodel to whatever repo is selected in the repo treeview
+    # TODO: is this necessary?
+    selection = self.treeview_repos.get_selection()
+    treemodel, iter = selection.get_selected()
+
+    if not iter:
+      return
+    else:
+      self.refresh_pkgs_treeview()
+  # }}}
+# }}}
+
+# main {{{
+if __name__ == '__main__':
+  g = gui()
+# }}}
+
