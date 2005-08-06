@@ -108,6 +108,7 @@ class shell:
   def __init__(self, command_line, interactive = False):
     #self.pacman = pacman(self)
     self.pacman = pacman()
+    self.yesno = False
     
     if interactive == True:
       self.pacman.set_pipeit(True)
@@ -184,6 +185,11 @@ class shell:
     os.kill(self.pid, signum)
   # }}}
 
+  # def sigkill(self): {{{
+  def sigkill(self):
+    print os.kill(self.pid, signal.SIGKILL)
+  # }}}
+
   # def interactive(self, what = ''): {{{
   def interactive(self, what = ''):
     if what == 'False':
@@ -193,6 +199,16 @@ class shell:
     #print self.pacman.get_pipeit()
   # }}}
 
+  # def get_yesno(self): {{{
+  def get_yesno(self):
+    return self.yesno
+  # }}}
+
+  # def send_to_pacman(self, what): {{{
+  def send_to_pacman(self, what):
+    self.pacman.get_write_pipe().write(what + '\n') # confirm
+  # }}}
+       
   # def check(self, big_list): {{{
   def check(self, big_list):
     i = 0
@@ -489,8 +505,8 @@ class shell:
       print "You are not ROOT. Bye bye."
       return
     
-    (yes, out) = self.__read_and_check_for_yesno__()
-
+    (self.yesno, out) = self.__read_and_check_for_yesno__()
+    
     regex = re.compile('is up to date')
     match = regex.search(out)
 
@@ -528,8 +544,8 @@ class shell:
     os.wait()
   # }}}
 
-  # def install(self, what = ''): {{{
-  def install(self, what = ''):
+  # def install_part_1(self, what = ''): {{{
+  def install_part_1(self, what = ''):
     if not self.__is_root__():
       print "You are not ROOT. Bye bye."
       return
@@ -543,68 +559,166 @@ class shell:
       read_pipe = self.pacman.get_read_pipe()
       write_pipe = self.pacman.get_write_pipe()
 
-      read_pipe.flush()
+      #read_pipe.flush()
 
-      if write_pipe != None:
-         write_pipe.flush()
-      sys.stdout.flush()
-      sys.stdin.flush()
+      #if write_pipe != None:
+      #   write_pipe.flush()
+      #sys.stdout.flush()
+      #sys.stdin.flush()
    
       (found, output) = self.__is_already_installed__(what)
+      
+      self.pid = self.pacman.get_pid()
 
-      if not found:
-        self.pacman.get_write_pipe().write('Y\n') # confirm
-        os.wait()
-
-        return True
-      else:
-        return False
+      return (found, output)
     else:
-      os.wait()
+      return (False, None)
+  # }}}
 
-    # BACKUP {{{
-    #line = 'a'
+  # def install_part_2(self, txt_to_pacman): {{{
+  def install_part_2(self, txt_to_pacman):
+    self.send_to_pacman(txt_to_pacman)
+    # HACK
+    (self.yesno, out) = self.__read_and_check_for_yesno__()
 
-    #while len(line) == 1: 
-    #  line = self.pacman.get_read_pipe().read(1)
-    #  sys.stdout.write(line)
-    #  if line == '[':
-    #    line2 = self.pacman.get_read_pipe().read(1)
-    #    if line2 == 'Y':
-    #      line3 = self.pacman.get_read_pipe().read(1)
-    #      sys.stdout.write(line2)
-    #      if line3 == '/':
-    #        line4 = self.pacman.get_read_pipe().read(1)
-    #        sys.stdout.write(line3)
-    #        if line4 == 'n':
-    #          line5 = self.pacman.get_read_pipe().read(1)
-    #          sys.stdout.write(line4)
-    #          if line5 == ']':
-    #            line6 = self.pacman.get_read_pipe().read(1)
-    #            sys.stdout.write(line5)
-    #            if line6 == ' ':
-    #              sys.stdout.write(line6)
-    #              # [Y/n] !!!
-    #              if self.pacman.get_write_pipe != None:
-    #                self.pacman.get_write_pipe().write('Y\n')
-    #              else:
-    #                print 'write_pipe == None'
-    #  #else:
-    #    #sys.stdout.write(line)
-    # }}}
-    
+    return out
   # }}}
   
-  # def install_packages(self, pkg_list): {{{
-  def install_packages(self, pkg_list):
-    what = ''
+  # def install_part_3(self, txt_to_pacman): {{{
+  def install_part_3(self, txt_to_pacman): 
+    self.send_to_pacman(txt_to_pacman)
+    # HACK
+    (self.yesno, out) = self.__read_and_check_for_yesno__()
 
-    for pkg_name in pkg_list:
-      what = what + pkg_name + ' '
+    (self.pid, exit_status) = os.wait()
     
-    self.install_noconfirm(what)
+    return (exit_status, (self.yesno, out))
   # }}}
 
+  # def install_part_2_no_wait(self, txt_to_pacman): {{{
+  def install_part_2_no_wait(self, txt_to_pacman):
+    self.send_to_pacman(txt_to_pacman)
+    # HACK
+    out = self.__read_and_check_for_yesno__()
+
+    return out
+  # }}}
+  
+  # def install(self, what = ''): {{{
+  def install(self, what = ''):
+    (ret, output) = self.install_part_1(what)
+
+    if ret:
+      # is already up to date, get confirmation from user about forcing the
+      # install of the package
+      print 'Package %s is already installed and up to date.' % what
+      response = raw_input('Upgrade anyway? [Y/n] ')
+
+      out = self.install_part_2(response)
+      print out,
+      response = raw_input()
+      (exit_status, (yesno, out)) = self.install_part_3(response)
+
+      if exit_status == 0:
+        print out,
+      
+      return
+
+    if self.yesno:
+      # pacman is querying for user input
+      print output,
+
+      response = raw_input()
+
+      (exit_status, (yesno, out)) = self.install_part_3(response)
+      print out,
+
+      return
+
+    #OLD {{{
+    #if not self.__is_root__():
+    #  print "You are not ROOT. Bye bye."
+    #  return
+    #if what == '':
+    #  print 'Please specify a package to install'
+    #  return
+
+    #self.run_pacman_with('-S ' + what)
+
+    #if self.pacman.get_pipeit():
+    #  read_pipe = self.pacman.get_read_pipe()
+    #  write_pipe = self.pacman.get_write_pipe()
+
+    #  read_pipe.flush()
+
+    #  if write_pipe != None:
+    #     write_pipe.flush()
+    #  sys.stdout.flush()
+    #  sys.stdin.flush()
+   
+    #  (found, output) = self.__is_already_installed__(what)
+
+    #  if not found:
+    #    #self.pacman.get_write_pipe().write('Y\n') # confirm
+    #    os.wait()
+
+    #    return True
+    #  else:
+    #    return False
+    #else:
+    #  os.wait()
+
+    ## BACKUP {{{
+    ##line = 'a'
+
+    ##while len(line) == 1: 
+    ##  line = self.pacman.get_read_pipe().read(1)
+    ##  sys.stdout.write(line)
+    ##  if line == '[':
+    ##    line2 = self.pacman.get_read_pipe().read(1)
+    ##    if line2 == 'Y':
+    ##      line3 = self.pacman.get_read_pipe().read(1)
+    ##      sys.stdout.write(line2)
+    ##      if line3 == '/':
+    ##        line4 = self.pacman.get_read_pipe().read(1)
+    ##        sys.stdout.write(line3)
+    ##        if line4 == 'n':
+    ##          line5 = self.pacman.get_read_pipe().read(1)
+    ##          sys.stdout.write(line4)
+    ##          if line5 == ']':
+    ##            line6 = self.pacman.get_read_pipe().read(1)
+    ##            sys.stdout.write(line5)
+    ##            if line6 == ' ':
+    ##              sys.stdout.write(line6)
+    ##              # [Y/n] !!!
+    ##              if self.pacman.get_write_pipe != None:
+    ##                self.pacman.get_write_pipe().write('Y\n')
+    ##              else:
+    ##                print 'write_pipe == None'
+    ##  #else:
+    ##    #sys.stdout.write(line)
+    ## }}}
+    #
+    # }}}
+  # }}}
+
+  # def install_packages_noconfirm(self, what = ''): {{{
+  def install_packages_noconfirm(self, pkg_list):
+    if not self.__is_root__():
+      print "You are not ROOT. Bye bye."
+      return
+    
+    what = ''
+    for pkg_name in pkg_list:
+      what = what + pkg_name + ' '
+      
+    self.run_pacman_with('-S ' + what + ' --noconfirm')
+
+    (self.pid, exit_status) = os.wait()
+
+    return exit_status
+  # }}}
+  
   # def __compile_pkg_info__(self, pacman_out): {{{
   def __compile_pkg_info__(self, pacman_output):
     pattern = '\n'
@@ -709,18 +823,6 @@ class shell:
     return (exit_status, dependencies, out)
   # }}}
 
-  # def remove_packages(self, pkg_list): {{{
-  def remove_packages(self, pkg_list):
-    what = ''
-
-    for pkg_name in pkg_list:
-      what = what + pkg_name + ' '
-    
-    #self.remove_noconfirm(what)
-    (exit_status, dependencies, out) = self.remove(what)
-    return (exit_status, dependencies, out)
-  # }}}
-  
   # help, quit, version {{{
   # def help(self, what = ''): {{{
   def help(self, what = ''):
@@ -844,13 +946,9 @@ the terms of the GNU General Public License'''
 
 # main {{{
 if __name__ == '__main__':
-  #s = shell(sys.argv[1:], True)
+  s = shell(sys.argv[1:], True)
   #s = shell(sys.argv[1:], False)
   #s = shell(sys.argv[1:], False, False)
   s.go()
-  #p = pacman()
-  #p.set_executable('/bin/cat')
-  p.set_args('')
-  #p.run()
 # }}}
 

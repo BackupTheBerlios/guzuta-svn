@@ -163,7 +163,8 @@ class gui:
     'on_install_pkg_popup_delete_event': self.on_install_pkg_popup_delete_event,
     'on_install_pkg_popup_destroy': self.on_install_pkg_popup_destroy,
     'on_search_clicked': self.on_search_clicked,
-    'on_clear_clicked': self.on_clear_clicked
+    'on_clear_clicked': self.on_clear_clicked,
+    'on_search_entry_activate': self.on_search_clicked
     }
     # end signals
     #self.pacman = pacman(self)
@@ -486,25 +487,116 @@ class gui:
   def refresh_pkgs_treeview(self):
     selection = self.treeview_repos.get_selection()
     treemodel, iter = selection.get_selected()
+
+    if not iter:
+      return
     repo = treemodel.get_value(iter, 0)
     # fill treeview with pkgs from 'repo'
     self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
   # }}}
 
+  # def install_packages(self, pkg_list): {{{
+  def install_packages(self, pkg_list):
+    what = ''
+    pkg_names_by_comma = ''
+
+    for pkg_name in pkg_list:
+      what = what + pkg_name + ' '
+      if pkg_names_by_comma == '':
+        # first
+        pkg_names_by_comma = pkg_name
+      else:
+        pkg_names_by_comma = pkg_names_by_comma + ', ' + pkg_name
+    
+    (ret, output) = self.shell.install_part_1(what)
+
+    if ret:
+      # is/are already up to date, get confirmation from user about forcing the
+      # install of the package
+      
+      install_pkg_error = self.all_widgets.get_widget('install_pkg_error')
+      install_pkg_error_label =\
+      self.all_widgets.get_widget('install_pkg_error_label')
+      #install_pkg_error_label.set_use_markup(True)
+      text = '''<span weight="bold">Package(s) %s is(are) up to date.</span>
+<span weight="bold">Upgrade anyway?</span>''' % pkg_names_by_comma
+      install_pkg_error_label.set_markup(text)
+      response2 = install_pkg_error.run()
+
+      install_pkg_error.hide()
+      if response2 == gtk.RESPONSE_CANCEL:
+        return (False, output)
+      elif response2 == gtk.RESPONSE_OK:
+        return (True, output)
+    else:
+      return (None, output)
+    #return ret
+
+    #retcode_dict = {}
+    #for pkg_name in pkg_list:
+    #  ret = self.shell.install(pkg_name)
+    #  if self.yesno:
+    #    #self.shell.send_to_pacman
+    #    pass
+    #  retcode_dict[pkg_name] = ret
+
+  # }}}
+
   # def on_install_pkg_clicked(self, button): {{{
   def on_install_pkg_clicked(self, button):
     self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
-    #self.install_pkg_popup.show()
     pkgs_to_install = self.get_all_selected_packages(self.liststore)
 
     if pkgs_to_install == []:
       return
     
-    self.shell.install_packages(pkgs_to_install)
-    
-    response = self.install_pkg_popup.run()
+    (retcode, output) = self.install_packages(pkgs_to_install)
 
-    self.install_pkg_popup.hide()
+    # TODO: do the same for remove pkg, add 'Are you sure?' dialog to remove
+    if retcode == False:
+      # cancel
+      (exit_status, out) = self.shell.install_part_3('n')
+      # TODO: check for proper pkg removal
+      #self.shell.sigkill()
+      print 'retcode was False, bailing now with exit_status: ',\
+        exit_status, out
+      return
+    elif retcode == True:
+      # force upgrade 
+      #self.shell.sigkill()
+      #exit_status = self.shell.install_packages_noconfirm(pkgs_to_install)
+      out = self.shell.install_part_2('Y')
+      (exit_status, out) = self.shell.install_part_3('Y')
+      # TODO: check for proper pkg install, check for file conflicts, etc. Build
+      # another popup
+      print 'retcode was True, bailing now with exit_status: ', exit_status
+      return
+    else:
+      # display generic_cancel_ok, all went well, prompt user for action
+      generic_cancel_ok = self.all_widgets.get_widget('generic_cancel_ok')
+
+      generic_cancel_ok_label =\
+      self.all_widgets.get_widget('generic_cancel_ok_label')
+
+      text = '''<span weight="bold">Warning</span>
+%s''' % output[:-7]
+
+      generic_cancel_ok_label.set_markup(text)
+      response3 = generic_cancel_ok.run()
+
+      generic_cancel_ok.hide()
+      
+      if response3 == gtk.RESPONSE_OK: 
+        self.shell.install_part_2('Y')
+        response = self.install_pkg_popup.run()
+        self.refresh_pkgs_treeview()
+      elif response3 == gtk.RESPONSE_CANCEL:
+        self.shell.install_part_2('n')
+
+
+      self.install_pkg_popup.hide()
+
+    #self.install_pkg_popup.hide()
 
     # for installed_pkg in pkgs_to_install: {{{
     for installed_pkg in pkgs_to_install:
@@ -541,9 +633,20 @@ class gui:
       self.local_pkgs[installed_pkg] = (repo, version, description)
     # }}}
 
-    self.refresh_pkgs_treeview()
   # }}}
 
+  # def remove_packages(self, pkg_list): {{{
+  def remove_packages(self, pkg_list):
+    what = ''
+
+    for pkg_name in pkg_list:
+      what = what + pkg_name + ' '
+    
+    #self.remove_noconfirm(what)
+    (exit_status, dependencies, out) = self.shell.remove(what)
+    return (exit_status, dependencies, out)
+  # }}}
+  
   # def on_remove_pkg_clicked(self, button): {{{
   def on_remove_pkg_clicked(self, button):
     self.remove_pkg_popup = self.all_widgets.get_widget('remove_pkg_popup')
@@ -552,7 +655,8 @@ class gui:
     if pkgs_to_remove == []:
       return
 
-    (exit_status, dependencies, out) = self.shell.remove_packages(pkgs_to_remove)
+    (exit_status, dependencies, out) =\
+    self.remove_packages(pkgs_to_remove)
 
     if exit_status != 0:
       # error ocurred
@@ -567,6 +671,9 @@ class gui:
     else:
       response = self.remove_pkg_popup.run()
 
+      if response == gtk.RESPONSE_OK:
+        # force
+        pass
       self.remove_pkg_popup.hide()
 
       # for removed_pkg in pkgs_to_remove: {{{
@@ -598,13 +705,13 @@ class gui:
     for repo, repo_list in self.pkgs_by_repo.iteritems():
       for pkg_info in repo_list:
         match = regexp.match(pkg_info[0]) # name
-
         if match:
           try:
-            available_version = self.pkgs[pkg_info[0]][1]
+            installed_version = self.local_pkgs[pkg_info[0]][1]
           except KeyError:
-            available_version = '--'
-          self.liststore.append([False, pkg_info[0], pkg_info[1], available_version])
+            installed_version = '--'
+          available_version = pkg_info[1]
+          self.liststore.append([False, pkg_info[0], installed_version, available_version])
         
     self.treeview.set_model(self.liststore)
   # }}}
