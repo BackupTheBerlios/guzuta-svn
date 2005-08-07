@@ -96,11 +96,15 @@ class gui:
     self.treeview.append_column(self.installedversioncolumn)
     self.treeview.append_column(self.availableversioncolumn)
 
+    #self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
     # positions are as follows:
     # name, version, description
-    for k,v in self.local_pkgs.iteritems():
-      #self.liststore.append([False, k, v[1], v[2]])
-
+    # TODO: sort this
+    keys = self.local_pkgs.keys()
+    keys.sort()
+    for k in keys:
+      v = self.local_pkgs[k]
+    #for k,v in self.local_pkgs.iteritems():
       #available version
       try:
         available_version = self.pkgs[k][1]
@@ -128,6 +132,8 @@ class gui:
     self.repocolumn.set_attributes(self.textrenderer_repos, text=0)
     
     self.treeview_repos.append_column(self.repocolumn)
+    
+    self.liststore_repos.set_sort_column_id(0, gtk.SORT_ASCENDING)
 
     self.liststore_repos.append(['All'])
     self.liststore_repos.append(['Installed'])
@@ -164,7 +170,8 @@ class gui:
     'on_install_pkg_popup_destroy': self.on_install_pkg_popup_destroy,
     'on_search_clicked': self.on_search_clicked,
     'on_clear_clicked': self.on_clear_clicked,
-    'on_search_entry_activate': self.on_search_clicked
+    'on_search_entry_activate': self.on_search_clicked,
+    'on_about_activate': self.on_about_activate
     }
     # end signals
     #self.pacman = pacman(self)
@@ -186,6 +193,7 @@ class gui:
     #self.open_menu_item = self.all_widgets.get_widget('open1')
     # checkbox, name, version, packager, description
     self.treeview = self.all_widgets.get_widget('treeview')
+    # sortable
     self.treeview_repos = self.all_widgets.get_widget('treeview_repos')
     self.vbox2 = self.all_widgets.get_widget('vbox2')
     self.quit_item = self.all_widgets.get_widget('quit')
@@ -213,6 +221,14 @@ class gui:
     self.all_widgets.signal_autoconnect(signals_dict)
 
     gtk.main()
+  # }}}
+
+  # def on_about_activate(self): {{{
+  def on_about_activate(self, menuitem):
+    about_dialog = self.all_widgets.get_widget('about_dialog')
+
+    about_dialog.run()
+    about_dialog.hide()
   # }}}
 
   # def populate_local_pkg_list(self): {{{
@@ -328,6 +344,7 @@ class gui:
   def __refresh_pkgs_treeview__(self):
     new_liststore = gtk.ListStore('gboolean', str, str, str)
     
+    new_liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
     for row in self.liststore:
       name = row[1]
       try:
@@ -351,6 +368,8 @@ class gui:
   # def __fill_treeview_with_pkgs_from_repo__(self, repo): {{{
   def __fill_treeview_with_pkgs_from_repo__(self, repo):
     self.liststore = gtk.ListStore('gboolean', str, str, str)
+
+    self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
     if repo != 'all' and repo != 'installed' and repo != 'not installed':
       # current, extra, community {{{
@@ -770,6 +789,8 @@ class gui:
   # def on_search_clicked(self): {{{
   def on_search_clicked(self, button):
     self.liststore = gtk.ListStore('gboolean', str, str, str)
+
+    self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
     regexp = re.compile(self.search_entry.get_text())
     
