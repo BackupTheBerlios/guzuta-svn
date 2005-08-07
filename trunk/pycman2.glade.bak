@@ -1718,7 +1718,7 @@ it more useful to permit linking proprietary applications with the library. If
 this is what you want to do, use the GNU Library General Public License instead
 of this License.
 </property>
-  <property name="website">guzuta.berlios.de</property>
+  <property name="website">http://guzuta.berlios.de</property>
   <property name="website_label" translatable="yes">Guzuta homepage</property>
   <property name="authors">João Estêvão &lt;trankas@gmail.com&gt;</property>
   <property name="translator_credits" translatable="yes" comments="TRANSLATORS: Replace this string with your names, one name per line.">translator-credits</property>
