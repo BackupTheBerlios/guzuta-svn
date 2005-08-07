@@ -324,6 +324,30 @@ class gui:
       self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
   # }}}
 
+  # def __refresh_pkgs_treeview__(self): {{{
+  def __refresh_pkgs_treeview__(self):
+    new_liststore = gtk.ListStore('gboolean', str, str, str)
+    
+    for row in self.liststore:
+      name = row[1]
+      try:
+        installed_version = self.local_pkgs[name][1]
+      except KeyError:
+        installed_version = '--'
+      try:
+        available_version = self.pkgs[name][1]
+      except KeyError:
+        available_version = '--'
+      
+      buffer = gtk.TextBuffer()
+      self.information_text.set_buffer(buffer)
+      
+      new_liststore.append([False, name, installed_version, available_version])
+    self.liststore = new_liststore
+    self.treeview.set_model(self.liststore)
+    #self.treeview.emit('cursor_changed')
+  # }}}
+
   # def __fill_treeview_with_pkgs_from_repo__(self, repo): {{{
   def __fill_treeview_with_pkgs_from_repo__(self, repo):
     self.liststore = gtk.ListStore('gboolean', str, str, str)
@@ -489,10 +513,11 @@ class gui:
     treemodel, iter = selection.get_selected()
 
     if not iter:
-      return
-    repo = treemodel.get_value(iter, 0)
-    # fill treeview with pkgs from 'repo'
-    self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
+      self.__refresh_pkgs_treeview__()
+    else:
+      repo = treemodel.get_value(iter, 0)
+      # fill treeview with pkgs from 'repo'
+      self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
   # }}}
 
   # def install_packages(self, pkg_list): {{{
@@ -542,69 +567,25 @@ class gui:
 
   # }}}
 
-  # def on_install_pkg_clicked(self, button): {{{
-  def on_install_pkg_clicked(self, button):
-    self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
-    pkgs_to_install = self.get_all_selected_packages(self.liststore)
-
-    if pkgs_to_install == []:
-      return
-    
-    (retcode, output) = self.install_packages(pkgs_to_install)
-
-    # TODO: do the same for remove pkg, add 'Are you sure?' dialog to remove
-    if retcode == False:
-      # cancel
-      (exit_status, out) = self.shell.install_part_3('n')
-      # TODO: check for proper pkg removal
-      #self.shell.sigkill()
-      print 'retcode was False, bailing now with exit_status: ',\
-        exit_status, out
-      return
-    elif retcode == True:
-      # force upgrade 
-      #self.shell.sigkill()
-      #exit_status = self.shell.install_packages_noconfirm(pkgs_to_install)
-      out = self.shell.install_part_2('Y')
-      (exit_status, out) = self.shell.install_part_3('Y')
-      # TODO: check for proper pkg install, check for file conflicts, etc. Build
-      # another popup
-      print 'retcode was True, bailing now with exit_status: ', exit_status
-      return
-    else:
-      # display generic_cancel_ok, all went well, prompt user for action
-      generic_cancel_ok = self.all_widgets.get_widget('generic_cancel_ok')
-
-      generic_cancel_ok_label =\
-      self.all_widgets.get_widget('generic_cancel_ok_label')
-
-      text = '''<span weight="bold">Warning</span>
-%s''' % output[:-7]
-
-      generic_cancel_ok_label.set_markup(text)
-      response3 = generic_cancel_ok.run()
-
-      generic_cancel_ok.hide()
-      
-      if response3 == gtk.RESPONSE_OK: 
-        self.shell.install_part_2('Y')
-        response = self.install_pkg_popup.run()
-        self.refresh_pkgs_treeview()
-      elif response3 == gtk.RESPONSE_CANCEL:
-        self.shell.install_part_2('n')
-
-
-      self.install_pkg_popup.hide()
-
-    #self.install_pkg_popup.hide()
-
-    # for installed_pkg in pkgs_to_install: {{{
-    for installed_pkg in pkgs_to_install:
+  # def __add_pkg_info_to_local_pkgs__(self, pkg_list): {{{
+  def __add_pkg_info_to_local_pkgs__(self, pkg_list):
+    for installed_pkg in pkg_list:
       # get repo, version, description in local search 
       # and put it in self.local_pkgs and put info in
       # self.local_pkg_info
-      info = self.remote_pkg_info[installed_pkg]
-      self.local_pkg_info[installed_pkg] = info
+      info = ''
+      try:
+        info = self.local_pkg_info[installed_pkg]
+      except KeyError:
+        try:
+          info = self.remote_pkg_info[installed_pkg]
+        except KeyError:
+          info = self.shell.info(installed_pkg)
+        self.local_pkg_info[installed_pkg] = info
+
+      if info == None:
+        info = self.remote_pkg_info[installed_pkg]
+        self.local_pkg_info[installed_pkg] = info
       n = len(info)
       repo = ''
       version = ''
@@ -631,8 +612,74 @@ class gui:
         else:
           pass
       self.local_pkgs[installed_pkg] = (repo, version, description)
-    # }}}
+  # }}}
 
+  # def on_install_pkg_clicked(self, button): {{{
+  def on_install_pkg_clicked(self, button):
+    self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
+    pkgs_to_install = self.get_all_selected_packages(self.liststore)
+
+    if pkgs_to_install == []:
+      return
+    
+    (retcode, output) = self.install_packages(pkgs_to_install)
+
+    # TODO: do the same for remove pkg, add 'Are you sure?' dialog to remove
+    if retcode == False:
+      # cancel
+      (exit_status, out) = self.shell.install_part_3('n')
+      # TODO: check for proper pkg removal
+      #self.shell.sigkill()
+      print 'retcode was False, bailing now with exit_status: ',\
+        exit_status, out
+      return
+    elif retcode == True:
+      # force upgrade 
+      #self.shell.sigkill()
+      #exit_status = self.shell.install_packages_noconfirm(pkgs_to_install)
+      out = self.shell.install_part_2('Y')
+      (exit_status, out) = self.shell.install_part_3('Y')
+      self.__add_pkg_info_to_local_pkgs__(pkgs_to_install)
+      self.refresh_pkgs_treeview()
+      # TODO: check for proper pkg install, check for file conflicts, etc. Build
+      # another popup
+      print 'retcode was True, bailing now with exit_status: ', exit_status
+      return
+    else:
+      # display generic_cancel_ok, all went well, prompt user for action
+      generic_cancel_ok = self.all_widgets.get_widget('generic_cancel_ok')
+
+      generic_cancel_ok_label =\
+      self.all_widgets.get_widget('generic_cancel_ok_label')
+
+      text = '''<span weight="bold">Warning</span>
+%s''' % output[:-7]
+
+      generic_cancel_ok_label.set_markup(text)
+      response3 = generic_cancel_ok.run()
+
+      generic_cancel_ok.hide()
+      
+      if response3 == gtk.RESPONSE_OK: 
+        self.shell.install_part_2('Y')
+        response = self.install_pkg_popup.run()
+        self.__add_pkg_info_to_local_pkgs__(pkgs_to_install)
+        self.refresh_pkgs_treeview()
+      elif response3 == gtk.RESPONSE_CANCEL:
+        self.shell.install_part_2('n')
+
+      self.install_pkg_popup.hide()
+
+      try:
+        print self.local_pkg_info['abcm2ps']
+      except KeyError:
+        print 'not found in local'
+      try:
+        print self.remote_pkg_info['abcm2ps']
+      except KeyError:
+        print 'not found in remote'
+
+    #self.install_pkg_popup.hide()
   # }}}
 
   # def remove_packages(self, pkg_list): {{{
@@ -655,35 +702,62 @@ class gui:
     if pkgs_to_remove == []:
       return
 
-    (exit_status, dependencies, out) =\
-    self.remove_packages(pkgs_to_remove)
+    remove_pkg_are_you_sure =\
+    self.all_widgets.get_widget('remove_pkg_are_you_sure')
 
-    if exit_status != 0:
-      # error ocurred
-      self.remove_pkg_error = self.all_widgets.get_widget('remove_pkg_error')
-      self.remove_dependencies_broken =\
-      self.all_widgets.get_widget('remove_dependencies_broken')
-     
-      #for dep in dependencies:
-      self.remove_dependencies_broken.set_text(out.rstrip())
-      response = self.remove_pkg_error.run()
-      self.remove_pkg_error.hide()
+    are_you_sure_label = self.all_widgets.get_widget('are_you_sure_label')
+
+    #text = 'Are you sure you want to remove the following packages?\n'
+    text = ''
+
+    for pkg_name in pkgs_to_remove:
+      text = text + pkg_name + '\n'
+
+    are_you_sure_label.set_text(text)
+    response = remove_pkg_are_you_sure.run()
+    remove_pkg_are_you_sure.hide()
+
+    if response == gtk.RESPONSE_CANCEL:
+      return
     else:
-      response = self.remove_pkg_popup.run()
+      (exit_status, dependencies, out) =\
+      self.remove_packages(pkgs_to_remove)
 
-      if response == gtk.RESPONSE_OK:
-        # force
-        pass
-      self.remove_pkg_popup.hide()
+      if exit_status != 0:
+        # error ocurred
+        self.remove_pkg_error = self.all_widgets.get_widget('remove_pkg_error')
+        self.remove_dependencies_broken =\
+        self.all_widgets.get_widget('remove_dependencies_broken')
+       
+        #for dep in dependencies:
+        self.remove_dependencies_broken.set_text(out.rstrip())
+        response = self.remove_pkg_error.run()
+        self.remove_pkg_error.hide()
+      else:
+        response = self.remove_pkg_popup.run()
 
-      # for removed_pkg in pkgs_to_remove: {{{
-      for removed_pkg in pkgs_to_remove:
-        # unset self.local_pkg_info and self.local_pkgs
-        del self.local_pkg_info[removed_pkg]
-        del self.local_pkgs[removed_pkg]
-      # }}}
+        if response == gtk.RESPONSE_OK:
+          # force
+          pass
+        self.remove_pkg_popup.hide()
 
-      self.refresh_pkgs_treeview()
+        # for removed_pkg in pkgs_to_remove: {{{
+        for removed_pkg in pkgs_to_remove:
+          # unset self.local_pkg_info and self.local_pkgs
+          del self.local_pkg_info[removed_pkg]
+          del self.local_pkgs[removed_pkg]
+        # }}}
+
+        self.refresh_pkgs_treeview()
+
+    try:
+      print self.local_pkg_info['abcm2ps']
+    except KeyError:
+      print 'not found in local'
+    try:
+      print self.remote_pkg_info['abcm2ps']
+    except KeyError:
+      print 'not found in remote'
   # }}}
   
   # def on_update_db_popup_delete_event(self, widget, event, data=None): {{{

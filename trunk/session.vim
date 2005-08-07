@@ -49,7 +49,7 @@ set wildmenu
 let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
 let v:this_session=expand("<sfile>:p")
 silent only
-cd ~/Projectos/pacshell/pycman-0.0.29
+cd ~/Projectos/guzuta/trunk
 set shortmess=aoO
 badd +25 gui.py
 badd +1 TODO
@@ -96,8 +96,8 @@ setlocal foldnestmax=20
 setlocal foldtext=foldtext()
 setlocal formatoptions=tcq
 setlocal grepprg=
-setlocal iminsert=2
-setlocal imsearch=2
+setlocal iminsert=0
+setlocal imsearch=0
 setlocal include=s*\\(from\\|import\\)
 setlocal includeexpr=substitute(v:fname,'\\.','/','g')
 setlocal indentexpr=GetPythonIndent(v:lnum)
@@ -135,12 +135,32 @@ setlocal thesaurus=
 setlocal nowinfixheight
 setlocal wrap
 setlocal wrapmargin=0
-let s:l = 576 - ((534 * winheight(0) + 13) / 26)
+50
+normal zo
+143
+normal zc
+288
+normal zc
+327
+normal zc
+570
+normal zc
+617
+normal zo
+617
+normal zc
+697
+normal zo
+697
+normal zc
+50
+normal zo
+let s:l = 217 - ((216 * winheight(0) + 20) / 40)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-576
-normal! 02l
+217
+normal! 0
 set winheight=1 winwidth=20 shortmess=filnxtToO
 let s:sx = expand("<sfile>:p:r")."x.vim"
 if file_readable(s:sx)
