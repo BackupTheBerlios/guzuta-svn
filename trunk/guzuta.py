@@ -256,6 +256,59 @@ class shell:
       return None
   # }}}
 
+  # def install_fresh_updates(self): {{{
+  def install_fresh_updates(self):
+    ret = self.run_pacman_with('-Su --noconfirm')
+
+    (self.pid, self.exit_status) = os.wait()
+    return ret
+  # }}}
+
+  # def get_fresh_updates(self): {{{
+  def get_fresh_updates(self):
+    ret = self.run_pacman_with('-Su')
+    
+    # list of (pkg_name, version)
+    updates = []
+
+    if self.pacman.get_pipeit() == True:
+      (self.yesno, out) = self.__read_and_check_for_yesno__()
+
+      if self.pid != 0:
+        self.send_to_pacman('n')
+      (self.pid, self.exit_status) = os.wait()
+
+      pattern = '\n'
+      results = re.split(pattern, out)
+
+      for result in results:
+        if result != '' and result.startswith('Targets'):
+          out = result
+          pattern2 = '\s'
+          
+          results2 = re.split(pattern2, result)
+
+          for result2 in results2[1:]:
+            first_dash = result2.index('-')
+            last_dash = result2.rindex('-')
+            before_last_dash = result2[:last_dash].rindex('-')
+
+            name = result2[:before_last_dash]
+            version = result2[before_last_dash+1:last_dash]
+
+            #updates.append((name, version))
+            updates.append(name)
+            
+          #print 'update list: ', updates
+
+      ret_err = self.pacman.get_err_pipe().read()
+      #print 'ret_err: ', ret_err
+      return updates, out
+    else:
+      (self.pid, self.exit_status) = os.wait()
+
+  # }}}
+
   # def __compile_pkg_dict__(self, pacman_output): {{{
   def __compile_pkg_dict__(self, pacman_output):
     # THIS WORKS {{{

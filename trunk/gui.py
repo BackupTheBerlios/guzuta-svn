@@ -149,7 +149,7 @@ class gui:
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
   def __init__(self, read_pipe = None, write_pipe = None):
     # signals !!!
-    self.glade_file = 'pycman2.glade'
+    self.glade_file = 'guzuta2.glade'
     signals_dict = {\
 #    'on_treeview_row_activated': self.row_activated,
     'on_treeview_cursor_changed': self.cursor_changed,
@@ -478,14 +478,6 @@ class gui:
 
   # def on_update_db_clicked(self, button): {{{
   def on_update_db_clicked(self, button):
-    #self.update_db_popup.show_now()
-    #self.update_db_popup.show_all()
-    #self.all_widgets.get_widget('vbox3').show_now()
-    #self.all_widgets.get_widget('button2').show_now()
-    #self.all_widgets.get_widget('expander1').show_now()
-    #self.all_widgets.get_widget('label2').show_now()
-    #self.all_widgets.get_widget('output').show_now()
-    
     if button == self.update_db and self.__is_root__():
       ret, ret_err = self.shell.updatedb()
       #print ret, ret_err
@@ -495,6 +487,30 @@ class gui:
       response = self.update_db_popup.run()
 
       self.update_db_popup.hide()
+
+      updates, updates_text = self.shell.get_fresh_updates()
+      print updates
+
+      fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
+      fresh_updates_label = self.all_widgets.get_widget('fresh_updates_label')
+
+      fresh_updates_label.set_text(updates_text)
+
+      response = fresh_updates_dialog.run()
+      fresh_updates_dialog.hide()
+      
+      if response == gtk.RESPONSE_OK:
+        self.shell.install_fresh_updates()
+
+      #for (pkg_name, pkg_version) in updates:
+      for pkg_name in updates:
+        info = self.shell.info(pkg_name)
+        #print 'info: ', info
+        self.local_pkg_info[pkg_name] = info
+        #print self.local_pkg_info[pkg_name]
+        self.remote_pkg_info[pkg_name] = info
+        #print self.local_pkgs
+      self.__add_pkg_info_to_local_pkgs__(updates)
 
       return
       #self.update_db_popup.destroy()
@@ -763,8 +779,11 @@ class gui:
         # for removed_pkg in pkgs_to_remove: {{{
         for removed_pkg in pkgs_to_remove:
           # unset self.local_pkg_info and self.local_pkgs
-          del self.local_pkg_info[removed_pkg]
-          del self.local_pkgs[removed_pkg]
+          try:
+            del self.local_pkg_info[removed_pkg]
+            del self.local_pkgs[removed_pkg]
+          except KeyError:
+            pass
         # }}}
 
         self.refresh_pkgs_treeview()

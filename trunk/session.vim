@@ -34,6 +34,8 @@ set guioptions=agimrtT
 set helplang=en
 set history=50
 set hlsearch
+set iminsert=0
+set imsearch=0
 set incsearch
 set laststatus=2
 set mouse=a
@@ -51,16 +53,138 @@ let v:this_session=expand("<sfile>:p")
 silent only
 cd ~/Projectos/guzuta/trunk
 set shortmess=aoO
-badd +25 gui.py
+badd +490 gui.py
 badd +1 TODO
+badd +0 guzuta.py
 args gui.py
-edit gui.py
+edit guzuta.py
 set splitbelow splitright
+wincmd _ | wincmd |
+split
+1wincmd k
+wincmd w
 set nosplitbelow
 set nosplitright
 wincmd t
 set winheight=1 winwidth=1
+exe '1resize ' . ((&lines * 1 + 22) / 44)
+exe '2resize ' . ((&lines * 40 + 22) / 44)
 argglobal
+setlocal autoindent
+setlocal autoread
+setlocal nobinary
+setlocal bufhidden=
+setlocal buflisted
+setlocal buftype=
+setlocal nocindent
+setlocal cinkeys=0{,0},0),:,!^F,o,O,e
+setlocal cinoptions=
+setlocal cinwords=if,else,while,do,for,switch
+setlocal comments=s1:/*,mb:*,ex:*/,://,b:#,:XCOMM,n:>,fb:-
+setlocal commentstring=#%s
+setlocal complete=.,w,b,u,t,i
+setlocal nocopyindent
+setlocal define=
+setlocal dictionary=
+setlocal nodiff
+setlocal equalprg=
+setlocal errorformat=
+setlocal expandtab
+if &filetype != 'python'
+setlocal filetype=python
+endif
+setlocal foldcolumn=0
+setlocal foldenable
+setlocal foldexpr=0
+setlocal foldignore=#
+setlocal foldlevel=0
+setlocal foldmarker={{{,}}}
+setlocal foldmethod=marker
+setlocal foldminlines=1
+setlocal foldnestmax=20
+setlocal foldtext=foldtext()
+setlocal formatoptions=tcq
+setlocal grepprg=
+setlocal iminsert=0
+setlocal imsearch=0
+setlocal include=s*\\(from\\|import\\)
+setlocal includeexpr=substitute(v:fname,'\\.','/','g')
+setlocal indentexpr=GetPythonIndent(v:lnum)
+setlocal indentkeys=0{,0},:,!^F,o,O,e,<:>,=elif,=except
+setlocal noinfercase
+setlocal iskeyword=@,48-57,_,192-255
+setlocal keywordprg=
+setlocal nolinebreak
+setlocal nolisp
+setlocal nolist
+setlocal makeprg=
+setlocal matchpairs=(:),{:},[:]
+setlocal modeline
+setlocal modifiable
+setlocal nrformats=octal,hex
+setlocal nonumber
+setlocal path=
+setlocal nopreserveindent
+setlocal nopreviewwindow
+setlocal noreadonly
+setlocal noscrollbind
+setlocal shiftwidth=2
+setlocal noshortname
+setlocal nosmartindent
+setlocal softtabstop=0
+setlocal suffixesadd=.py
+setlocal swapfile
+if &syntax != 'python'
+setlocal syntax=python
+endif
+setlocal tabstop=2
+setlocal tags=
+setlocal textwidth=80
+setlocal thesaurus=
+setlocal nowinfixheight
+setlocal wrap
+setlocal wrapmargin=0
+100
+normal zo
+134
+normal zc
+225
+normal zc
+241
+normal zc
+259
+normal zc
+301
+normal zo
+303
+normal zc
+301
+normal zc
+509
+normal zc
+544
+normal zc
+589
+normal zc
+620
+normal zc
+629
+normal zc
+649
+normal zo
+649
+normal zc
+100
+normal zo
+let s:l = 589 - ((0 * winheight(0) + 0) / 1)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+589
+normal! 02l
+wincmd w
+argglobal
+edit gui.py
 setlocal autoindent
 setlocal autoread
 setlocal nobinary
@@ -137,30 +261,28 @@ setlocal wrap
 setlocal wrapmargin=0
 50
 normal zo
-143
+122
 normal zc
-288
+149
 normal zc
-327
-normal zc
-570
-normal zc
-617
+479
 normal zo
-617
+599
 normal zc
-697
-normal zo
-697
+646
 normal zc
 50
 normal zo
-let s:l = 217 - ((216 * winheight(0) + 20) / 40)
+let s:l = 152 - ((151 * winheight(0) + 20) / 40)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-217
-normal! 0
+152
+normal! 028l
+wincmd w
+2wincmd w
+exe '1resize ' . ((&lines * 1 + 22) / 44)
+exe '2resize ' . ((&lines * 40 + 22) / 44)
 set winheight=1 winwidth=20 shortmess=filnxtToO
 let s:sx = expand("<sfile>:p:r")."x.vim"
 if file_readable(s:sx)
