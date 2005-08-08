@@ -816,6 +816,7 @@ class gui:
     # search current, extra, community
     # self.pkgs_by_repo: dict of repos with lists of pairs with
     # (name, version)
+    # TODO: search in remote_pkg_info ??
     for repo, repo_list in self.pkgs_by_repo.iteritems():
       for pkg_info in repo_list:
         match = regexp.match(pkg_info[0]) # name
