@@ -511,21 +511,25 @@ class gui:
       response = fresh_updates_dialog.run()
       fresh_updates_dialog.hide()
       
+      fresh_updates_installed = False
+      
       if response == gtk.RESPONSE_OK:
         self.shell.install_fresh_updates()
+        fresh_updates_installed = True  
 
       #for (pkg_name, pkg_version) in updates:
+      # TODO: is this necessary?
       for pkg_name in updates:
         info = self.shell.info(pkg_name)
         #print 'info: ', info
-        self.local_pkg_info[pkg_name] = info
+        #self.local_pkg_info[pkg_name] = info
         #print self.local_pkg_info[pkg_name]
         self.remote_pkg_info[pkg_name] = info
         #print self.local_pkgs
-      self.__add_pkg_info_to_local_pkgs__(updates)
+      if fresh_updates_installed:
+        self.__add_pkg_info_to_local_pkgs__(updates)
 
       return
-      #self.update_db_popup.destroy()
     else:
       # display a warning window?? switch to root?? gksu???
       print 'not root!'
@@ -824,24 +828,31 @@ class gui:
     self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
     regexp = re.compile(self.search_entry.get_text())
-    
+    search_combobox = self.all_widgets.get_widget('search_combobox')
     # search current, extra, community
     # self.pkgs_by_repo: dict of repos with lists of pairs with
     # (name, version)
     # TODO: search in remote_pkg_info ??
-    #print self.pkgs_by_repo['current'][1]
-    for repo, repo_list in self.pkgs_by_repo.iteritems():
-      for pkg_info in repo_list:
-        match = regexp.match(pkg_info[0]) # name
-        if match:
-          try:
-            installed_version = self.local_pkgs[pkg_info[0]][1]
-          except KeyError:
-            installed_version = '--'
-          available_version = pkg_info[1]
-          self.liststore.append([False, pkg_info[0], installed_version, available_version])
-        
-    self.treeview.set_model(self.liststore)
+    where_to_search = search_combobox.get_active_text()
+    
+    if where_to_search != None:
+      for repo, repo_list in self.pkgs_by_repo.iteritems():
+        #for pkg_info in repo_list:
+        for name, version, description in repo_list:
+          if where_to_search == 'Version':
+            match = regexp.match(version)
+          elif where_to_search == 'Name':
+            match = regexp.match(name)
+          else: # description
+            match = regexp.match(description)
+          if match:
+            try:
+              installed_version = self.local_pkgs[name][1]
+            except KeyError:
+              installed_version = '--'
+            self.liststore.append([False, name, installed_version, version])
+          
+      self.treeview.set_model(self.liststore)
   # }}}
 
   # def on_clear_clicked(self): {{{
