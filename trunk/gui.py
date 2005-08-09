@@ -100,6 +100,7 @@ class gui:
     # positions are as follows:
     # name, version, description
     # TODO: sort this
+    #print self.local_pkgs
     keys = self.local_pkgs.keys()
     keys.sort()
     for k in keys:
@@ -220,7 +221,17 @@ class gui:
 
     self.all_widgets.signal_autoconnect(signals_dict)
 
+    print self.remote_pkg_info
+
     gtk.main()
+  # }}}
+
+  # def populate_remote_pkg_info(self): {{{
+  def populate_remote_pkg_info(self):
+    for repo,v in self.pkgs_by_repo.iteritems():
+      for pkg_desc in v:
+        name = pkg_desc[0]
+        self.remote_pkg_info[name] = self.shell.info(name)
   # }}}
 
   # def on_about_activate(self): {{{
@@ -238,7 +249,8 @@ class gui:
   
   # def populate_pkgs_by_repo(self): {{{
   def populate_pkgs_by_repo(self):
-    (self.pkgs_by_repo, self.pkgs) = self.shell.repofiles()
+    #(self.pkgs_by_repo, self.pkgs) = self.shell.repofiles()
+    (self.pkgs_by_repo, self.pkgs) = self.shell.repofiles2()
   # }}}
 
   # def populate_pkg_lists(self): {{{
@@ -817,6 +829,7 @@ class gui:
     # self.pkgs_by_repo: dict of repos with lists of pairs with
     # (name, version)
     # TODO: search in remote_pkg_info ??
+    #print self.pkgs_by_repo['current'][1]
     for repo, repo_list in self.pkgs_by_repo.iteritems():
       for pkg_info in repo_list:
         match = regexp.match(pkg_info[0]) # name

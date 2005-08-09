@@ -187,7 +187,7 @@ class shell:
 
   # def sigkill(self): {{{
   def sigkill(self):
-    print os.kill(self.pid, signal.SIGKILL)
+    os.kill(self.pid, signal.SIGKILL)
   # }}}
 
   # def interactive(self, what = ''): {{{
@@ -309,6 +309,67 @@ class shell:
 
   # }}}
 
+  # def __compile_pkg_dict_2__(self, pacman_output): {{{
+  def __compile_pkg_dict_2__(self, pacman_output):
+    pattern = '\n'
+    pattern2 = '/|\s'
+
+    results = re.split(pattern, pacman_output)
+
+    all = {}
+    pkgs = {}
+
+    i = 0
+    name = repo = version = description = ''
+    buf = ''
+    for r in results: # for every line
+      if r != '':
+        if r[0] != ' ': # if anything but description
+          if buf != '': # description of the pkg before
+            pkgs[name] = (repo, version, description)
+            try:
+              all[repo].append((name, version, description))
+            except KeyError:
+              all[repo] = []
+              all[repo].append((name, version, description))
+            buf = ''
+          results2 = re.split(pattern2, r) # split by / or \s
+          temp = []
+          # repo, name, version
+          for r2 in results2: # for every result
+            if i == 0:
+              repo = r2.strip()
+              i = i + 1
+            elif i == 1:
+              name = r2.strip()
+              i = i + 1
+            elif i == 2:
+              version = r2.strip()
+              i = i + 1
+        else: # starts with ' ', description
+          i = 0
+          if r != '':
+            if buf == '':
+              buf = r.strip()
+            else:
+              if buf[-1] == ' ':
+                buf = buf + r.strip()
+              else:
+                buf = buf + ' ' + r.strip()
+            description = buf
+
+    if buf != '': # the very last description
+      pkgs[name] = (repo, version, description)
+      try:
+        all[repo].append((name, version, description))
+      except KeyError:
+        all[repo] = []
+        all[repo].append((name, version, description))
+      buf = ''
+
+    return (all, pkgs)
+  # }}}
+
   # def __compile_pkg_dict__(self, pacman_output): {{{
   def __compile_pkg_dict__(self, pacman_output):
     # THIS WORKS {{{
@@ -344,6 +405,7 @@ class shell:
     results = re.split(pattern, pacman_output)
 
     all = {}
+
     i = 0
     name = repo = version = description = ''
     buf = ''
@@ -425,6 +487,23 @@ class shell:
       (self.pid, self.exit_status) = os.wait()
       #print self.check(all)
       return all
+    else:
+      (self.pid, self.exit_status) = os.wait()
+      return None
+  # }}}
+  
+  # def repofiles2(self): {{{
+  def repofiles2(self):
+    self.run_pacman_with('-Ss')
+
+    if self.pacman.get_pipeit() == True:
+
+      list = self.pacman.get_read_pipe().read()
+      #(all, pkgs) = self.__compile_from_repo_list_dict_2__(list)
+      (all, pkgs) = self.__compile_pkg_dict_2__(list)
+
+      (self.pid, self.exit_status) = os.wait()
+      return (all, pkgs)
     else:
       (self.pid, self.exit_status) = os.wait()
       return None
@@ -668,23 +747,23 @@ class shell:
       response = raw_input('Upgrade anyway? [Y/n] ')
 
       out = self.install_part_2(response)
-      print out,
+      #print out,
       response = raw_input()
       (exit_status, (yesno, out)) = self.install_part_3(response)
 
-      if exit_status == 0:
-        print out,
+      #if exit_status == 0:
+      #  print out,
       
       return
 
     if self.yesno:
       # pacman is querying for user input
-      print output,
+      #print output,
 
       response = raw_input()
 
       (exit_status, (yesno, out)) = self.install_part_3(response)
-      print out,
+      #print out,
 
       return
 
@@ -892,8 +971,8 @@ class shell:
   
   # def version(self): {{{
   def version(self):
-    print 'Pycman %s' % version
-    print 'Copyright (C) 2005 João Estêvão <trankas@gmail.com>'
+    print 'Guzuta %s' % version
+    print 'Copyright (C) 2005 Joao Estevao <trankas@gmail.com>'
     print ''
     print '''This program may be freely redistributed under
 the terms of the GNU General Public License'''

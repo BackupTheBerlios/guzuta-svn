@@ -1,1 +1,3 @@
-fix the install/remove pkg not appearing bug
+rearrage the repos to have the repos themselves, current, extra, community, and
+the pseudo-repos, installed, not installed, separately. this will mean to change
+the model for the repos treeview to a treestore model
