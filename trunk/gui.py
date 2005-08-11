@@ -221,7 +221,7 @@ class gui:
 
     self.all_widgets.signal_autoconnect(signals_dict)
 
-    print self.remote_pkg_info
+    #print self.remote_pkg_info
 
     gtk.main()
   # }}}
@@ -501,7 +501,7 @@ class gui:
       self.update_db_popup.hide()
 
       updates, updates_text = self.shell.get_fresh_updates()
-      print updates
+      #print updates
 
       fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
       fresh_updates_label = self.all_widgets.get_widget('fresh_updates_label')
@@ -721,14 +721,14 @@ class gui:
 
       self.install_pkg_popup.hide()
 
-      try:
-        print self.local_pkg_info['abcm2ps']
-      except KeyError:
-        print 'not found in local'
-      try:
-        print self.remote_pkg_info['abcm2ps']
-      except KeyError:
-        print 'not found in remote'
+      #try:
+      #  print self.local_pkg_info['abcm2ps']
+      #except KeyError:
+      #  print 'not found in local'
+      #try:
+      #  print self.remote_pkg_info['abcm2ps']
+      #except KeyError:
+      #  print 'not found in remote'
 
     #self.install_pkg_popup.hide()
   # }}}
@@ -804,14 +804,14 @@ class gui:
 
         self.refresh_pkgs_treeview()
 
-    try:
-      print self.local_pkg_info['abcm2ps']
-    except KeyError:
-      print 'not found in local'
-    try:
-      print self.remote_pkg_info['abcm2ps']
-    except KeyError:
-      print 'not found in remote'
+    #try:
+    #  print self.local_pkg_info['abcm2ps']
+    #except KeyError:
+    #  print 'not found in local'
+    #try:
+    #  print self.remote_pkg_info['abcm2ps']
+    #except KeyError:
+    #  print 'not found in remote'
   # }}}
   
   # def on_update_db_popup_delete_event(self, widget, event, data=None): {{{
