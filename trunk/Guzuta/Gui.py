@@ -150,7 +150,13 @@ class gui:
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
   def __init__(self, read_pipe = None, write_pipe = None):
     # signals !!!
-    self.glade_file = '../guzuta2.glade'
+    if os.path.exists('guzuta2.glade'):
+      self.glade_file = 'guzuta2.glade'
+    else:
+      print __name__
+      print os.getcwd()
+      print 'no glade file found!'
+      sys.exit(2)
     signals_dict = {\
 #    'on_treeview_row_activated': self.row_activated,
     'on_treeview_cursor_changed': self.cursor_changed,
