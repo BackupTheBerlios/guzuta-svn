@@ -18,7 +18,7 @@ import sys, os, posix
 import re
 #import gksu
 
-from guzuta import *
+from shell import *
 # }}}
 
 # def xor_two_dicts(a, b): {{{
@@ -150,7 +150,7 @@ class gui:
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
   def __init__(self, read_pipe = None, write_pipe = None):
     # signals !!!
-    self.glade_file = 'guzuta2.glade'
+    self.glade_file = '../guzuta2.glade'
     signals_dict = {\
 #    'on_treeview_row_activated': self.row_activated,
     'on_treeview_cursor_changed': self.cursor_changed,
