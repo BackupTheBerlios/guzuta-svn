@@ -122,7 +122,7 @@ class gui:
   
   # def __setup_repo_treeview__(self): {{{
   def __setup_repo_treeview__(self):
-    self.liststore_repos = gtk.ListStore(str)
+    self.treestore_repos = gtk.TreeStore(str)
 
     self.textrenderer_repos = gtk.CellRendererText()
     self.textrenderer_repos.set_property('weight', 400)
@@ -134,17 +134,20 @@ class gui:
     
     self.treeview_repos.append_column(self.repocolumn)
     
-    self.liststore_repos.set_sort_column_id(0, gtk.SORT_ASCENDING)
+    self.treestore_repos.set_sort_column_id(0, gtk.SORT_ASCENDING)
 
-    self.liststore_repos.append(['All'])
-    self.liststore_repos.append(['Installed'])
-    self.liststore_repos.append(['Not installed'])
+    iter0 = self.treestore_repos.append(None, ['Pseudo Repos'])
+    self.treestore_repos.append(iter0, ['All'])
+    self.treestore_repos.append(iter0, ['Installed'])
+    self.treestore_repos.append(iter0, ['Not installed'])
 
-    for repo,v in self.pkgs_by_repo.iteritems():
+    iter1 = self.treestore_repos.append(None, ['Repos'])
+    for repo, v in self.pkgs_by_repo.iteritems():
       repo = repo.capitalize()
-      self.liststore_repos.append([repo])
+      self.treestore_repos.append(iter1, [repo])
     
-    self.treeview_repos.set_model(self.liststore_repos)
+    self.treeview_repos.set_model(self.treestore_repos)
+    self.treeview_repos.expand_all()
   # }}}
 
   # def __init__(self, read_pipe = None, write_pipe = None): {{{

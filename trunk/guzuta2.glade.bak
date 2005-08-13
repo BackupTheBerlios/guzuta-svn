@@ -186,7 +186,7 @@
 
 	  <child>
 	    <widget class="GtkScrolledWindow" id="repos">
-	      <property name="width_request">106</property>
+	      <property name="width_request">64</property>
 	      <property name="visible">True</property>
 	      <property name="can_focus">True</property>
 	      <property name="hscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
@@ -212,7 +212,7 @@
 	    </widget>
 	    <packing>
 	      <property name="padding">0</property>
-	      <property name="expand">False</property>
+	      <property name="expand">True</property>
 	      <property name="fill">True</property>
 	    </packing>
 	  </child>
@@ -262,7 +262,7 @@
 Version
 Description</property>
 		      <property name="add_tearoffs">False</property>
-		      <property name="focus_on_click">True</property>
+		      <property name="focus_on_click">False</property>
 		    </widget>
 		    <packing>
 		      <property name="padding">0</property>
