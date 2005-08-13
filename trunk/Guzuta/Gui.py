@@ -18,7 +18,7 @@ import sys, os, posix
 import re
 #import gksu
 
-from shell import *
+from Shell import *
 # }}}
 
 # def xor_two_dicts(a, b): {{{
@@ -153,13 +153,17 @@ class gui:
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
   def __init__(self, read_pipe = None, write_pipe = None):
     # signals !!!
-    if os.path.exists('guzuta2.glade'):
-      self.glade_file = 'guzuta2.glade'
+    fname = '/usr/share/guzuta/guzuta2.glade'
+    if os.path.exists(fname):
+      self.glade_file = fname
     else:
-      print __name__
-      print os.getcwd()
-      print 'no glade file found!'
-      sys.exit(2)
+      if os.path.exists('guzuta2.glade'):
+        self.glade_file = 'guzuta2.glade'
+      else:
+        print __name__
+        print os.getcwd()
+        print 'no glade file found!'
+        sys.exit(2)
     signals_dict = {\
 #    'on_treeview_row_activated': self.row_activated,
     'on_treeview_cursor_changed': self.cursor_changed,

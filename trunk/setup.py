@@ -6,10 +6,10 @@ from distutils.core import setup
 
 setup(name='guzuta',
     version='0.0.1',
-    package_dir={'': 'Guzuta'},
+    package_dir={'guzuta': 'Guzuta'},
     packages=['guzuta'],
     data_files=[
                 ('/usr/share/guzuta', ['guzuta2.glade']),
-                ('/usr/bin'
+                ('/usr/bin', ['guzuta'])
       ]
     )
