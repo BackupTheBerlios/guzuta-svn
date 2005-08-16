@@ -364,6 +364,8 @@ class gui:
 
     else: # treeview of repos
       repo = treemodel.get_value(iter, 0)
+      if repo == 'Pseudo Repos' or repo == 'Repos':
+        return
       # fill treeview with pkgs from 'repo'
       self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
   # }}}

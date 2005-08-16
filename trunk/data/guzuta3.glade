@@ -2133,7 +2133,7 @@ of this License.
 	<widget class="GtkHPaned" id="hpaned1">
 	  <property name="visible">True</property>
 	  <property name="can_focus">True</property>
-	  <property name="position">0</property>
+	  <property name="position">135</property>
 
 	  <child>
 	    <widget class="GtkScrolledWindow" id="scrolledwindow5">
@@ -2280,7 +2280,7 @@ Description</property>
 		<widget class="GtkVPaned" id="vpaned1">
 		  <property name="visible">True</property>
 		  <property name="can_focus">True</property>
-		  <property name="position">222</property>
+		  <property name="position">304</property>
 
 		  <child>
 		    <widget class="GtkScrolledWindow" id="scrolledwindow6">
