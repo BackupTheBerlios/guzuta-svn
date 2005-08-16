@@ -5,12 +5,12 @@
 # imports {{{
 #from Guzuta.gui import *
 #from Guzuta import *
-import guzuta
+import libguzuta
 # }}}
 
 # main {{{
 if __name__ == '__main__':
-  g = guzuta.gui()
+  g = libguzuta.gui()
   #dir()
 # }}}
 

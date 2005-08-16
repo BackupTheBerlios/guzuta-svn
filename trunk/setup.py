@@ -1,15 +1,12 @@
-#! /usr/bin/env python
-# -*- coding: UTF-8 -*
-# vim: set foldmethod=marker:
+#!/usr/bin/env python
 
 from distutils.core import setup
 
 setup(name='guzuta',
-    version='0.0.1',
-    package_dir={'guzuta': 'Guzuta'},
-    packages=['guzuta'],
-    data_files=[
-                ('/usr/share/guzuta', ['guzuta2.glade']),
-                ('/usr/bin', ['guzuta'])
-      ]
-    )
+      version='0.0.1',
+      package_dir={'': 'src'},
+      packages=['libguzuta'],
+      data_files=[
+                  ('/usr/share/guzuta/', ['data/guzuta2.glade']),
+                ('/usr/bin', ['src/guzuta'])],
+      )
