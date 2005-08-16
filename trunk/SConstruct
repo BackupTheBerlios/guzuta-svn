@@ -1,0 +1,3 @@
+env = Environment()  # Initialize the environment
+
+env.Program('src/guzuta')
