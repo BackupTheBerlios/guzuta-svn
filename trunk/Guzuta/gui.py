@@ -18,7 +18,7 @@ import sys, os, posix
 import re
 #import gksu
 
-from Shell import *
+from shell import *
 # }}}
 
 # def xor_two_dicts(a, b): {{{
@@ -156,9 +156,12 @@ class gui:
     fname = '/usr/share/guzuta/guzuta2.glade'
     if os.path.exists(fname):
       self.glade_file = fname
+      print 'guzuta glade file found in <%s>' % fname
     else:
+      print 'guzuta glade file not found in <%s>' % fname
       if os.path.exists('guzuta2.glade'):
         self.glade_file = 'guzuta2.glade'
+        print 'guzuta glade file found in <%s>' % fname
       else:
         print __name__
         print os.getcwd()
