@@ -2,9 +2,6 @@
 # -*- coding: UTF-8 -*
 # vim: set foldmethod=marker:
 
-# TODO: find a way to install/remove a pkg and update the database and show the
-# text in a popup window
-
 # imports {{{
 import pygtk
 pygtk.require('2.0')

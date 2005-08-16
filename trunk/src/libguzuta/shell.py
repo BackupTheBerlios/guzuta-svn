@@ -5,8 +5,6 @@
 import os, sys, posix, signal, re
 from subprocess import *
 
-version = '0.0.0.30'
-
 #class pacman: {{{
 class pacman:
   """runs pacman. specify args for arguments passed, pacman_location for the
