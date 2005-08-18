@@ -272,7 +272,8 @@ class shell:
     if self.pacman.get_pipeit() == True:
       (self.yesno, out) = self.__read_and_check_for_yesno__()
 
-      if self.pid != 0:
+      if self.yesno:
+      #if self.pid != 0:
         self.send_to_pacman('n')
       (self.pid, self.exit_status) = os.wait()
 
@@ -908,7 +909,6 @@ class shell:
     else:
       (self.pid, self.exit_status) = os.wait()
       return None
-
   # }}}
   
   #def remove_nodeps(self, what = ''): {{{

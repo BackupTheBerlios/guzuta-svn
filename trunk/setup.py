@@ -8,5 +8,6 @@ setup(name='guzuta',
       packages=['libguzuta'],
       data_files=[
                   ('/usr/share/guzuta/', ['data/guzuta2.glade']),
+                  ('/usr/share/guzuta/', ['data/guzuta3.glade']),
                 ('/usr/bin', ['src/guzuta'])],
       )

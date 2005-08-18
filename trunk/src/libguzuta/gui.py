@@ -150,7 +150,8 @@ class gui:
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
   def __init__(self, read_pipe = None, write_pipe = None):
     # signals !!!
-    fname = '/usr/share/guzuta/guzuta2.glade'
+    #fname = '/usr/share/guzuta/guzuta2.glade'
+    fname = '/usr/share/guzuta/guzuta3.glade'
     if os.path.exists(fname):
       self.glade_file = fname
       print 'guzuta glade file found in <%s>' % fname
@@ -171,7 +172,7 @@ class gui:
     'on_treeview_repos_cursor_changed': self.cursor_changed,
     'on_treeview_repos_select_cursor_row': self.select_cursor_row,
     'on_mainwindow_delete_event': self.delete_event,
-    'on_mainwindow_destroy': self.destroy,
+    'on_mainwindow_destroy_event': self.destroy,
     'on_update_db_popup_delete_event': self.on_update_db_popup_delete_event,
     'on_update_db_popup_destroy': self.destroy,
     'on_quit_activate': self.on_quit_activate,
@@ -296,6 +297,43 @@ class gui:
   #  print 'path :',path
   #  print 'column :',column
   # }}}
+  
+  # def __add_pkg_info_markuped_to_pkg_info_label__(self, lines, {{{
+  # installed = True):
+  def __add_pkg_info_markuped_to_pkg_info_label__(self, lines,
+      installed = True):
+    pkg_info_label = self.all_widgets.get_widget('pkg_info_label')
+    #iterator = text_buffer.get_iter_at_offset(0)
+    #table = text_buffer.get_tag_table()
+    #tag = table.lookup('bold')
+    #if tag == None:
+    #  tag = text_buffer.create_tag('bold', weight=pango.WEIGHT_BOLD)
+    
+    label_text = ''
+    if not installed:
+      #text_buffer.insert_with_tags_by_name(iterator,
+      #    'Package not installed!\n\n', 'bold')
+      label_text = label_text + '<b>Package not installed!</b>\n\n'
+      
+    pattern = ':'
+
+    # add text accordingly, 'bolding' the 'Name    :', etc
+    for line in lines:
+      if line != '':
+        match_object = re.search(pattern, line)
+        
+        if match_object != None:
+          #text_buffer.insert_with_tags_by_name(iterator,
+          #    line[:match_object.start()+1], 'bold')
+          #text_buffer.insert(iterator, line[match_object.start()+1:] + '\n')
+          label_text = label_text + '<b>' + line[:match_object.start()+1] +\
+          '</b>\n'
+        else:
+          #text_buffer.insert(iterator, line + '\n')
+          label_text = label_text + line + '\n'
+    print 'setting label text to: <%s>' % label_text
+    pkg_info_label.set_markup(label_text)
+  # }}}
 
   # def __add_pkg_info_markuped_to_text_buffer__(self, text_buffer, {{{
   # lines, installed = True):
@@ -344,8 +382,8 @@ class gui:
         info = self.shell.local_info(name)
         self.local_pkg_info[name] = info
       
-      buffer = gtk.TextBuffer()
-      self.information_text.set_buffer(buffer)
+      #buffer = gtk.TextBuffer()
+      #self.information_text.set_buffer(buffer)
 
       if info == None:
         try:
@@ -354,10 +392,13 @@ class gui:
           remote_info = self.shell.info(name)
           self.remote_pkg_info[name] = remote_info
         
-        self.__add_pkg_info_markuped_to_text_buffer__(buffer, remote_info,
+        #self.__add_pkg_info_markuped_to_text_buffer__(buffer, remote_info,
+        #    installed = False)
+        self.__add_pkg_info_markuped_to_pkg_info_label__(remote_info,
             installed = False)
       else:
-        self.__add_pkg_info_markuped_to_text_buffer__(buffer, info)
+        #self.__add_pkg_info_markuped_to_text_buffer__(buffer, info)
+        self.__add_pkg_info_markuped_to_pkg_info_label__(info)
 
     else: # treeview of repos
       repo = treemodel.get_value(iter, 0)
