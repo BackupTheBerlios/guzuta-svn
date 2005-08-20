@@ -231,6 +231,9 @@ class gui:
     self.__setup_pkg_treeview__()
     self.__setup_repo_treeview__()
 
+    if not self.__is_root__():
+      self.__disable_all_root_widgets()
+
     self.main_window.show_all()
 
     self.all_widgets.signal_autoconnect(signals_dict)
@@ -238,6 +241,13 @@ class gui:
     #print self.remote_pkg_info
 
     gtk.main()
+  # }}}
+
+  # def __disable_all_root_widgets(self): {{{
+  def __disable_all_root_widgets(self):
+    self.all_widgets.get_widget('update_db').set_sensitive(False)
+    self.all_widgets.get_widget('install_pkg').set_sensitive(False)
+    self.all_widgets.get_widget('remove_pkg').set_sensitive(False)
   # }}}
 
   # def populate_remote_pkg_info(self): {{{
@@ -320,19 +330,35 @@ class gui:
     # add text accordingly, 'bolding' the 'Name    :', etc
     for line in lines:
       if line != '':
+        print 'line: ', line
+
+        try:
+          if line.index('<'):
+            line = line.replace('<', '&lt')
+          if line.index('>'):
+            line = line.replace('>', '&gt')
+          if line.index('@'):
+            line = line.replace('@', '.at.')
+        except ValueError:
+          pass
+
+        print 'line after replaces: ', line
         match_object = re.search(pattern, line)
         
         if match_object != None:
           #text_buffer.insert_with_tags_by_name(iterator,
           #    line[:match_object.start()+1], 'bold')
           #text_buffer.insert(iterator, line[match_object.start()+1:] + '\n')
-          label_text = label_text + '<b>' + line[:match_object.start()+1] +\
-          '</b>\n'
+          print 'line altered: ',  line[:match_object.start()+1].strip()
+          label_text = label_text + '<b>' +\
+          line[:match_object.start()+1].strip() +\
+          '</b>' + line[match_object.start()+1:].strip() + '\n'
         else:
           #text_buffer.insert(iterator, line + '\n')
-          label_text = label_text + line + '\n'
+          label_text = label_text + line.strip() + '\n'
     print 'setting label text to: <%s>' % label_text
     pkg_info_label.set_markup(label_text)
+    #pkg_info_label.set_text(label_text)
   # }}}
 
   # def __add_pkg_info_markuped_to_text_buffer__(self, text_buffer, {{{
