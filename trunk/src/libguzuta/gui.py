@@ -15,6 +15,8 @@ import sys, os, posix
 import re
 #import gksu
 
+import egg.trayicon
+
 from shell import *
 # }}}
 
@@ -44,6 +46,12 @@ def xor_two_dicts(a, b):
   return ret
 # }}}
     
+#class trayicon:
+#  def __init__(self):
+#    t = egg.trayicon.TrayIcon('Test!')
+#    t.add(gtk.Label('Hello'))
+#    t.show_all()
+
 # class gui: {{{
 class gui:
   # def __setup_pkg_treeview__(self): {{{
@@ -187,6 +195,12 @@ class gui:
     'on_clear_clicked': self.on_clear_clicked,
     'on_search_entry_activate': self.on_search_clicked,
     'on_about_activate': self.on_about_activate
+    #'on_systray_eventbox_button_press_event':\
+    #    self.on_systray_eventbox_button_press_event,
+    #'on_systray_eventbox_motion_notify_event':\
+    #    self.on_systray_eventbox_motion_notify_event,
+    #'on_systray_eventbox_leave_notify_event':\
+    #    self.on_systray_eventbox_leave_notify_event
     }
     # end signals
     #self.pacman = pacman(self)
@@ -196,6 +210,7 @@ class gui:
     self.local_pkg_info = {}
     self.remote_pkg_info = {}
     self.not_installed = {}
+    self.trayicon = None
 
     self.shell = shell(command_line = None, interactive = True)
     self.populate_pkg_lists()
@@ -240,7 +255,44 @@ class gui:
 
     #print self.remote_pkg_info
 
+    # trayicon
+    self.__build_trayicon__()
+    self.trayicon.show_all()
+
     gtk.main()
+  # }}}
+
+  # def on_systray_eventbox_button_press_event(self): {{{
+  def on_systray_eventbox_button_press_event(self, widget, event):
+    if event.button == 1: # left click
+      print 'left click!'
+    if event.button == 2: # middle click
+      print 'middle click!'
+    if event.button == 3: # right click
+      print 'right click!'
+  # }}}
+
+  # def on_systray_eventbox_motion_notify_event(self): {{{
+  def on_systray_eventbox_motion_notify_event(self):
+    print 'systray motion notify event'
+  # }}}
+
+  # def on_systray_eventbox_leave_notify_event(self): {{{
+  def on_systray_eventbox_leave_notify_event(self):
+    print 'on_systray_eventbox_leave_notify_event'
+  # }}}
+
+  # def __build_trayicon__(self): {{{
+  def __build_trayicon__(self):
+    self.trayicon = egg.trayicon.TrayIcon('Tray!')
+    #self.trayicon.add(gtk.Label('Teste!'))
+    #systray_eventbox = self.all_widgets.get_widget('systray_eventbox')
+    systray_eventbox = gtk.EventBox()
+    systray_eventbox.connect('button_press_event',\
+        self.on_systray_eventbox_button_press_event)
+    systray_eventbox.connect('motion_notify_event',\
+        self.on_systray_eventbox_motion_notify_event)
+    self.trayicon.add(systray_eventbox)
   # }}}
 
   # def __disable_all_root_widgets(self): {{{
