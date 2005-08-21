@@ -572,7 +572,8 @@ class gui:
 
   # def on_update_db_clicked(self, button): {{{
   def on_update_db_clicked(self, button):
-    if button == self.update_db and self.__is_root__():
+    #if button == self.update_db and self.__is_root__():
+    if button == self.update_db:
       ret, ret_err = self.shell.updatedb()
       #print ret, ret_err
       #self.shell.get_read_pipe()
@@ -583,7 +584,12 @@ class gui:
       self.update_db_popup.hide()
 
       updates, updates_text = self.shell.get_fresh_updates()
-      #print updates
+      #print 'updates: ', updates
+      if updates == []:
+        no_updates_dialog = self.all_widgets.get_widget('no_updates_dialog')
+        no_updates_dialog.run()
+        no_updates_dialog.hide()
+        return
 
       fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
       fresh_updates_label = self.all_widgets.get_widget('fresh_updates_label')
