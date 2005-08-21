@@ -293,6 +293,9 @@ class gui:
     systray_eventbox.connect('motion_notify_event',\
         self.on_systray_eventbox_motion_notify_event)
     self.trayicon.add(systray_eventbox)
+    img = gtk.Image()
+    img.set_from_stock(gtk.STOCK_MISSING_IMAGE, gtk.ICON_SIZE_MENU)
+    systray_eventbox.add(img)
   # }}}
 
   # def __disable_all_root_widgets(self): {{{
