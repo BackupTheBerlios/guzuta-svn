@@ -285,17 +285,23 @@ class gui:
   # def __build_trayicon__(self): {{{
   def __build_trayicon__(self):
     self.trayicon = egg.trayicon.TrayIcon('Tray!')
-    #self.trayicon.add(gtk.Label('Teste!'))
-    #systray_eventbox = self.all_widgets.get_widget('systray_eventbox')
+
     systray_eventbox = gtk.EventBox()
+
+    systray_eventbox.set_visible_window(False)
+    systray_eventbox.set_events(gtk.gdk.POINTER_MOTION_MASK)
+
     systray_eventbox.connect('button_press_event',\
         self.on_systray_eventbox_button_press_event)
     systray_eventbox.connect('motion_notify_event',\
         self.on_systray_eventbox_motion_notify_event)
-    self.trayicon.add(systray_eventbox)
+    
     img = gtk.Image()
-    img.set_from_stock(gtk.STOCK_MISSING_IMAGE, gtk.ICON_SIZE_MENU)
+    #img.set_from_stock(gtk.STOCK_MISSING_IMAGE, gtk.ICON_SIZE_MENU)
+    img.set_from_file('/usr/share/guzuta/guzuta_icon_transparent.png')
     systray_eventbox.add(img)
+    
+    self.trayicon.add(systray_eventbox)
   # }}}
 
   # def __disable_all_root_widgets(self): {{{

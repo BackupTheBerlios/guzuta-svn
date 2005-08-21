@@ -9,5 +9,6 @@ setup(name='guzuta',
       data_files=[
                   ('/usr/share/guzuta/', ['data/guzuta2.glade']),
                   ('/usr/share/guzuta/', ['data/guzuta3.glade']),
-                ('/usr/bin', ['src/guzuta'])],
+                  ('/usr/share/guzuta/', ['data/guzuta_icon_transparent.png']),
+                  ('/usr/bin', ['src/guzuta'])],
       )
