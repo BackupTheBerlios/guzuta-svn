@@ -641,6 +641,8 @@ class gui:
 
       if self.shell.get_exit_status() != 0:
         # something has gone horribly wrong
+        # TODO: display pacman_error_dialog with ret_err
+        pass
       #print ret, ret_err
       #self.shell.get_read_pipe()
       self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
