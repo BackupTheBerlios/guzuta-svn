@@ -176,6 +176,11 @@ class shell:
     }
     # }}}
 
+  # def get_exit_status(self): {{{
+  def get_exit_status(self):
+    return self.exit_status
+  # }}}
+  
   # def sigint(self, signum, frame): {{{
   def sigint(self, signum, frame):
     # print 'Signal handler called with signal', signum
@@ -721,9 +726,9 @@ class shell:
     # HACK
     (self.yesno, out) = self.__read_and_check_for_yesno__()
 
-    (self.pid, exit_status) = os.wait()
+    (self.pid, self.exit_status) = os.wait()
     
-    return (exit_status, (self.yesno, out))
+    return (self.exit_status, (self.yesno, out))
   # }}}
 
   # def install_part_2_no_wait(self, txt_to_pacman): {{{
@@ -748,7 +753,7 @@ class shell:
       out = self.install_part_2(response)
       #print out,
       response = raw_input()
-      (exit_status, (yesno, out)) = self.install_part_3(response)
+      (self.exit_status, (yesno, out)) = self.install_part_3(response)
 
       #if exit_status == 0:
       #  print out,
@@ -761,7 +766,7 @@ class shell:
 
       response = raw_input()
 
-      (exit_status, (yesno, out)) = self.install_part_3(response)
+      (self.exit_status, (yesno, out)) = self.install_part_3(response)
       #print out,
 
       return
@@ -845,9 +850,9 @@ class shell:
       
     self.run_pacman_with('-S ' + what + ' --noconfirm')
 
-    (self.pid, exit_status) = os.wait()
+    (self.pid, self.exit_status) = os.wait()
 
-    return exit_status
+    return self.exit_status
   # }}}
   
   # def __compile_pkg_info__(self, pacman_out): {{{
@@ -923,8 +928,8 @@ class shell:
     self.run_pacman_with('-Rd ' + what)
     
     out = self.__capture_output__()
-    (pid, exit_status) = os.wait()
-    if exit_status != 0:
+    (pid, self.exit_status) = os.wait()
+    if self.exit_status != 0:
       return False
     return True
   # }}}
@@ -941,16 +946,16 @@ class shell:
     self.run_pacman_with('-R ' + what)
     
     out = self.__capture_output__()
-    (pid, exit_status) = os.wait()
+    (pid, self.exit_status) = os.wait()
     
     dependencies = []
-    if exit_status != 0:
+    if self.exit_status != 0:
       pattern = '\n'
       tmp = re.split(pattern, out)
       for string in tmp:
         if string != '':
           dependencies.append(string[string.rfind(' ')+1:])
-    return (exit_status, dependencies, out)
+    return (self.exit_status, dependencies, out)
   # }}}
 
   # help, quit, version {{{

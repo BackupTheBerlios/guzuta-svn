@@ -636,6 +636,11 @@ class gui:
     #if button == self.update_db and self.__is_root__():
     if button == self.update_db:
       ret, ret_err = self.shell.updatedb()
+      
+      #print self.shell.get_exit_status()
+
+      if self.shell.get_exit_status() != 0:
+        # something has gone horribly wrong
       #print ret, ret_err
       #self.shell.get_read_pipe()
       self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
