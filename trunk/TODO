@@ -1,3 +1,8 @@
-rearrage the repos to have the repos themselves, current, extra, community, and
-the pseudo-repos, installed, not installed, separately. this will mean to change
-the model for the repos treeview to a treestore model
+0.0.2
+=====
+
+* View pacman's installation log /var/log/pacman.log
+* Search by group
+* Support pacman -U
+* Tray icon
+* Use libpypac

@@ -838,6 +838,21 @@ class shell:
     # }}}
   # }}}
 
+  # def install_pkg_from_file(self, pathname): {{{
+  def install_pkg_from_file(self, pathname):
+    if pathname == '' or None:
+      return (None, None)
+    
+    self.run_pacman_with('-U ' + pathname)
+    
+    (self.pid, self.exit_status) = os.wait()
+
+    ret = self.pacman.get_read_pipe().read()
+    ret_err = self.pacman.get_err_pipe().read()
+
+    return (ret, ret_err)
+  # }}}
+
   # def install_packages_noconfirm(self, what = ''): {{{
   def install_packages_noconfirm(self, pkg_list):
     if not self.__is_root__():

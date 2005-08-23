@@ -194,7 +194,10 @@ class gui:
     'on_search_clicked': self.on_search_clicked,
     'on_clear_clicked': self.on_clear_clicked,
     'on_search_entry_activate': self.on_search_clicked,
-    'on_about_activate': self.on_about_activate
+    'on_about_activate': self.on_about_activate,
+    'on_install_pkg_from_file_button_clicked':\
+        self.on_install_pkg_from_file_activate,
+    'on_install_pkg_from_file_activate': self.on_install_pkg_from_file_activate
     #'on_systray_eventbox_button_press_event':\
     #    self.on_systray_eventbox_button_press_event,
     #'on_systray_eventbox_motion_notify_event':\
@@ -246,8 +249,13 @@ class gui:
     self.__setup_pkg_treeview__()
     self.__setup_repo_treeview__()
 
+    self.all_widgets.get_widget('search_combobox').set_active(0)
+    
     if not self.__is_root__():
-      self.__disable_all_root_widgets()
+      self.__disable_all_root_widgets__()
+      not_root_dialog = self.all_widgets.get_widget('not_root_dialog')
+      not_root_dialog.run()
+      not_root_dialog.hide()
 
     self.main_window.show_all()
 
@@ -260,6 +268,57 @@ class gui:
     self.trayicon.show_all()
 
     gtk.main()
+  # }}}
+
+  # def on_install_pkg_from_file_activate(self, menuitem): {{{
+  def on_install_pkg_from_file_activate(self, menuitem):
+    pkg_filechooser_dialog =\
+    self.all_widgets.get_widget('pkg_filechooser_dialog')
+    
+    filter = gtk.FileFilter()
+    filter.set_name('Pacman Files')
+    filter.add_pattern('*.pkg.tar.gz')
+
+    pkg_filechooser_dialog.add_filter(filter)
+
+    pkg_filechooser_dialog.set_current_folder('/var/cache/pacman/pkg/')
+    response = pkg_filechooser_dialog.run()
+
+    pkg_filechooser_dialog.hide()
+    if response == gtk.RESPONSE_OK:
+      pathname = pkg_filechooser_dialog.get_filename()
+      
+      install_pkg_are_you_sure_dialog =\
+      self.all_widgets.get_widget('install_pkg_are_you_sure_dialog')
+
+      install_are_you_sure_label =\
+      self.all_widgets.get_widget('install_are_you_sure_label')
+      
+      index = pathname.rfind('/')
+
+      pkg = pathname[index+1:]
+      pkg = pkg[:pkg.find('.')]
+
+      install_are_you_sure_label.set_text(pkg)
+
+      response = install_pkg_are_you_sure_dialog.run()
+      install_pkg_are_you_sure_dialog.hide()
+
+      if response == gtk.RESPONSE_OK:
+        print 'installing: ' + pathname
+        ret,ret_err = self.shell.install_pkg_from_file(pathname)
+        if self.shell.get_exit_status() == 0:
+          install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
+          install_pkg_popup.run()
+          install_pkg_popup.hide()
+        else:
+          print 'ret: ', ret
+          print 'ret_err: ', ret_err
+      else:
+        return
+    else:
+      return
+    
   # }}}
 
   # def on_systray_eventbox_button_press_event(self): {{{
@@ -304,11 +363,13 @@ class gui:
     self.trayicon.add(systray_eventbox)
   # }}}
 
-  # def __disable_all_root_widgets(self): {{{
-  def __disable_all_root_widgets(self):
+  # def __disable_all_root_widgets__(self): {{{
+  def __disable_all_root_widgets__(self):
     self.all_widgets.get_widget('update_db').set_sensitive(False)
     self.all_widgets.get_widget('install_pkg').set_sensitive(False)
     self.all_widgets.get_widget('remove_pkg').set_sensitive(False)
+    self.all_widgets.get_widget('install_pkg_from_file').set_sensitive(False)
+    self.all_widgets.get_widget('install_pkg_from_file_button').set_sensitive(False)
   # }}}
 
   # def populate_remote_pkg_info(self): {{{
@@ -390,34 +451,35 @@ class gui:
 
     # add text accordingly, 'bolding' the 'Name    :', etc
     for line in lines:
+      line = line.strip()
       if line != '':
-        print 'line: ', line
+        #print 'line: ', line
 
         try:
           if line.index('<'):
-            line = line.replace('<', '&lt')
+            line = line.replace('<', ' ')
           if line.index('>'):
-            line = line.replace('>', '&gt')
+            line = line.replace('>', ' ')
           if line.index('@'):
             line = line.replace('@', '.at.')
         except ValueError:
           pass
 
-        print 'line after replaces: ', line
+        #print 'line after replaces: <%s> '% line
         match_object = re.search(pattern, line)
         
         if match_object != None:
           #text_buffer.insert_with_tags_by_name(iterator,
           #    line[:match_object.start()+1], 'bold')
           #text_buffer.insert(iterator, line[match_object.start()+1:] + '\n')
-          print 'line altered: ',  line[:match_object.start()+1].strip()
+          #print 'line altered: ',  line[:match_object.start()+1].strip()
           label_text = label_text + '<b>' +\
           line[:match_object.start()+1].strip() +\
           '</b>' + line[match_object.start()+1:].strip() + '\n'
         else:
           #text_buffer.insert(iterator, line + '\n')
           label_text = label_text + line.strip() + '\n'
-    print 'setting label text to: <%s>' % label_text
+    #print 'setting label text to: <%s>' % label_text
     pkg_info_label.set_markup(label_text)
     #pkg_info_label.set_text(label_text)
   # }}}
@@ -510,9 +572,6 @@ class gui:
         available_version = self.pkgs[name][1]
       except KeyError:
         available_version = '--'
-      
-      buffer = gtk.TextBuffer()
-      self.information_text.set_buffer(buffer)
       
       new_liststore.append([False, name, installed_version, available_version])
     self.liststore = new_liststore
@@ -641,8 +700,12 @@ class gui:
 
       if self.shell.get_exit_status() != 0:
         # something has gone horribly wrong
-        # TODO: display pacman_error_dialog with ret_err
-        pass
+        pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
+        pacman_error_dialog = self.all_widgets.get_widget('pacman_error_dialog')
+        pacman_error_label.set_text(ret_err)
+        pacman_error_dialog.run()
+        pacman_error_dialog.hide()
+        return
       #print ret, ret_err
       #self.shell.get_read_pipe()
       self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
@@ -835,14 +898,11 @@ class gui:
     if retcode == False:
       # cancel
       (exit_status, out) = self.shell.install_part_3('n')
-      # TODO: check for proper pkg removal
-      #self.shell.sigkill()
       print 'retcode was False, bailing now with exit_status: ',\
         exit_status, out
       return
     elif retcode == True:
       # force upgrade 
-      #self.shell.sigkill()
       #exit_status = self.shell.install_packages_noconfirm(pkgs_to_install)
       out = self.shell.install_part_2('Y')
       (exit_status, out) = self.shell.install_part_3('Y')
@@ -988,6 +1048,8 @@ class gui:
     # search current, extra, community
     # self.pkgs_by_repo: dict of repos with lists of pairs with
     # (name, version)
+    # TODO: use search_combobox.get_active() instead of get_active_text()?? 
+    #       better for i18n? cleaner?
     # TODO: search in remote_pkg_info ??
     where_to_search = search_combobox.get_active_text()
     
@@ -1009,6 +1071,11 @@ class gui:
             self.liststore.append([False, name, installed_version, version])
           
       self.treeview.set_model(self.liststore)
+    else: # this should not happed but it stays here for completeness
+      no_search_selected_dialog =\
+      self.all_widgets.get_widget('no_search_selected_dialog')
+      no_search_selected_dialog.run()
+      no_search_selected_dialog.hide()
   # }}}
 
   # def on_clear_clicked(self): {{{
