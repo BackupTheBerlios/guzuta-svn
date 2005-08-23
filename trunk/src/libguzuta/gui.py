@@ -197,7 +197,9 @@ class gui:
     'on_about_activate': self.on_about_activate,
     'on_install_pkg_from_file_button_clicked':\
         self.on_install_pkg_from_file_activate,
-    'on_install_pkg_from_file_activate': self.on_install_pkg_from_file_activate
+    'on_install_pkg_from_file_activate':\
+        self.on_install_pkg_from_file_activate,
+    'on_pacman_log_activate': self.on_pacman_log_activate
     #'on_systray_eventbox_button_press_event':\
     #    self.on_systray_eventbox_button_press_event,
     #'on_systray_eventbox_motion_notify_event':\
@@ -268,6 +270,27 @@ class gui:
     self.trayicon.show_all()
 
     gtk.main()
+  # }}}
+
+  # def on_pacman_log_activate(self, menuitem): {{{
+  def on_pacman_log_activate(self, menuitem):
+    pacman_log = open('/var/log/pacman.log', 'r')
+
+    buffer = gtk.TextBuffer()
+    #log = pacman_log.read()
+    lines = pacman_log.readlines()
+    start = buffer.get_start_iter()
+    
+    for line in lines:
+      buffer.insert(start, line, len(line))
+    pacman_log_dialog = self.all_widgets.get_widget('pacman_log_dialog')
+
+    pacman_log_textview = self.all_widgets.get_widget('pacman_log_textview')
+
+    pacman_log_textview.set_buffer(buffer)
+
+    pacman_log_dialog.run()
+    pacman_log_dialog.hide()
   # }}}
 
   # def on_install_pkg_from_file_activate(self, menuitem): {{{
