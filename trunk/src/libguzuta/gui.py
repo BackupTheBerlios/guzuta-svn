@@ -165,8 +165,8 @@ class gui:
       print 'guzuta glade file found in <%s>' % fname
     else:
       print 'guzuta glade file not found in <%s>' % fname
-      if os.path.exists('guzuta2.glade'):
-        self.glade_file = 'guzuta2.glade'
+      if os.path.exists('guzuta3.glade'):
+        self.glade_file = 'guzuta3.glade'
         print 'guzuta glade file found in <%s>' % fname
       else:
         print __name__
@@ -199,7 +199,10 @@ class gui:
         self.on_install_pkg_from_file_activate,
     'on_install_pkg_from_file_activate':\
         self.on_install_pkg_from_file_activate,
-    'on_pacman_log_activate': self.on_pacman_log_activate
+    'on_pacman_log_activate': self.on_pacman_log_activate,
+    'on_treeview_button_press_event': self.on_treeview_button_press_event,
+    'on_install_popup_menu_activate': self.on_install_popup_menu_activate,
+    'on_remove_popup_menu_activate': self.on_remove_popup_menu_activate
     #'on_systray_eventbox_button_press_event':\
     #    self.on_systray_eventbox_button_press_event,
     #'on_systray_eventbox_motion_notify_event':\
@@ -727,7 +730,26 @@ class gui:
       self.refresh_pkgs_treeview()
   # }}}
 
-  # def __build_trayicon__(self): {{{
+  # def on_treeview_button_press_event(self): {{{
+  def on_treeview_button_press_event(self, treeview, event):
+    if event.button == 3:
+      # display popup menu
+      popup_menu = self.all_widgets.get_widget('popup_menu')
+
+      popup_menu.popup(None, None, None, event.button, event.get_time())
+  # }}}
+
+  # def on_install_popup_menu_activate(self): {{{
+  def on_install_popup_menu_activate(self, menuitem):
+    pkgs_to_install = self.get_all_selected_packages(self.liststore)
+  # }}}
+
+  # def on_remove_popup_menu_activate(self): {{{
+  def on_remove_popup_menu_activate(self, menuitem):
+    pass
+  # }}}
+
+# def __build_trayicon__(self): {{{
   def __build_trayicon__(self):
     self.trayicon = egg.trayicon.TrayIcon('Tray!')
 
