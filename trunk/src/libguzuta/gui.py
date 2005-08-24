@@ -174,15 +174,15 @@ class gui:
         print 'no glade file found!'
         sys.exit(2)
     signals_dict = {\
-#    'on_treeview_row_activated': self.row_activated,
-    'on_treeview_cursor_changed': self.cursor_changed,
-    'on_treeview_select_cursor_row': self.select_cursor_row,
-    'on_treeview_repos_cursor_changed': self.cursor_changed,
-    'on_treeview_repos_select_cursor_row': self.select_cursor_row,
-    'on_mainwindow_delete_event': self.delete_event,
-    'on_mainwindow_destroy_event': self.destroy,
+#    'on_treeview_row_activated': self.on_row_activated,
+    'on_treeview_cursor_changed': self.on_cursor_changed,
+    'on_treeview_select_cursor_row': self.on_select_cursor_row,
+    'on_treeview_repos_cursor_changed': self.on_cursor_changed,
+    'on_treeview_repos_select_cursor_row': self.on_select_cursor_row,
+    'on_mainwindow_delete_event': self.on_delete_event,
+    'on_mainwindow_destroy_event': self.on_destroy,
     'on_update_db_popup_delete_event': self.on_update_db_popup_delete_event,
-    'on_update_db_popup_destroy': self.destroy,
+    'on_update_db_popup_destroy': self.on_destroy,
     'on_quit_activate': self.on_quit_activate,
     'on_update_db_clicked': self.on_update_db_clicked,
     #'on_okbutton_clicked': self.on_okbutton_clicked,
@@ -364,6 +364,369 @@ class gui:
     print 'on_systray_eventbox_leave_notify_event'
   # }}}
 
+  # def on_about_activate(self): {{{
+  def on_about_activate(self, menuitem):
+    about_dialog = self.all_widgets.get_widget('about_dialog')
+
+    about_dialog.run()
+    about_dialog.hide()
+  # }}}
+
+  # def on_cursor_changed(self, treeview): {{{
+  def on_cursor_changed(self, treeview):
+    selection = treeview.get_selection()
+    treemodel, iter = selection.get_selected()
+    info = ''
+    if not iter:
+      return
+
+    if treeview == self.treeview:
+      # treeview of pkgs
+      name = treemodel.get_value(iter, 1)
+      
+      try:
+        info = self.local_pkg_info[name]
+      except KeyError:
+        info = self.shell.local_info(name)
+        self.local_pkg_info[name] = info
+      
+      if info == None:
+        try:
+          remote_info = self.remote_pkg_info[name]
+        except KeyError:
+          remote_info = self.shell.info(name)
+          self.remote_pkg_info[name] = remote_info
+        
+        self.__add_pkg_info_markuped_to_pkg_info_label__(remote_info,
+            installed = False)
+      else:
+        self.__add_pkg_info_markuped_to_pkg_info_label__(info)
+
+    else: # treeview of repos
+      repo = treemodel.get_value(iter, 0)
+      if repo == 'Pseudo Repos' or repo == 'Repos':
+        return
+      # fill treeview with pkgs from 'repo'
+      self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
+  # }}}
+
+  # def on_select_cursor_row(self, treeview, start_editing): {{{
+  def on_select_cursor_row(self, treeview, start_editing):
+    print treeview
+    print start_editing
+    print treeview.get_cursor()
+  # }}}
+
+  # def on_quit_activate(self, menuitem): {{{
+  def on_quit_activate(self, menuitem):
+    gtk.main_quit()
+  # }}}
+
+  # def on_destroy(self, widget, data=None): {{{
+  def on_destroy(self, widget, data=None):
+    if widget == self.main_window:
+      gtk.main_quit()
+    else:
+      self.update_db_popup.hide()
+      return False
+  # }}}
+
+  # def on_install_pkg_popup_destroy(self, widget, data=None): {{{
+  def on_install_pkg_popup_destroy(self, widget, data=None):
+    self.install_pkg_popup.hide()
+    return False
+  # }}}
+
+  # def on_delete_event(self, widget, event, data=None): {{{
+  def on_delete_event(self, widget, event, data=None):
+    return False
+  # }}}
+
+  # def on_install_pkg_popup_delete_event(self, widget, event, data=None): {{{
+  def on_install_pkg_popup_delete_event(self, widget, event, data=None):
+    return False
+  # }}}
+
+  # def on_row_activated(self, treeview, path, column): {{{
+  #def on_row_activated(self, treeview, path, column):
+  #  print 'row!'
+  #  print 'treeview :',treeview
+  #  print 'path :',path
+  #  print 'column :',column
+  # }}}
+
+  # def on_update_db_clicked(self, button): {{{
+  def on_update_db_clicked(self, button):
+    #if button == self.update_db and self.__is_root__():
+    if button == self.update_db:
+      ret, ret_err = self.shell.updatedb()
+      
+      #print self.shell.get_exit_status()
+
+      if self.shell.get_exit_status() != 0:
+        # something has gone horribly wrong
+        pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
+        pacman_error_dialog = self.all_widgets.get_widget('pacman_error_dialog')
+        pacman_error_label.set_text(ret_err)
+        pacman_error_dialog.run()
+        pacman_error_dialog.hide()
+        return
+      #print ret, ret_err
+      #self.shell.get_read_pipe()
+      self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
+      #self.update_db_popup.show()
+      response = self.update_db_popup.run()
+
+      self.update_db_popup.hide()
+
+      updates, updates_text = self.shell.get_fresh_updates()
+      #print 'updates: ', updates
+      if updates == []:
+        no_updates_dialog = self.all_widgets.get_widget('no_updates_dialog')
+        no_updates_dialog.run()
+        no_updates_dialog.hide()
+        return
+
+      fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
+      fresh_updates_label = self.all_widgets.get_widget('fresh_updates_label')
+
+      fresh_updates_label.set_text(updates_text)
+
+      response = fresh_updates_dialog.run()
+      fresh_updates_dialog.hide()
+      
+      fresh_updates_installed = False
+      
+      if response == gtk.RESPONSE_OK:
+        self.shell.install_fresh_updates()
+        fresh_updates_installed = True  
+
+      #for (pkg_name, pkg_version) in updates:
+      # TODO: is this necessary?
+      for pkg_name in updates:
+        info = self.shell.info(pkg_name)
+        #print 'info: ', info
+        #self.local_pkg_info[pkg_name] = info
+        #print self.local_pkg_info[pkg_name]
+        self.remote_pkg_info[pkg_name] = info
+        #print self.local_pkgs
+      if fresh_updates_installed:
+        self.__add_pkg_info_to_local_pkgs__(updates)
+
+      return
+    else:
+      # display a warning window?? switch to root?? gksu???
+      print 'not root!'
+  # }}}
+
+  # def on_okbutton_clicked(self, button): {{{
+  def on_okbutton_clicked(self, button):
+    self.update_db_popup.hide()
+  # }}}
+
+  # def on_okbutton2_clicked(self, button): {{{
+  def on_okbutton2_clicked(self, button):
+    self.install_pkg_popup.hide()
+  # }}}
+
+  # def on_install_pkg_clicked(self, button): {{{
+  def on_install_pkg_clicked(self, button):
+    self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
+    pkgs_to_install = self.get_all_selected_packages(self.liststore)
+
+    if pkgs_to_install == []:
+      return
+
+    (retcode, output) = self.install_packages(pkgs_to_install)
+
+    # TODO: do the same for remove pkg, add 'Are you sure?' dialog to remove
+    if retcode == False:
+      # cancel
+      (exit_status, out) = self.shell.install_part_3('n')
+      print 'retcode was False, bailing now with exit_status: ',\
+        exit_status, out
+      return
+    elif retcode == True:
+      # force upgrade 
+      #exit_status = self.shell.install_packages_noconfirm(pkgs_to_install)
+      out = self.shell.install_part_2('Y')
+      (exit_status, out) = self.shell.install_part_3('Y')
+      self.__add_pkg_info_to_local_pkgs__(pkgs_to_install)
+      self.refresh_pkgs_treeview()
+      # TODO: check for proper pkg install, check for file conflicts, etc. Build
+      # another popup
+      print 'retcode was True, bailing now with exit_status: ', exit_status
+      return
+    else:
+      # display generic_cancel_ok, all went well, prompt user for action
+      generic_cancel_ok = self.all_widgets.get_widget('generic_cancel_ok')
+
+      generic_cancel_ok_label =\
+      self.all_widgets.get_widget('generic_cancel_ok_label')
+
+      text = '''<span weight="bold">Warning</span>
+%s''' % output[:-7]
+
+      generic_cancel_ok_label.set_markup(text)
+      response3 = generic_cancel_ok.run()
+
+      generic_cancel_ok.hide()
+      
+      if response3 == gtk.RESPONSE_OK: 
+        self.shell.install_part_2('Y')
+        response = self.install_pkg_popup.run()
+        self.__add_pkg_info_to_local_pkgs__(pkgs_to_install)
+        self.refresh_pkgs_treeview()
+      elif response3 == gtk.RESPONSE_CANCEL:
+        self.shell.install_part_2('n')
+
+      self.install_pkg_popup.hide()
+
+      #try:
+      #  print self.local_pkg_info['abcm2ps']
+      #except KeyError:
+      #  print 'not found in local'
+      #try:
+      #  print self.remote_pkg_info['abcm2ps']
+      #except KeyError:
+      #  print 'not found in remote'
+
+    #self.install_pkg_popup.hide()
+  # }}}
+
+  # def on_remove_pkg_clicked(self, button): {{{
+  def on_remove_pkg_clicked(self, button):
+    self.remove_pkg_popup = self.all_widgets.get_widget('remove_pkg_popup')
+    pkgs_to_remove = self.get_all_selected_packages(self.liststore)
+
+    if pkgs_to_remove == []:
+      return
+
+    remove_pkg_are_you_sure =\
+    self.all_widgets.get_widget('remove_pkg_are_you_sure')
+
+    are_you_sure_label = self.all_widgets.get_widget('are_you_sure_label')
+
+    #text = 'Are you sure you want to remove the following packages?\n'
+    text = ''
+
+    for pkg_name in pkgs_to_remove:
+      text = text + pkg_name + '\n'
+
+    are_you_sure_label.set_text(text)
+    response = remove_pkg_are_you_sure.run()
+    remove_pkg_are_you_sure.hide()
+
+    if response == gtk.RESPONSE_CANCEL:
+      return
+    else:
+      (exit_status, dependencies, out) =\
+      self.remove_packages(pkgs_to_remove)
+
+      if exit_status != 0:
+        # error ocurred
+        self.remove_pkg_error = self.all_widgets.get_widget('remove_pkg_error')
+        self.remove_dependencies_broken =\
+        self.all_widgets.get_widget('remove_dependencies_broken')
+       
+        #for dep in dependencies:
+        self.remove_dependencies_broken.set_text(out.rstrip())
+        response = self.remove_pkg_error.run()
+        self.remove_pkg_error.hide()
+      else:
+        response = self.remove_pkg_popup.run()
+
+        if response == gtk.RESPONSE_OK:
+          # force
+          pass
+        self.remove_pkg_popup.hide()
+
+        # for removed_pkg in pkgs_to_remove: {{{
+        for removed_pkg in pkgs_to_remove:
+          # unset self.local_pkg_info and self.local_pkgs
+          try:
+            del self.local_pkg_info[removed_pkg]
+            del self.local_pkgs[removed_pkg]
+          except KeyError:
+            pass
+        # }}}
+
+        self.refresh_pkgs_treeview()
+
+    #try:
+    #  print self.local_pkg_info['abcm2ps']
+    #except KeyError:
+    #  print 'not found in local'
+    #try:
+    #  print self.remote_pkg_info['abcm2ps']
+    #except KeyError:
+    #  print 'not found in remote'
+  # }}}
+
+  # def on_update_db_popup_delete_event(self, widget, event, data=None): {{{
+  def on_update_db_popup_delete_event(self, widget, event, data=None):
+    self.update_db_popup.hide()
+    self.update_db_popup.destroy()
+    return True
+  # }}}
+
+  # def on_search_clicked(self): {{{
+  def on_search_clicked(self, button):
+    self.liststore = gtk.ListStore('gboolean', str, str, str)
+
+    self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
+
+    regexp = re.compile(self.search_entry.get_text())
+    search_combobox = self.all_widgets.get_widget('search_combobox')
+    # search current, extra, community
+    # self.pkgs_by_repo: dict of repos with lists of pairs with
+    # (name, version)
+    # TODO: use search_combobox.get_active() instead of get_active_text()?? 
+    #       better for i18n? cleaner?
+    # TODO: search in remote_pkg_info ??
+    where_to_search = search_combobox.get_active_text()
+    
+    if where_to_search != None:
+      for repo, repo_list in self.pkgs_by_repo.iteritems():
+        #for pkg_info in repo_list:
+        for name, version, description in repo_list:
+          if where_to_search == 'Version':
+            match = regexp.match(version)
+          elif where_to_search == 'Name':
+            match = regexp.match(name)
+          else: # description
+            match = regexp.match(description)
+          if match:
+            try:
+              installed_version = self.local_pkgs[name][1]
+            except KeyError:
+              installed_version = '--'
+            self.liststore.append([False, name, installed_version, version])
+          
+      self.treeview.set_model(self.liststore)
+    else: # this should not happed but it stays here for completeness
+      no_search_selected_dialog =\
+      self.all_widgets.get_widget('no_search_selected_dialog')
+      no_search_selected_dialog.run()
+      no_search_selected_dialog.hide()
+  # }}}
+
+  # def on_clear_clicked(self): {{{
+  def on_clear_clicked(self, button):
+    # clear the search_entry
+    self.search_entry.set_text('')
+
+    # set the pkg treemodel to whatever repo is selected in the repo treeview
+    # TODO: is this necessary?
+    selection = self.treeview_repos.get_selection()
+    treemodel, iter = selection.get_selected()
+
+    if not iter:
+      return
+    else:
+      self.refresh_pkgs_treeview()
+  # }}}
+
   # def __build_trayicon__(self): {{{
   def __build_trayicon__(self):
     self.trayicon = egg.trayicon.TrayIcon('Tray!')
@@ -403,19 +766,11 @@ class gui:
         self.remote_pkg_info[name] = self.shell.info(name)
   # }}}
 
-  # def on_about_activate(self): {{{
-  def on_about_activate(self, menuitem):
-    about_dialog = self.all_widgets.get_widget('about_dialog')
-
-    about_dialog.run()
-    about_dialog.hide()
-  # }}}
-
   # def populate_local_pkg_list(self): {{{
   def populate_local_pkg_list(self):
     self.local_pkgs = self.shell.local_search()
   # }}}
-  
+
   # def populate_pkgs_by_repo(self): {{{
   def populate_pkgs_by_repo(self):
     #(self.pkgs_by_repo, self.pkgs) = self.shell.repofiles()
@@ -444,15 +799,7 @@ class gui:
     # set value
     self.liststore.set_value(iter, 0, checked)
   # }}}
-  
-  # def row_activated(self, treeview, path, column): {{{
-  #def row_activated(self, treeview, path, column):
-  #  print 'row!'
-  #  print 'treeview :',treeview
-  #  print 'path :',path
-  #  print 'column :',column
-  # }}}
-  
+
   # def __add_pkg_info_markuped_to_pkg_info_label__(self, lines, {{{
   # installed = True):
   def __add_pkg_info_markuped_to_pkg_info_label__(self, lines,
@@ -536,50 +883,6 @@ class gui:
           text_buffer.insert(iterator, line + '\n')
   # }}}
 
-  # def cursor_changed(self, treeview): {{{
-  def cursor_changed(self, treeview):
-    selection = treeview.get_selection()
-    treemodel, iter = selection.get_selected()
-    info = ''
-    if not iter:
-      return
-
-    if treeview == self.treeview:
-      # treeview of pkgs
-      name = treemodel.get_value(iter, 1)
-      
-      try:
-        info = self.local_pkg_info[name]
-      except KeyError:
-        info = self.shell.local_info(name)
-        self.local_pkg_info[name] = info
-      
-      #buffer = gtk.TextBuffer()
-      #self.information_text.set_buffer(buffer)
-
-      if info == None:
-        try:
-          remote_info = self.remote_pkg_info[name]
-        except KeyError:
-          remote_info = self.shell.info(name)
-          self.remote_pkg_info[name] = remote_info
-        
-        #self.__add_pkg_info_markuped_to_text_buffer__(buffer, remote_info,
-        #    installed = False)
-        self.__add_pkg_info_markuped_to_pkg_info_label__(remote_info,
-            installed = False)
-      else:
-        #self.__add_pkg_info_markuped_to_text_buffer__(buffer, info)
-        self.__add_pkg_info_markuped_to_pkg_info_label__(info)
-
-    else: # treeview of repos
-      repo = treemodel.get_value(iter, 0)
-      if repo == 'Pseudo Repos' or repo == 'Repos':
-        return
-      # fill treeview with pkgs from 'repo'
-      self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
-  # }}}
-
   # def __refresh_pkgs_treeview__(self): {{{
   def __refresh_pkgs_treeview__(self):
     new_liststore = gtk.ListStore('gboolean', str, str, str)
@@ -599,14 +902,13 @@ class gui:
       new_liststore.append([False, name, installed_version, available_version])
     self.liststore = new_liststore
     self.treeview.set_model(self.liststore)
-    #self.treeview.emit('cursor_changed')
   # }}}
 
   # def __fill_treeview_with_pkgs_from_repo__(self, repo): {{{
   def __fill_treeview_with_pkgs_from_repo__(self, repo):
-    self.liststore = gtk.ListStore('gboolean', str, str, str)
+    self.treeview.set_model(None) # unsetting model to speed things up
 
-    self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
+    self.liststore = gtk.ListStore('gboolean', str, str, str)
 
     if repo != 'all' and repo != 'installed' and repo != 'not installed':
       # current, extra, community {{{
@@ -625,7 +927,6 @@ class gui:
           installed_version = '--'
         
         self.liststore.append([False, v[0], installed_version, v[1]])
-      self.treeview.set_model(self.liststore)
       # }}}
     elif repo == 'installed':
       # installed {{{
@@ -638,7 +939,6 @@ class gui:
           available_version = '--'
           
         self.liststore.append([False, name, v[1], available_version])
-      self.treeview.set_model(self.liststore)
       # }}}
     elif repo == 'all':
       # all {{{
@@ -657,7 +957,6 @@ class gui:
             installed_version = '--'
 
           self.liststore.append([False, pkg[0], installed_version, pkg[1]])
-      self.treeview.set_model(self.liststore)
       # }}}
     else:
       # not installed {{{
@@ -665,126 +964,15 @@ class gui:
       # pkg: repo, version
       for name, v in not_installed.iteritems():
         self.liststore.append([False, name, '--', v[1]])
-      self.treeview.set_model(self.liststore)
       # }}}
-  # }}}
-
-  # def select_cursor_row(self, treeview, start_editing): {{{
-  def select_cursor_row(self, treeview, start_editing):
-    #print 'select_cursor_row'
-    print treeview
-    print start_editing
-    print treeview.get_cursor()
-  # }}}
-
-  # def on_quit_activate(self, menuitem): {{{
-  def on_quit_activate(self, menuitem):
-    gtk.main_quit()
-  # }}}
-
-  # def destroy(self, widget, data=None): {{{
-  def destroy(self, widget, data=None):
-    if widget == self.main_window:
-      gtk.main_quit()
-    else:
-      self.update_db_popup.hide()
-      return False
-  # }}}
-
-  # def on_install_pkg_popup_destroy(self, widget, data=None): {{{
-  def on_install_pkg_popup_destroy(self, widget, data=None):
-    self.install_pkg_popup.hide()
-    return False
-  # }}}
-
-  # def delete_event(self, widget, event, data=None): {{{
-  def delete_event(self, widget, event, data=None):
-    return False
-  # }}}
-  
-  # def on_install_pkg_popup_delete_event(self, widget, event, data=None): {{{
-  def on_install_pkg_popup_delete_event(self, widget, event, data=None):
-    return False
+    self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
+    self.treeview.set_model(self.liststore)
   # }}}
 
   # def __is_root__(self): {{{
   def __is_root__(self):
     uid = posix.getuid()
     return uid == 0
-  # }}}
-
-  # def on_update_db_clicked(self, button): {{{
-  def on_update_db_clicked(self, button):
-    #if button == self.update_db and self.__is_root__():
-    if button == self.update_db:
-      ret, ret_err = self.shell.updatedb()
-      
-      #print self.shell.get_exit_status()
-
-      if self.shell.get_exit_status() != 0:
-        # something has gone horribly wrong
-        pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
-        pacman_error_dialog = self.all_widgets.get_widget('pacman_error_dialog')
-        pacman_error_label.set_text(ret_err)
-        pacman_error_dialog.run()
-        pacman_error_dialog.hide()
-        return
-      #print ret, ret_err
-      #self.shell.get_read_pipe()
-      self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
-      #self.update_db_popup.show()
-      response = self.update_db_popup.run()
-
-      self.update_db_popup.hide()
-
-      updates, updates_text = self.shell.get_fresh_updates()
-      #print 'updates: ', updates
-      if updates == []:
-        no_updates_dialog = self.all_widgets.get_widget('no_updates_dialog')
-        no_updates_dialog.run()
-        no_updates_dialog.hide()
-        return
-
-      fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
-      fresh_updates_label = self.all_widgets.get_widget('fresh_updates_label')
-
-      fresh_updates_label.set_text(updates_text)
-
-      response = fresh_updates_dialog.run()
-      fresh_updates_dialog.hide()
-      
-      fresh_updates_installed = False
-      
-      if response == gtk.RESPONSE_OK:
-        self.shell.install_fresh_updates()
-        fresh_updates_installed = True  
-
-      #for (pkg_name, pkg_version) in updates:
-      # TODO: is this necessary?
-      for pkg_name in updates:
-        info = self.shell.info(pkg_name)
-        #print 'info: ', info
-        #self.local_pkg_info[pkg_name] = info
-        #print self.local_pkg_info[pkg_name]
-        self.remote_pkg_info[pkg_name] = info
-        #print self.local_pkgs
-      if fresh_updates_installed:
-        self.__add_pkg_info_to_local_pkgs__(updates)
-
-      return
-    else:
-      # display a warning window?? switch to root?? gksu???
-      print 'not root!'
-  # }}}
-
-  # def on_okbutton_clicked(self, button): {{{
-  def on_okbutton_clicked(self, button):
-    self.update_db_popup.hide()
-  # }}}
-  
-  # def on_okbutton2_clicked(self, button): {{{
-  def on_okbutton2_clicked(self, button):
-    self.install_pkg_popup.hide()
   # }}}
 
   # def get_all_selected_packages(tree_model): {{{
@@ -799,7 +987,7 @@ class gui:
 
     return names
   # }}}
-      
+
   # def refresh_pkgs_treeview(self): {{{
   def refresh_pkgs_treeview(self):
     selection = self.treeview_repos.get_selection()
@@ -907,71 +1095,6 @@ class gui:
       self.local_pkgs[installed_pkg] = (repo, version, description)
   # }}}
 
-  # def on_install_pkg_clicked(self, button): {{{
-  def on_install_pkg_clicked(self, button):
-    self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
-    pkgs_to_install = self.get_all_selected_packages(self.liststore)
-
-    if pkgs_to_install == []:
-      return
-    
-    (retcode, output) = self.install_packages(pkgs_to_install)
-
-    # TODO: do the same for remove pkg, add 'Are you sure?' dialog to remove
-    if retcode == False:
-      # cancel
-      (exit_status, out) = self.shell.install_part_3('n')
-      print 'retcode was False, bailing now with exit_status: ',\
-        exit_status, out
-      return
-    elif retcode == True:
-      # force upgrade 
-      #exit_status = self.shell.install_packages_noconfirm(pkgs_to_install)
-      out = self.shell.install_part_2('Y')
-      (exit_status, out) = self.shell.install_part_3('Y')
-      self.__add_pkg_info_to_local_pkgs__(pkgs_to_install)
-      self.refresh_pkgs_treeview()
-      # TODO: check for proper pkg install, check for file conflicts, etc. Build
-      # another popup
-      print 'retcode was True, bailing now with exit_status: ', exit_status
-      return
-    else:
-      # display generic_cancel_ok, all went well, prompt user for action
-      generic_cancel_ok = self.all_widgets.get_widget('generic_cancel_ok')
-
-      generic_cancel_ok_label =\
-      self.all_widgets.get_widget('generic_cancel_ok_label')
-
-      text = '''<span weight="bold">Warning</span>
-%s''' % output[:-7]
-
-      generic_cancel_ok_label.set_markup(text)
-      response3 = generic_cancel_ok.run()
-
-      generic_cancel_ok.hide()
-      
-      if response3 == gtk.RESPONSE_OK: 
-        self.shell.install_part_2('Y')
-        response = self.install_pkg_popup.run()
-        self.__add_pkg_info_to_local_pkgs__(pkgs_to_install)
-        self.refresh_pkgs_treeview()
-      elif response3 == gtk.RESPONSE_CANCEL:
-        self.shell.install_part_2('n')
-
-      self.install_pkg_popup.hide()
-
-      #try:
-      #  print self.local_pkg_info['abcm2ps']
-      #except KeyError:
-      #  print 'not found in local'
-      #try:
-      #  print self.remote_pkg_info['abcm2ps']
-      #except KeyError:
-      #  print 'not found in remote'
-
-    #self.install_pkg_popup.hide()
-  # }}}
-
   # def remove_packages(self, pkg_list): {{{
   def remove_packages(self, pkg_list):
     what = ''
@@ -982,139 +1105,6 @@ class gui:
     #self.remove_noconfirm(what)
     (exit_status, dependencies, out) = self.shell.remove(what)
     return (exit_status, dependencies, out)
-  # }}}
-  
-  # def on_remove_pkg_clicked(self, button): {{{
-  def on_remove_pkg_clicked(self, button):
-    self.remove_pkg_popup = self.all_widgets.get_widget('remove_pkg_popup')
-    pkgs_to_remove = self.get_all_selected_packages(self.liststore)
-
-    if pkgs_to_remove == []:
-      return
-
-    remove_pkg_are_you_sure =\
-    self.all_widgets.get_widget('remove_pkg_are_you_sure')
-
-    are_you_sure_label = self.all_widgets.get_widget('are_you_sure_label')
-
-    #text = 'Are you sure you want to remove the following packages?\n'
-    text = ''
-
-    for pkg_name in pkgs_to_remove:
-      text = text + pkg_name + '\n'
-
-    are_you_sure_label.set_text(text)
-    response = remove_pkg_are_you_sure.run()
-    remove_pkg_are_you_sure.hide()
-
-    if response == gtk.RESPONSE_CANCEL:
-      return
-    else:
-      (exit_status, dependencies, out) =\
-      self.remove_packages(pkgs_to_remove)
-
-      if exit_status != 0:
-        # error ocurred
-        self.remove_pkg_error = self.all_widgets.get_widget('remove_pkg_error')
-        self.remove_dependencies_broken =\
-        self.all_widgets.get_widget('remove_dependencies_broken')
-       
-        #for dep in dependencies:
-        self.remove_dependencies_broken.set_text(out.rstrip())
-        response = self.remove_pkg_error.run()
-        self.remove_pkg_error.hide()
-      else:
-        response = self.remove_pkg_popup.run()
-
-        if response == gtk.RESPONSE_OK:
-          # force
-          pass
-        self.remove_pkg_popup.hide()
-
-        # for removed_pkg in pkgs_to_remove: {{{
-        for removed_pkg in pkgs_to_remove:
-          # unset self.local_pkg_info and self.local_pkgs
-          try:
-            del self.local_pkg_info[removed_pkg]
-            del self.local_pkgs[removed_pkg]
-          except KeyError:
-            pass
-        # }}}
-
-        self.refresh_pkgs_treeview()
-
-    #try:
-    #  print self.local_pkg_info['abcm2ps']
-    #except KeyError:
-    #  print 'not found in local'
-    #try:
-    #  print self.remote_pkg_info['abcm2ps']
-    #except KeyError:
-    #  print 'not found in remote'
-  # }}}
-  
-  # def on_update_db_popup_delete_event(self, widget, event, data=None): {{{
-  def on_update_db_popup_delete_event(self, widget, event, data=None):
-    self.update_db_popup.hide()
-    self.update_db_popup.destroy()
-    return True
-  # }}}
-
-  # def on_search_clicked(self): {{{
-  def on_search_clicked(self, button):
-    self.liststore = gtk.ListStore('gboolean', str, str, str)
-
-    self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
-
-    regexp = re.compile(self.search_entry.get_text())
-    search_combobox = self.all_widgets.get_widget('search_combobox')
-    # search current, extra, community
-    # self.pkgs_by_repo: dict of repos with lists of pairs with
-    # (name, version)
-    # TODO: use search_combobox.get_active() instead of get_active_text()?? 
-    #       better for i18n? cleaner?
-    # TODO: search in remote_pkg_info ??
-    where_to_search = search_combobox.get_active_text()
-    
-    if where_to_search != None:
-      for repo, repo_list in self.pkgs_by_repo.iteritems():
-        #for pkg_info in repo_list:
-        for name, version, description in repo_list:
-          if where_to_search == 'Version':
-            match = regexp.match(version)
-          elif where_to_search == 'Name':
-            match = regexp.match(name)
-          else: # description
-            match = regexp.match(description)
-          if match:
-            try:
-              installed_version = self.local_pkgs[name][1]
-            except KeyError:
-              installed_version = '--'
-            self.liststore.append([False, name, installed_version, version])
-          
-      self.treeview.set_model(self.liststore)
-    else: # this should not happed but it stays here for completeness
-      no_search_selected_dialog =\
-      self.all_widgets.get_widget('no_search_selected_dialog')
-      no_search_selected_dialog.run()
-      no_search_selected_dialog.hide()
-  # }}}
-
-  # def on_clear_clicked(self): {{{
-  def on_clear_clicked(self, button):
-    # clear the search_entry
-    self.search_entry.set_text('')
-
-    # set the pkg treemodel to whatever repo is selected in the repo treeview
-    # TODO: is this necessary?
-    selection = self.treeview_repos.get_selection()
-    treemodel, iter = selection.get_selected()
-
-    if not iter:
-      return
-    else:
-      self.refresh_pkgs_treeview()
   # }}}
 # }}}
 
