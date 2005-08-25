@@ -9,7 +9,7 @@ import gtk
 if gtk.pygtk_version < (2,3,90):
   raise SystemExit
 import gobject
-import pango
+#import pango
 import gtk.glade
 import sys, os, posix
 import re
@@ -358,12 +358,12 @@ class gui:
   # }}}
 
   # def on_systray_eventbox_motion_notify_event(self): {{{
-  def on_systray_eventbox_motion_notify_event(self):
+  def on_systray_eventbox_motion_notify_event(self, widget, event):
     print 'systray motion notify event'
   # }}}
 
   # def on_systray_eventbox_leave_notify_event(self): {{{
-  def on_systray_eventbox_leave_notify_event(self):
+  def on_systray_eventbox_leave_notify_event(self, widget, event):
     print 'on_systray_eventbox_leave_notify_event'
   # }}}
 
@@ -776,6 +776,8 @@ class gui:
         self.on_systray_eventbox_button_press_event)
     systray_eventbox.connect('motion_notify_event',\
         self.on_systray_eventbox_motion_notify_event)
+    systray_eventbox.connect('leave_notify_event',\
+        self.on_systray_eventbox_leave_notify_event)
     
     img = gtk.Image()
     #img.set_from_stock(gtk.STOCK_MISSING_IMAGE, gtk.ICON_SIZE_MENU)
