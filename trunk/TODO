@@ -1,10 +1,8 @@
 0.0.2
 =====
 
-* View pacman's installation log /var/log/pacman.log
 * Search by group
-* Support pacman -U
 * Tray icon
 * Use libpypac
 * Add option to specify pacman log file? read from conf file?
-* Popup menu
+* select multiple packages with ctrl-right click, see: http://www.pygtk.org/pygtk2tutorial/sec-TreeSelections.html 
