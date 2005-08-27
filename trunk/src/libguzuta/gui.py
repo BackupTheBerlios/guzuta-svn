@@ -165,7 +165,8 @@ class gui:
       # hours
       self.pkg_update_alarm = alarm_time * 60 * 60
       self.pkg_update_alarm_period = 1
-      signal.alarm(self.pkg_update_alarm)
+      print 'setting alarm to: ', self.pkg_update_alarm
+      #signal.alarm(self.pkg_update_alarm)
     else:
       # dangerous, don't let this be less than a good number, like say 40
       # minutes. if so, warn
@@ -182,13 +183,15 @@ class gui:
         if response == gtk.RESPONSE_OK:
           self.pkg_update_alarm = alarm_time * 60
           self.pkg_update_alarm_period = 1
-          signal.alarm(self.pkg_update_alarm)
+          print 'setting alarm to: ', self.pkg_update_alarm
+          #signal.alarm(self.pkg_update_alarm)
         else:
           pass
       else:
         self.pkg_update_alarm = alarm_time * 60
         self.pkg_update_alarm_period = 1
-        signal.alarm(self.pkg_update_alarm)
+        print 'setting alarm to: ', self.pkg_update_alarm
+        #signal.alarm(self.pkg_update_alarm)
   # }}}
     
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
@@ -278,9 +281,18 @@ class gui:
     self.pkg_update_alarm = 2 # 2 hours
     self.pkg_update_alarm_period = 1 # hours
 
+    self.read_conf()
+
     # setup the alarm handler
     signal.signal(signal.SIGALRM, self.on_alarm)
-    signal.alarm(self.pkg_update_alarm)
+    if self.pkg_update_alarm_period == 0:
+      # minutes
+      alarm_time = self.pkg_update_alarm * 60
+    else:
+      # hours
+      alarm_time = self.pkg_update_alarm * 60 * 60
+    print '2222 setting alarm to: ', alarm_time
+    #signal.alarm(alarm_time)
 
     self.shell = shell(command_line = None, interactive = True)
     self.populate_pkg_lists()
@@ -323,8 +335,6 @@ class gui:
       not_root_dialog = self.all_widgets.get_widget('not_root_dialog')
       not_root_dialog.run()
       not_root_dialog.hide()
-
-    self.read_conf()
 
     #alarm_time = self.pkg_update_alarm / 60
     #spinbutton = self.all_widgets.get_widget('interval_preferences_spinbutton')
@@ -375,13 +385,21 @@ class gui:
     preferences_dialog = self.all_widgets.get_widget('preferences_dialog')
 
     print self.pkg_update_alarm_period
-    print self.pkg_update_alarm
+
+    print 'antes: ', self.pkg_update_alarm
 
     interval_preferences_combobox.set_active(\
         self.pkg_update_alarm_period)
 
+    #if self.pkg_update_alarm_period == 0:
+    #  interval_preferences_spinbutton.set_value(\
+    #      self.pkg_update_alarm)
+    #  print 'depois: ', self.pkg_update_alarm
+    #else:
     interval_preferences_spinbutton.set_value(\
         self.pkg_update_alarm)
+    print 'depois: ', self.pkg_update_alarm
+
 
     preferences_dialog.run()
     preferences_dialog.hide()
@@ -404,6 +422,7 @@ class gui:
   # def on_alarm(self, signum, frame): {{{
   def on_alarm(self, signum, frame):
     # only do this if the main window is hidden !!!
+    print 'Alarm!'
     if self.main_window_hidden():
       ret, ret_err = self.shell.updatedb()
 
@@ -414,7 +433,8 @@ class gui:
         systray_tooltip_text = 'Update(s) available'
         self.systray_tooltips.set_tip(self.systray_eventbox, systray_tooltip_text)
 
-    signal.alarm(self.pkg_update_alarm)
+    print 'setting alarm to: ', self.pkg_update_alarm
+    #signal.alarm(self.pkg_update_alarm)
   # }}}
 
   # def on_pacman_log_activate(self, menuitem): {{{
@@ -843,18 +863,30 @@ class gui:
       return
     contents = conf_file.readlines()
 
+    use_default = False
+    
     for line in contents:
       if line.startswith('pkg_update_alarm ='):
         equal_pos = line.index('=')
         self.pkg_update_alarm = int(line[equal_pos+1:].strip())
+        if self.pkg_update_alarm == 0:
+          self.pkg_update_alarm = 2
+          use_default = True
         print 'pkg_update_alarm from conf: ', self.pkg_update_alarm
       elif line.startswith('pacman_log_file ='):
         equal_pos = line.index('=')
         self.pacman_log_file = line[equal_pos+1:].strip()
         print 'pacman_log_file from conf: ', self.pacman_log_file
       elif line.startswith('pkg_update_alarm_period ='):
-        equal_pos = line.index('=')
-        self.pkg_update_alarm_period = int(line[equal_pos+1:].strip())
+        if use_default:
+          self.pkg_update_alarm_period = 1
+        else:
+          equal_pos = line.index('=')
+          self.pkg_update_alarm_period = int(line[equal_pos+1:].strip())
+          if self.pkg_update_alarm_period != 0 or self.pkg_update_alarm_period\
+              != 1:
+            self.pkg_update_alarm_period = 1
+            use_default = True
         print 'pkg_update_alarm_period from conf: ',\
         self.pkg_update_alarm_period
   # }}}
