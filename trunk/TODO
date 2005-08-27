@@ -5,4 +5,4 @@
 * Tray icon
 * Use libpypac
 * Add option to specify pacman log file? read from conf file?
-* select multiple packages with ctrl-right click, see: http://www.pygtk.org/pygtk2tutorial/sec-TreeSelections.html 
+* Add tooltips where applicable

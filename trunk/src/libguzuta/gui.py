@@ -9,13 +9,13 @@ import gtk
 if gtk.pygtk_version < (2,3,90):
   raise SystemExit
 import gobject
-#import pango
 import gtk.glade
 import sys, os, posix
 import re
 #import gksu
 
 import egg.trayicon
+import signal
 
 from shell import *
 # }}}
@@ -155,6 +155,36 @@ class gui:
     self.treeview_repos.expand_all()
   # }}}
 
+  # def set_pkg_update_alarm(self, alarm_time, time_type): {{{
+  def set_pkg_update_alarm(self, alarm_time, time_type):
+    # unschedule the alarm
+    signal.alarm(0)
+
+    self.pkg_update_alarm = 60 * 60 # 60 minutes
+    if time_type == "hours":
+      self.pkg_update_alarm = alarm_time * 60 * 60
+      signal.alarm(self.pkg_update_alarm)
+    else:
+      # dangerous, don't let this be less than a good number, like say 40
+      # minutes. if so, warn
+      if alarm_time < 40:
+        generic_cancel_ok = self.all_widgets.get_widget('generic_cancel_ok')
+        generic_cancel_ok_label =\
+        self.all_widgets.get_widget('generic_cancel_ok_label')
+        text = """<b>Warning</b>\nThe time lapse between automatic update checks
+        is very short.\nAre you sure you want to keep this value?"""
+
+        response = generic_cancel_ok.run()
+        if response == gtk.RESPONSE_OK:
+          self.pkg_update_alarm = alarm_time * 60
+          signal.alarm(self.pkg_update_alarm)
+        else:
+          pass
+      else:
+        self.pkg_update_alarm = alarm_time * 60
+        signal.alarm(self.pkg_update_alarm)
+  # }}}
+    
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
   def __init__(self, read_pipe = None, write_pipe = None):
     # signals !!!
@@ -202,7 +232,16 @@ class gui:
     'on_pacman_log_activate': self.on_pacman_log_activate,
     'on_treeview_button_press_event': self.on_treeview_button_press_event,
     'on_install_popup_menu_activate': self.on_install_popup_menu_activate,
-    'on_remove_popup_menu_activate': self.on_remove_popup_menu_activate
+    'on_remove_popup_menu_activate': self.on_remove_popup_menu_activate,
+    'on_systray_popup_menu_show_window_activate':\
+        self.on_systray_popup_menu_show_window_activate,
+    'on_systray_popup_menu_preferences_activate':\
+        self.on_systray_popup_menu_preferences_activate,
+    'on_systray_popup_menu_quit_activate':\
+        self.on_systray_popup_menu_quit_activate,
+    'on_preferences_clicked': self.on_preferences_clicked,
+    'on_browse_preferences_button_clicked':\
+        self.on_browse_preferences_button_clicked
     #'on_systray_eventbox_button_press_event':\
     #    self.on_systray_eventbox_button_press_event,
     #'on_systray_eventbox_motion_notify_event':\
@@ -219,6 +258,17 @@ class gui:
     self.remote_pkg_info = {}
     self.not_installed = {}
     self.trayicon = None
+    self.systray_eventbox = None
+    self.systray_tooltips = gtk.Tooltips()
+    self.systray_tooltips.enable()
+    self.main_window_hidden = False
+    
+    self.pacman_log_file = '/var/log/pacman.log'
+    
+    self.pkg_update_alarm = 2 * 60 * 60 # 2 hours
+    # setup the alarm handler
+    signal.signal(signal.SIGALRM, self.on_alarm)
+    signal.alarm(self.pkg_update_alarm)
 
     self.shell = shell(command_line = None, interactive = True)
     self.populate_pkg_lists()
@@ -255,6 +305,7 @@ class gui:
     self.__setup_repo_treeview__()
 
     self.all_widgets.get_widget('search_combobox').set_active(0)
+    self.all_widgets.get_widget('interval_preferences_combobox').set_active(0)
     
     if not self.__is_root__():
       self.__disable_all_root_widgets__()
@@ -262,6 +313,7 @@ class gui:
       not_root_dialog.run()
       not_root_dialog.hide()
 
+    self.read_conf()
     self.main_window.show_all()
 
     self.all_widgets.signal_autoconnect(signals_dict)
@@ -275,9 +327,68 @@ class gui:
     gtk.main()
   # }}}
 
+  # def on_browse_preferences_button_clicked(self, button): {{{
+  def on_browse_preferences_button_clicked(self, button):
+    pkg_filechooser_dialog =\
+    self.all_widgets.get_widget('pkg_filechooser_dialog')
+
+    preferences_pacman_log_file_text_entry =\
+        self.all_widgets.get_widget('preferences_pacman_log_file_text_entry')
+
+    response = pkg_filechooser_dialog.run()
+    pkg_filechooser_dialog.hide()
+
+    if response == gtk.RESPONSE_OK:
+      preferences_pacman_log_file_text_entry.set_text(\
+          pkg_filechooser_dialog.get_filename())
+  # }}}
+    
+  # def on_preferences_clicked(self, button): {{{
+  def on_preferences_clicked(self, button):
+    preferences_dialog = self.all_widgets.get_widget('preferences_dialog')
+    preferences_dialog.run()
+    preferences_dialog.hide()
+    
+    interval_preferences_spinbutton =\
+    self.all_widgets.get_widget('interval_preferences_spinbutton')
+    
+    interval_preferences_combobox =\
+        self.all_widgets.get_widget('interval_preferences_combobox')
+
+    if interval_preferences_combobox.get_active() == 1:
+      # hours
+      self.set_pkg_update_alarm(\
+          interval_preferences_spinbutton.get_value_as_int(), 'hours')
+    else:
+      self.set_pkg_update_alarm(\
+          interval_preferences_spinbutton.get_value_as_int(), 'minutes')
+
+    preferences_pacman_log_file_text_entry =\
+        self.all_widgets.get_widget('preferences_pacman_log_file_text_entry')
+    self.pacman_log_file = preferences_pacman_log_file_text_entry.get_text()
+
+    self.write_conf()
+  # }}}
+  
+  # def on_alarm(self, signum, frame): {{{
+  def on_alarm(self, signum, frame):
+    # only do this if the main window is hidden !!!
+    if self.main_window_hidden():
+      ret, ret_err = self.shell.updatedb()
+
+      if self.shell.get_exit_status() != 0:
+        systray_tooltip_text = 'Error updating database'
+        self.systray_tooltips.set_tip(self.systray_eventbox, systray_tooltip_text)
+      else:
+        systray_tooltip_text = 'Update(s) available'
+        self.systray_tooltips.set_tip(self.systray_eventbox, systray_tooltip_text)
+
+    signal.alarm(self.pkg_update_alarm)
+  # }}}
+
   # def on_pacman_log_activate(self, menuitem): {{{
   def on_pacman_log_activate(self, menuitem):
-    pacman_log = open('/var/log/pacman.log', 'r')
+    pacman_log = open(self.pacman_log_file, 'r')
 
     buffer = gtk.TextBuffer()
     #log = pacman_log.read()
@@ -347,24 +458,53 @@ class gui:
     
   # }}}
 
+  # def on_systray_popup_menu_show_window_activate(self, menuitem): {{{
+  def on_systray_popup_menu_show_window_activate(self, menuitem):
+    self.main_window_hidden = False
+    self.main_window.show()
+  # }}}
+
+  # def on_systray_popup_menu_preferences_activate(self, menuitem): {{{
+  def on_systray_popup_menu_preferences_activate(self, menuitem):
+    self.on_preferences_clicked(None)
+  # }}}
+
+  # def on_systray_popup_menu_quit_activate(self, menuitem): {{{
+  def on_systray_popup_menu_quit_activate(self, menuitem):
+    self.on_quit_activate(None)
+  # }}}
+
   # def on_systray_eventbox_button_press_event(self): {{{
   def on_systray_eventbox_button_press_event(self, widget, event):
     if event.button == 1: # left click
-      print 'left click!'
+      
+      if self.main_window_hidden:
+        self.main_window.show()
+        self.main_window_hidden = False
+      else:
+        self.main_window.hide()
+        self.main_window_hidden = True
     if event.button == 2: # middle click
-      print 'middle click!'
+      # do nothing?
+      pass
     if event.button == 3: # right click
-      print 'right click!'
+      # show popup menu
+      #print 'right click!'
+      systray_popup_menu = self.all_widgets.get_widget('systray_popup_menu')
+
+      systray_popup_menu.popup(None, None, None, event.button, event.get_time())
   # }}}
 
   # def on_systray_eventbox_motion_notify_event(self): {{{
   def on_systray_eventbox_motion_notify_event(self, widget, event):
-    print 'systray motion notify event'
+    #print 'systray motion notify event'
+    pass
   # }}}
 
   # def on_systray_eventbox_leave_notify_event(self): {{{
   def on_systray_eventbox_leave_notify_event(self, widget, event):
-    print 'on_systray_eventbox_leave_notify_event'
+    #print 'on_systray_eventbox_leave_notify_event'
+    pass
   # }}}
 
   # def on_about_activate(self): {{{
@@ -648,6 +788,37 @@ class gui:
     self.remove_packages_from_list(pkgs_to_remove)
   # }}}
 
+  # def write_conf(self): {{{
+  def write_conf(self):
+    # write self.pkg_update_alarm
+    conf_filename = os.environ['HOME'] + '/.guzutarc'
+    print 'conf_filename: ', conf_filename
+    conf_file = open(conf_filename, 'w')
+    conf_file.write('pkg_update_alarm = ' + str(self.pkg_update_alarm) + '\n')
+    conf_file.write('pacman_log_file = ' + self.pacman_log_file + '\n')
+    conf_file.close()
+  # }}}
+
+  # def read_conf(self): {{{
+  def read_conf(self):
+    conf_filename = os.environ['HOME'] + '/.guzutarc'
+    try:
+      conf_file = open(conf_filename, 'r')
+    except IOError:
+      return
+    contents = conf_file.readlines()
+
+    for line in contents:
+      if line.startswith('pkg_update_alarm ='):
+        equal_pos = line.index('=')
+        self.pkg_update_alarm = int(line[equal_pos+1:].strip())
+        print 'pkg_update_alarm from conf: ', self.pkg_update_alarm
+      elif line.startswith('pacman_log_file ='):
+        equal_pos = line.index('=')
+        self.pacman_log_file = line[equal_pos+1:].strip()
+        print 'pacman_log_file from conf: ', self.pacman_log_file
+  # }}}
+  
   # def install_packages_from_list(self, list): {{{
   def install_packages_from_list(self, list):
     self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
@@ -763,28 +934,30 @@ class gui:
     #  print 'not found in remote'
   # }}}
 
-# def __build_trayicon__(self): {{{
+  # def __build_trayicon__(self): {{{
   def __build_trayicon__(self):
     self.trayicon = egg.trayicon.TrayIcon('Tray!')
 
-    systray_eventbox = gtk.EventBox()
+    self.systray_eventbox = gtk.EventBox()
 
-    systray_eventbox.set_visible_window(False)
-    systray_eventbox.set_events(gtk.gdk.POINTER_MOTION_MASK)
+    self.systray_eventbox.set_visible_window(False)
+    self.systray_eventbox.set_events(gtk.gdk.POINTER_MOTION_MASK)
 
-    systray_eventbox.connect('button_press_event',\
+    self.systray_eventbox.connect('button_press_event',\
         self.on_systray_eventbox_button_press_event)
-    systray_eventbox.connect('motion_notify_event',\
+    self.systray_eventbox.connect('motion_notify_event',\
         self.on_systray_eventbox_motion_notify_event)
-    systray_eventbox.connect('leave_notify_event',\
+    self.systray_eventbox.connect('leave_notify_event',\
         self.on_systray_eventbox_leave_notify_event)
+    systray_tooltip_text = "No Updates Available."
+    self.systray_tooltips.set_tip(self.systray_eventbox, systray_tooltip_text)
     
     img = gtk.Image()
     #img.set_from_stock(gtk.STOCK_MISSING_IMAGE, gtk.ICON_SIZE_MENU)
     img.set_from_file('/usr/share/guzuta/guzuta_icon_transparent.png')
-    systray_eventbox.add(img)
+    self.systray_eventbox.add(img)
     
-    self.trayicon.add(systray_eventbox)
+    self.trayicon.add(self.systray_eventbox)
   # }}}
 
   # def __disable_all_root_widgets__(self): {{{
