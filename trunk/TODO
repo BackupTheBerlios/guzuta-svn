@@ -2,3 +2,10 @@
 =====
 
 * Add tooltips where applicable
+
+0.0.3
+=====
+
+* Use threads to run shell methods in order to not have the main window and
+  popups not redrawed, probably use a 'Please wait' type dialog
+* Add pseudo-repos: Last Installed, Last Uninstalled
