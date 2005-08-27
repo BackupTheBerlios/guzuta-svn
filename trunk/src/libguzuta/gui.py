@@ -160,9 +160,11 @@ class gui:
     # unschedule the alarm
     signal.alarm(0)
 
-    self.pkg_update_alarm = 60 * 60 # 60 minutes
-    if time_type == "hours":
+    #self.pkg_update_alarm = 60 * 60 # 60 minutes
+    if time_type == 1:
+      # hours
       self.pkg_update_alarm = alarm_time * 60 * 60
+      self.pkg_update_alarm_period = 1
       signal.alarm(self.pkg_update_alarm)
     else:
       # dangerous, don't let this be less than a good number, like say 40
@@ -173,15 +175,19 @@ class gui:
         self.all_widgets.get_widget('generic_cancel_ok_label')
         text = """<b>Warning</b>\nThe time lapse between automatic update checks
         is very short.\nAre you sure you want to keep this value?"""
+        generic_cancel_ok_label.set_markup(text)
 
         response = generic_cancel_ok.run()
+        generic_cancel_ok.hide()
         if response == gtk.RESPONSE_OK:
           self.pkg_update_alarm = alarm_time * 60
+          self.pkg_update_alarm_period = 1
           signal.alarm(self.pkg_update_alarm)
         else:
           pass
       else:
         self.pkg_update_alarm = alarm_time * 60
+        self.pkg_update_alarm_period = 1
         signal.alarm(self.pkg_update_alarm)
   # }}}
     
@@ -192,19 +198,19 @@ class gui:
     fname = '/usr/share/guzuta/guzuta3.glade'
     if os.path.exists(fname):
       self.glade_file = fname
-      print 'guzuta glade file found in <%s>' % fname
+      #print 'guzuta glade file found in <%s>' % fname
     else:
-      print 'guzuta glade file not found in <%s>' % fname
+      #print 'guzuta glade file not found in <%s>' % fname
       if os.path.exists('guzuta3.glade'):
         self.glade_file = 'guzuta3.glade'
-        print 'guzuta glade file found in <%s>' % fname
+        #print 'guzuta glade file found in <%s>' % fname
       else:
         print __name__
         print os.getcwd()
         print 'no glade file found!'
         sys.exit(2)
     signals_dict = {\
-#    'on_treeview_row_activated': self.on_row_activated,
+    #'on_treeview_row_activated': self.on_row_activated,
     'on_treeview_cursor_changed': self.on_cursor_changed,
     'on_treeview_select_cursor_row': self.on_select_cursor_row,
     'on_treeview_repos_cursor_changed': self.on_cursor_changed,
@@ -259,47 +265,19 @@ class gui:
     self.not_installed = {}
     self.trayicon = None
     self.systray_eventbox = None
-    
+
     self.all_widgets = gtk.glade.XML(self.glade_file)
 
     self.systray_tooltips = gtk.Tooltips()
-    self.update_db_button_tooltips = gtk.Tooltips()
-    self.install_pkg_button_tooltips = gtk.Tooltips()
-    self.remove_pkg_button_tooltips = gtk.Tooltips()
-    self.preferences_pkg_button_tooltips = gtk.Tooltips()
-    self.install_pkg_from_file_button_tooltips = gtk.Tooltips()
-
     self.systray_tooltips.enable()
 
-    #self.update_db_button_tooltips.enable()
-    #self.update_db_button_tooltips.set_tip(\
-    #    self.all_widgets.get_widget('update_db'), 'Refresh pacman\'s database')
-    #
-    #self.install_pkg_button_tooltips.enable()
-    #self.install_pkg_button_tooltips.set_tip(\
-    #    self.all_widgets.get_widget('install_pkg'),\
-    #    'Install selected packages')
-    #
-    #self.remove_pkg_button_tooltips.enable()
-    #self.remove_pkg_button_tooltips.set_tip(\
-    #    self.all_widgets.get_widget('remove_pkg'),\
-    #    'Remove selected packages')
-    #
-    #self.preferences_pkg_button_tooltips.enable()
-    #self.preferences_pkg_button_tooltips.set_tip(\
-    #    self.all_widgets.get_widget('preferences'),\
-    #    'Preferences')
-    #
-    #self.install_pkg_from_file_button_tooltips.enable()
-    #self.install_pkg_from_file_button_tooltips.set_tip(\
-    #    self.all_widgets.get_widget('install_pkg_from_file_button'),\
-    #    'Install package from file')
-    
     self.main_window_hidden = False
     
     self.pacman_log_file = '/var/log/pacman.log'
     
-    self.pkg_update_alarm = 2 * 60 * 60 # 2 hours
+    self.pkg_update_alarm = 2 # 2 hours
+    self.pkg_update_alarm_period = 1 # hours
+
     # setup the alarm handler
     signal.signal(signal.SIGALRM, self.on_alarm)
     signal.alarm(self.pkg_update_alarm)
@@ -347,15 +325,25 @@ class gui:
       not_root_dialog.hide()
 
     self.read_conf()
-    self.main_window.show_all()
+
+    #alarm_time = self.pkg_update_alarm / 60
+    #spinbutton = self.all_widgets.get_widget('interval_preferences_spinbutton')
+    #interval_preferences_combobox =\
+    #  self.all_widgets.get_widget('interval_preferences_combobox')
+
+    #interval_preferences_combobox.set_active(self.pkg_update_alarm_period)
+    #spinbutton.set_value(alarm_time)
 
     self.all_widgets.signal_autoconnect(signals_dict)
+    
+    self.__build_trayicon__()
 
-    #print self.remote_pkg_info
+    self.main_window.show()
 
     # trayicon
-    self.__build_trayicon__()
     self.trayicon.show_all()
+
+    #print self.remote_pkg_info
 
     gtk.main()
   # }}}
@@ -378,23 +366,33 @@ class gui:
     
   # def on_preferences_clicked(self, button): {{{
   def on_preferences_clicked(self, button):
-    preferences_dialog = self.all_widgets.get_widget('preferences_dialog')
-    preferences_dialog.run()
-    preferences_dialog.hide()
-    
     interval_preferences_spinbutton =\
     self.all_widgets.get_widget('interval_preferences_spinbutton')
     
     interval_preferences_combobox =\
         self.all_widgets.get_widget('interval_preferences_combobox')
+    
+    preferences_dialog = self.all_widgets.get_widget('preferences_dialog')
+
+    print self.pkg_update_alarm_period
+    print self.pkg_update_alarm
+
+    interval_preferences_combobox.set_active(\
+        self.pkg_update_alarm_period)
+
+    interval_preferences_spinbutton.set_value(\
+        self.pkg_update_alarm)
+
+    preferences_dialog.run()
+    preferences_dialog.hide()
 
     if interval_preferences_combobox.get_active() == 1:
       # hours
       self.set_pkg_update_alarm(\
-          interval_preferences_spinbutton.get_value_as_int(), 'hours')
+          interval_preferences_spinbutton.get_value_as_int(), 1)
     else:
       self.set_pkg_update_alarm(\
-          interval_preferences_spinbutton.get_value_as_int(), 'minutes')
+          interval_preferences_spinbutton.get_value_as_int(), 0)
 
     preferences_pacman_log_file_text_entry =\
         self.all_widgets.get_widget('preferences_pacman_log_file_text_entry')
@@ -830,6 +828,8 @@ class gui:
     print 'conf_filename: ', conf_filename
     conf_file = open(conf_filename, 'w')
     conf_file.write('pkg_update_alarm = ' + str(self.pkg_update_alarm) + '\n')
+    conf_file.write('pkg_update_alarm_period = ' +\
+        str(self.pkg_update_alarm_period) + '\n')
     conf_file.write('pacman_log_file = ' + self.pacman_log_file + '\n')
     conf_file.close()
   # }}}
@@ -852,6 +852,11 @@ class gui:
         equal_pos = line.index('=')
         self.pacman_log_file = line[equal_pos+1:].strip()
         print 'pacman_log_file from conf: ', self.pacman_log_file
+      elif line.startswith('pkg_update_alarm_period ='):
+        equal_pos = line.index('=')
+        self.pkg_update_alarm_period = int(line[equal_pos+1:].strip())
+        print 'pkg_update_alarm_period from conf: ',\
+        self.pkg_update_alarm_period
   # }}}
   
   # def install_packages_from_list(self, list): {{{

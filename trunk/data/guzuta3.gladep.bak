@@ -2,7 +2,7 @@
 <!DOCTYPE glade-project SYSTEM "http://glade.gnome.org/glade-project-2.0.dtd">
 
 <glade-project>
-  <name>pycman2</name>
-  <program_name>pycman2</program_name>
+  <name>Guzuta</name>
+  <program_name>Guzuta</program_name>
   <gnome_support>FALSE</gnome_support>
 </glade-project>
