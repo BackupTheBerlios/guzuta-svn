@@ -259,8 +259,42 @@ class gui:
     self.not_installed = {}
     self.trayicon = None
     self.systray_eventbox = None
+    
+    self.all_widgets = gtk.glade.XML(self.glade_file)
+
     self.systray_tooltips = gtk.Tooltips()
+    self.update_db_button_tooltips = gtk.Tooltips()
+    self.install_pkg_button_tooltips = gtk.Tooltips()
+    self.remove_pkg_button_tooltips = gtk.Tooltips()
+    self.preferences_pkg_button_tooltips = gtk.Tooltips()
+    self.install_pkg_from_file_button_tooltips = gtk.Tooltips()
+
     self.systray_tooltips.enable()
+
+    #self.update_db_button_tooltips.enable()
+    #self.update_db_button_tooltips.set_tip(\
+    #    self.all_widgets.get_widget('update_db'), 'Refresh pacman\'s database')
+    #
+    #self.install_pkg_button_tooltips.enable()
+    #self.install_pkg_button_tooltips.set_tip(\
+    #    self.all_widgets.get_widget('install_pkg'),\
+    #    'Install selected packages')
+    #
+    #self.remove_pkg_button_tooltips.enable()
+    #self.remove_pkg_button_tooltips.set_tip(\
+    #    self.all_widgets.get_widget('remove_pkg'),\
+    #    'Remove selected packages')
+    #
+    #self.preferences_pkg_button_tooltips.enable()
+    #self.preferences_pkg_button_tooltips.set_tip(\
+    #    self.all_widgets.get_widget('preferences'),\
+    #    'Preferences')
+    #
+    #self.install_pkg_from_file_button_tooltips.enable()
+    #self.install_pkg_from_file_button_tooltips.set_tip(\
+    #    self.all_widgets.get_widget('install_pkg_from_file_button'),\
+    #    'Install package from file')
+    
     self.main_window_hidden = False
     
     self.pacman_log_file = '/var/log/pacman.log'
@@ -275,7 +309,6 @@ class gui:
     # pid of pacman process
     self.pid = 0
 
-    self.all_widgets = gtk.glade.XML(self.glade_file)
     #self.textview = self.all_widgets.get_widget("textview")
     self.main_window = self.all_widgets.get_widget("mainwindow")
     #self.open_menu_item = self.all_widgets.get_widget('open1')
@@ -388,6 +421,9 @@ class gui:
 
   # def on_pacman_log_activate(self, menuitem): {{{
   def on_pacman_log_activate(self, menuitem):
+    if self.pacman_log_file == '':
+      self.pacman_log_file = '/var/log/pacman.log'
+
     pacman_log = open(self.pacman_log_file, 'r')
 
     buffer = gtk.TextBuffer()
@@ -489,7 +525,6 @@ class gui:
       pass
     if event.button == 3: # right click
       # show popup menu
-      #print 'right click!'
       systray_popup_menu = self.all_widgets.get_widget('systray_popup_menu')
 
       systray_popup_menu.popup(None, None, None, event.button, event.get_time())
@@ -949,7 +984,8 @@ class gui:
         self.on_systray_eventbox_motion_notify_event)
     self.systray_eventbox.connect('leave_notify_event',\
         self.on_systray_eventbox_leave_notify_event)
-    systray_tooltip_text = "No Updates Available."
+    #systray_tooltip_text = "No Updates Available."
+    systray_tooltip_text = "Guzuta"
     self.systray_tooltips.set_tip(self.systray_eventbox, systray_tooltip_text)
     
     img = gtk.Image()

@@ -1,8 +1,4 @@
 0.0.2
 =====
 
-* Search by group
-* Tray icon
-* Use libpypac
-* Add option to specify pacman log file? read from conf file?
 * Add tooltips where applicable
