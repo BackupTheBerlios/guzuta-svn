@@ -250,7 +250,8 @@ class gui:
         self.on_systray_popup_menu_quit_activate,
     'on_preferences_clicked': self.on_preferences_clicked,
     'on_browse_preferences_button_clicked':\
-        self.on_browse_preferences_button_clicked
+        self.on_browse_preferences_button_clicked,
+    'on_preferences_menu_activate': self.on_preferences_clicked
     #'on_systray_eventbox_button_press_event':\
     #    self.on_systray_eventbox_button_press_event,
     #'on_systray_eventbox_motion_notify_event':\
@@ -327,7 +328,8 @@ class gui:
     self.__setup_repo_treeview__()
 
     self.all_widgets.get_widget('search_combobox').set_active(0)
-    self.all_widgets.get_widget('interval_preferences_combobox').set_active(0)
+    #TODO: implement when auto update works. alarm is giving a keyboarderror
+    #self.all_widgets.get_widget('interval_preferences_combobox').set_active(0)
     
     if not self.__is_root__():
       self.__disable_all_root_widgets__()
@@ -387,36 +389,46 @@ class gui:
 
     #print 'antes: ', self.pkg_update_alarm
 
-    interval_preferences_combobox.set_active(\
-        self.pkg_update_alarm_period)
+    #TODO: implement when auto update works. alarm is giving a keyboarderror
+    #interval_preferences_combobox.set_active(\
+    #    self.pkg_update_alarm_period)
 
     #if self.pkg_update_alarm_period == 0:
     #  interval_preferences_spinbutton.set_value(\
     #      self.pkg_update_alarm)
     #  print 'depois: ', self.pkg_update_alarm
     #else:
-    interval_preferences_spinbutton.set_value(\
-        self.pkg_update_alarm)
+    
+    #TODO: implement when auto update works. alarm is giving a keyboarderror
+    #interval_preferences_spinbutton.set_value(\
+    #    self.pkg_update_alarm)
+    
     #print 'depois: ', self.pkg_update_alarm
 
+    preferences_pacman_log_file_text_entry =\
+        self.all_widgets.get_widget('preferences_pacman_log_file_text_entry')
+    
+    if self.pacman_log_file == '':
+      log_file = '/var/log/pacman.log'
+    else:
+      log_file = self.pacman_log_file
+    preferences_pacman_log_file_text_entry.set_text(log_file)
 
     preferences_dialog.run()
     preferences_dialog.hide()
 
     #print 'combobox: ', interval_preferences_combobox.get_active()
 
-    if interval_preferences_combobox.get_active() == 1:
-      # hours
-      self.set_pkg_update_alarm(\
-          interval_preferences_spinbutton.get_value_as_int(), 1)
-    else:
-      #print 'value of spinbutton: ',\
-      interval_preferences_spinbutton.get_value_as_int()
-      self.set_pkg_update_alarm(\
-          interval_preferences_spinbutton.get_value_as_int(), 0)
+    #if interval_preferences_combobox.get_active() == 1:
+    #  # hours
+    #  self.set_pkg_update_alarm(\
+    #      interval_preferences_spinbutton.get_value_as_int(), 1)
+    #else:
+    #  #print 'value of spinbutton: ',\
+    #  interval_preferences_spinbutton.get_value_as_int()
+    #  self.set_pkg_update_alarm(\
+    #      interval_preferences_spinbutton.get_value_as_int(), 0)
 
-    preferences_pacman_log_file_text_entry =\
-        self.all_widgets.get_widget('preferences_pacman_log_file_text_entry')
     self.pacman_log_file = preferences_pacman_log_file_text_entry.get_text()
 
     self.write_conf()
@@ -850,10 +862,14 @@ class gui:
   def write_conf(self):
     # write self.pkg_update_alarm
     conf_filename = os.environ['HOME'] + '/.guzutarc'
-    conf_file = open(conf_filename, 'w')
-    conf_file.write('pkg_update_alarm = ' + str(self.pkg_update_alarm) + '\n')
-    conf_file.write('pkg_update_alarm_period = ' +\
-        str(self.pkg_update_alarm_period) + '\n')
+    try:
+      conf_file = open(conf_filename, 'w')
+    except IOError:
+      print 'Failure to open %s for writing. Bailing out' % conf_filename
+      return
+    #conf_file.write('pkg_update_alarm = ' + str(self.pkg_update_alarm) + '\n')
+    #conf_file.write('pkg_update_alarm_period = ' +\
+    #    str(self.pkg_update_alarm_period) + '\n')
     conf_file.write('pacman_log_file = ' + self.pacman_log_file + '\n')
     conf_file.close()
   # }}}
@@ -871,23 +887,29 @@ class gui:
     
     for line in contents:
       if line.startswith('pkg_update_alarm ='):
-        equal_pos = line.index('=')
-        self.pkg_update_alarm = int(line[equal_pos+1:].strip())
-        if self.pkg_update_alarm == 0:
-          self.pkg_update_alarm = 2
-          use_default = True
+        #TODO: implement when auto update works. alarm is giving a keyboarderror
+        #      ???
+        #equal_pos = line.index('=')
+        #self.pkg_update_alarm = int(line[equal_pos+1:].strip())
+        #if self.pkg_update_alarm == 0:
+        #  self.pkg_update_alarm = 2
+        #  use_default = True
+        pass
       elif line.startswith('pacman_log_file ='):
         equal_pos = line.index('=')
         self.pacman_log_file = line[equal_pos+1:].strip()
       elif line.startswith('pkg_update_alarm_period ='):
-        if use_default:
-          self.pkg_update_alarm_period = 1
-        else:
-          equal_pos = line.index('=')
-          self.pkg_update_alarm_period = int(line[equal_pos+1:].strip())
-          if self.pkg_update_alarm_period <0 or self.pkg_update_alarm_period>1:
-              self.pkg_update_alarm_period = 1
-              use_default = True
+        #TODO: implement when auto update works. alarm is giving a keyboarderror
+        #      ???
+        #if use_default:
+        #  self.pkg_update_alarm_period = 1
+        #else:
+        #  equal_pos = line.index('=')
+        #  self.pkg_update_alarm_period = int(line[equal_pos+1:].strip())
+        #  if self.pkg_update_alarm_period <0 or self.pkg_update_alarm_period>1:
+        #      self.pkg_update_alarm_period = 1
+        #      use_default = True
+        pass
   # }}}
   
   # def install_packages_from_list(self, list): {{{

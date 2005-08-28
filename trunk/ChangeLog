@@ -1,0 +1,18 @@
+Guzuta 0.0.2 (28 Aug 2005)
+
+ * Better performance.
+ * Rough trayicon support.
+ * Better displaying of repositories.
+ * Install package from file (pacman -U file support).
+ * View pacman's log.
+ * Preferences dialog.
+ * Setting to insensitive all applicable widgets when running as non root.
+ * Other stuff I forgot about.
+
+Guzuta 0.0.1 (16 Aug 2005)
+
+ * Initial release.
+ * Install, remove, display information about packages.
+ * Update pacman's database.
+ * Display packages by Pseudo Repos (Installed, Not Installed and All) and 
+   regular repositories (Current, Extra, Community).
