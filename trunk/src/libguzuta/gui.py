@@ -158,15 +158,15 @@ class gui:
   # def set_pkg_update_alarm(self, alarm_time, time_type): {{{
   def set_pkg_update_alarm(self, alarm_time, time_type):
     # unschedule the alarm
-    signal.alarm(0)
+    #signal.alarm(0)
 
     #self.pkg_update_alarm = 60 * 60 # 60 minutes
     if time_type == 1:
       # hours
       self.pkg_update_alarm = alarm_time
       self.pkg_update_alarm_period = 1
-      print 'setting alarm to: ', alarm_time * 60 * 60
-      signal.alarm(alarm_time * 60 * 60)
+      #print 'setting alarm to: ', alarm_time * 60 * 60
+      #signal.alarm(alarm_time * 60 * 60)
     else:
       # dangerous, don't let this be less than a good number, like say 40
       # minutes. if so, warn
@@ -183,15 +183,15 @@ class gui:
         if response == gtk.RESPONSE_OK:
           self.pkg_update_alarm = alarm_time
           self.pkg_update_alarm_period = 0
-          print 'setting alarm to: ', alarm_time * 60
-          signal.alarm(alarm_time * 60)
+          #print 'setting alarm to: ', alarm_time * 60
+          #signal.alarm(alarm_time * 60)
         else:
           pass
       else:
         self.pkg_update_alarm = alarm_time
         self.pkg_update_alarm_period = 0
-        print 'setting alarm to: ', alarm_time * 60
-        signal.alarm(alarm_time * 60)
+        #print 'setting alarm to: ', alarm_time * 60
+        #signal.alarm(alarm_time * 60)
   # }}}
     
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
@@ -284,14 +284,14 @@ class gui:
     self.read_conf()
 
     # setup the alarm handler
-    signal.signal(signal.SIGALRM, self.on_alarm)
+    #signal.signal(signal.SIGALRM, self.on_alarm)
     if self.pkg_update_alarm_period == 0:
       # minutes
       alarm_time = self.pkg_update_alarm * 60
     else:
       # hours
       alarm_time = self.pkg_update_alarm * 60 * 60
-    signal.alarm(alarm_time)
+    #signal.alarm(alarm_time)
 
     self.shell = shell(command_line = None, interactive = True)
     self.populate_pkg_lists()
@@ -403,14 +403,14 @@ class gui:
     preferences_dialog.run()
     preferences_dialog.hide()
 
-    print 'combobox: ', interval_preferences_combobox.get_active()
+    #print 'combobox: ', interval_preferences_combobox.get_active()
 
     if interval_preferences_combobox.get_active() == 1:
       # hours
       self.set_pkg_update_alarm(\
           interval_preferences_spinbutton.get_value_as_int(), 1)
     else:
-      print 'value of spinbutton: ',\
+      #print 'value of spinbutton: ',\
       interval_preferences_spinbutton.get_value_as_int()
       self.set_pkg_update_alarm(\
           interval_preferences_spinbutton.get_value_as_int(), 0)
@@ -425,7 +425,9 @@ class gui:
   # def on_alarm(self, signum, frame): {{{
   def on_alarm(self, signum, frame):
     # only do this if the main window is hidden !!!
-    print 'Alarm!'
+    #print 'Alarm!'
+    self.systray_tooltips.set_tip(self.systray_eventbox,\
+        'Checking for updates...')
     if self.main_window_hidden():
       ret, ret_err = self.shell.updatedb()
 
@@ -436,8 +438,8 @@ class gui:
         systray_tooltip_text = 'Update(s) available'
         self.systray_tooltips.set_tip(self.systray_eventbox, systray_tooltip_text)
 
-    print 'setting alarm to: ', self.pkg_update_alarm
-    signal.alarm(self.pkg_update_alarm)
+    #print 'setting alarm to: ', self.pkg_update_alarm
+    #signal.alarm(self.pkg_update_alarm)
   # }}}
 
   # def on_pacman_log_activate(self, menuitem): {{{
