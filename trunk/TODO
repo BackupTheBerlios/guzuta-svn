@@ -1,7 +1,10 @@
 0.0.3
 =====
 
+* List pkgs not associated with a repo, when installing them from a file
+  directly
 * Add more tooltips where applicable
 * Use threads to run shell methods in order to not have the main window and
-  popups not redrawed, probably use a 'Please wait' type dialog
+  popups not redrawed, probably use a 'Please wait' type dialog, with some sort
+  of progress dialog
 * Add pseudo-repos: Last Installed, Last Uninstalled

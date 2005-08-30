@@ -1861,7 +1861,7 @@ of this License.
 	  <child>
 	    <widget class="GtkToolButton" id="remove_pkg">
 	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">Remove</property>
+	      <property name="label" translatable="yes">Uninstall</property>
 	      <property name="use_underline">True</property>
 	      <property name="stock_id">gtk-delete</property>
 	      <property name="visible_horizontal">True</property>

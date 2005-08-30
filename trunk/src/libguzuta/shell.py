@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*
 # vim: set foldmethod=marker:
 
-import os, sys, posix, signal, re
+import os, os.path, sys, posix, signal, re
 from subprocess import *
 
 #class pacman: {{{
@@ -1091,6 +1091,40 @@ the terms of the GNU General Public License'''
     #else:
     #  (self.pid, self.exit_status) = os.wait()
     # }}}
+  # }}}
+
+  # def get_no_repository_pkgs(self): {{{
+  def get_no_repository_pkgs(self):
+    local_dir = '/var/lib/pacman/local'
+
+    ret = []
+    checked = {}
+    
+    # TODO:
+    for pkg_dir in sorted(os.listdir(local_dir)):
+      for file in os.listdir(os.path.join(local_dir, pkg_dir)):
+        print os.path.join(local_dir, pkg_dir, file)
+      #pkg_name = pkg_dir[:pkg_dir.index('-')]
+      #info = self.info(pkg_name)
+      #try:
+      #  checked[pkg_name]
+      #  print 'already checked: ', pkg_name
+      #  continue
+      #except KeyError:
+      #  checked[pkg_name] = None
+      #print 'pkg_name <%s>' %pkg_name
+
+      #try:
+      #  repository = info[0][info[0].rindex(':')+2:]
+      #  if repository != 'current' and repository != 'extra' \
+      #    and repository != 'community':
+      #      print 'repo: <%s>' % repository
+      #      name = info[1][info[1].rindex(':')+2:]
+      #      version = info[2][info[2].rindex(':')+2:]
+      #      print name, version
+      #      #ret.append((name, version, description))
+      #except ValueError:
+      #  print 'no info: ',pkg_name
   # }}}
 # }}}
 

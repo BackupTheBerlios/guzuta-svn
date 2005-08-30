@@ -145,6 +145,9 @@ class gui:
     self.treestore_repos.append(iter0, ['All'])
     self.treestore_repos.append(iter0, ['Installed'])
     self.treestore_repos.append(iter0, ['Not installed'])
+    self.treestore_repos.append(iter0, ['No Repository'])
+    self.treestore_repos.append(iter0, ['Last Installed'])
+    self.treestore_repos.append(iter0, ['Last Uninstalled'])
 
     iter1 = self.treestore_repos.append(None, ['Repos'])
     for repo, v in self.pkgs_by_repo.iteritems():
@@ -266,6 +269,10 @@ class gui:
     self.pkgs = {}
     self.local_pkg_info = {}
     self.remote_pkg_info = {}
+
+    self.pkgs_by_repo = {}
+    self.pkgs_by_repo['no repository'] = []
+
     self.not_installed = {}
     self.trayicon = None
     self.systray_eventbox = None
@@ -353,6 +360,7 @@ class gui:
 
     # trayicon
     self.trayicon.show_all()
+    self.shell.get_no_repository_pkgs()
 
     #print self.remote_pkg_info
 
@@ -513,12 +521,18 @@ class gui:
       install_pkg_are_you_sure_dialog.hide()
 
       if response == gtk.RESPONSE_OK:
+        selection = treeview.get_selection()
+        treemodel, iter = selection.get_selected()
+        #if not iter:
+        #  return
+
         print 'installing: ' + pathname
         ret,ret_err = self.shell.install_pkg_from_file(pathname)
         if self.shell.get_exit_status() == 0:
           install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
           install_pkg_popup.run()
           install_pkg_popup.hide()
+          self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
         else:
           print 'ret: ', ret
           print 'ret_err: ', ret_err
@@ -1215,7 +1229,7 @@ class gui:
 
     self.liststore = gtk.ListStore('gboolean', str, str, str)
 
-    if repo != 'all' and repo != 'installed' and repo != 'not installed':
+    if repo == 'current' or repo == 'extra' or repo == 'community':
       # current, extra, community {{{
       for v in self.pkgs_by_repo[repo]:
         
@@ -1263,12 +1277,44 @@ class gui:
 
           self.liststore.append([False, pkg[0], installed_version, pkg[1]])
       # }}}
-    else:
+    elif repo == 'not installed':
       # not installed {{{
       not_installed = xor_two_dicts(self.local_pkgs, self.pkgs)
       # pkg: repo, version
       for name, v in not_installed.iteritems():
         self.liststore.append([False, name, '--', v[1]])
+      # }}}
+    elif repo == 'last installed':
+      # TODO: last installed {{{
+      pass
+      # }}}
+    elif repo == 'last uninstalled':
+      # TODO: last uninstalled {{{
+      pass
+      # }}}
+    elif repo == 'no repository':
+      # no repository {{{
+      try:
+        self.pkgs_by_repo[repo]
+      except KeyError:
+        print 'duuh'
+        return
+
+      for v in self.pkgs_by_repo[repo]:
+        
+        name = v[0] # name
+        try:
+          # repo, version, description
+          installed_version = self.local_pkgs[name][1]
+        except KeyError:
+          # not installed
+          #try:
+          #  self.not_installed[name]
+          #except KeyError:
+          #  self.not_installed[name] = None
+          installed_version = '--'
+        
+        self.liststore.append([False, v[0], installed_version, v[1]])
       # }}}
     self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
     self.treeview.set_model(self.liststore)
