@@ -1,6 +1,8 @@
 0.0.3
 =====
 
+* Add download only menu
+* Go to package url somehow
 * List pkgs not associated with a repo, when installing them from a file
   directly
 * Add more tooltips where applicable

@@ -10,6 +10,7 @@ if gtk.pygtk_version < (2,3,90):
   raise SystemExit
 import gobject
 import gtk.glade
+#import pango
 import sys, os, posix
 import re
 #import gksu
@@ -196,7 +197,7 @@ class gui:
         #print 'setting alarm to: ', alarm_time * 60
         #signal.alarm(alarm_time * 60)
   # }}}
-    
+
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
   def __init__(self, read_pipe = None, write_pipe = None):
     # signals !!!
@@ -360,7 +361,9 @@ class gui:
 
     # trayicon
     self.trayicon.show_all()
-    self.shell.get_no_repository_pkgs()
+    
+    
+    #self.shell.get_no_repository_pkgs()
 
     #print self.remote_pkg_info
 
@@ -611,6 +614,9 @@ class gui:
       # treeview of pkgs
       name = treemodel.get_value(iter, 1)
       
+      buffer = gtk.TextBuffer()
+      self.information_text.set_buffer(buffer)
+      
       try:
         info = self.local_pkg_info[name]
       except KeyError:
@@ -623,11 +629,14 @@ class gui:
         except KeyError:
           remote_info = self.shell.info(name)
           self.remote_pkg_info[name] = remote_info
-        
-        self.__add_pkg_info_markuped_to_pkg_info_label__(remote_info,
+
+        self.__add_pkg_info_markuped_to_text_buffer__(buffer, remote_info,\
             installed = False)
+        #self.__add_pkg_info_markuped_to_pkg_info_label__(remote_info,
+        #    installed = False)
       else:
-        self.__add_pkg_info_markuped_to_pkg_info_label__(info)
+        self.__add_pkg_info_markuped_to_text_buffer__(buffer, info)
+        #self.__add_pkg_info_markuped_to_pkg_info_label__(info)
 
     else: # treeview of repos
       repo = treemodel.get_value(iter, 0)
@@ -1162,9 +1171,24 @@ class gui:
           #    line[:match_object.start()+1], 'bold')
           #text_buffer.insert(iterator, line[match_object.start()+1:] + '\n')
           #print 'line altered: ',  line[:match_object.start()+1].strip()
-          label_text = label_text + '<b>' +\
-          line[:match_object.start()+1].strip() +\
-          '</b>' + line[match_object.start()+1:].strip() + '\n'
+          bold_stuff = line[:match_object.start()+1].strip()
+          normal_stuff = line[match_object.start()+1:].strip()
+          if bold_stuff.startswith('Size'):
+            raw_size = int(normal_stuff)
+            kb_size = raw_size / 1024
+            normal_stuff = str(kb_size) + ' KB'
+            if kb_size > 1024:
+              mb_size = kb_size / 1024
+              normal_stuff = str(mb_size) + ' MB'
+              if mb_size > 1024:
+                gb_size = mb_size / 1024
+                normal_stuff = str(gb_size) + ' GB'
+          elif bold_stuff.startswith('URL'):
+            # underline the url
+            normal_stuff = '<u>' + normal_stuff + '</u>'
+                
+          label_text = label_text + '<b>' + bold_stuff + '</b> ' +\
+              normal_stuff + '\n'
         else:
           #text_buffer.insert(iterator, line + '\n')
           label_text = label_text + line.strip() + '\n'
@@ -1179,9 +1203,11 @@ class gui:
       installed = True):
     iterator = text_buffer.get_iter_at_offset(0)
     table = text_buffer.get_tag_table()
-    tag = table.lookup('bold')
-    if tag == None:
-      tag = text_buffer.create_tag('bold', weight=pango.WEIGHT_BOLD)
+    bold_tag = table.lookup('bold')
+    hyperlink_tag = table.lookup('hyperlink')
+
+    if bold_tag == None:
+      bold_tag = text_buffer.create_tag('bold', weight=700)
     
     if not installed:
       text_buffer.insert_with_tags_by_name(iterator,
@@ -1194,10 +1220,22 @@ class gui:
       if line != '':
         match_object = re.search(pattern, line)
         
+        bold_stuff = line[:match_object.start()+1]
+        normal_stuff = line[match_object.start()+1:]
+
         if match_object != None:
           text_buffer.insert_with_tags_by_name(iterator,
-              line[:match_object.start()+1], 'bold')
-          text_buffer.insert(iterator, line[match_object.start()+1:] + '\n')
+              bold_stuff, 'bold')
+        
+          if line.startswith('URL'):
+            #newtag = make_hyperlink_tag("my link", textbuffer)
+            if hyperlink_tag == None:
+              hyperlink_tag = self.make_hyperlink_tag(normal_stuff, text_buffer, iterator)
+
+            text_buffer.insert_with_tags(iterator, normal_stuff + '\n',\
+                hyperlink_tag)
+          else:
+            text_buffer.insert(iterator, normal_stuff + '\n')
         else:
           text_buffer.insert(iterator, line + '\n')
   # }}}
@@ -1301,20 +1339,21 @@ class gui:
         return
 
       for v in self.pkgs_by_repo[repo]:
+        pass
         
-        name = v[0] # name
-        try:
-          # repo, version, description
-          installed_version = self.local_pkgs[name][1]
-        except KeyError:
-          # not installed
-          #try:
-          #  self.not_installed[name]
-          #except KeyError:
-          #  self.not_installed[name] = None
-          installed_version = '--'
-        
-        self.liststore.append([False, v[0], installed_version, v[1]])
+        #name = v[0] # name
+        #try:
+        #  # repo, version, description
+        #  installed_version = self.local_pkgs[name][1]
+        #except KeyError:
+        #  # not installed
+        #  #try:
+        #  #  self.not_installed[name]
+        #  #except KeyError:
+        #  #  self.not_installed[name] = None
+        #  installed_version = '--'
+        #
+        #self.liststore.append([False, v[0], installed_version, v[1]])
       # }}}
     self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
     self.treeview.set_model(self.liststore)
@@ -1457,5 +1496,24 @@ class gui:
     (exit_status, dependencies, out) = self.shell.remove(what)
     return (exit_status, dependencies, out)
   # }}}
+
+  # def hyperlink_handler(self, tag, widget, event, iter, link): {{{
+  def hyperlink_handler(self, tag, widget, event, iter, link):
+    #print link
+    #os.execlp('firefox', link)
+
+  # }}}
+
+  # def make_hyperlink_tag(self, userdata, textbuffer, iter): {{{
+  def make_hyperlink_tag(self, userdata, textbuffer, iter):
+   hyperlink_tag = textbuffer.create_tag('hyperlink', foreground='blue')
+   
+   def anonymous_hyperlink(tag,widget,event,iter):
+        return self.hyperlink_handler(tag,widget,event,iter,userdata)
+   
+   hyperlink_tag.connect('event', anonymous_hyperlink)
+   
+   return hyperlink_tag
+ # }}}
 # }}}
 
