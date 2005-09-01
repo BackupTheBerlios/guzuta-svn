@@ -10,7 +10,7 @@ if gtk.pygtk_version < (2,3,90):
   raise SystemExit
 import gobject
 import gtk.glade
-#import pango
+import pango
 import sys, os, posix
 import re
 #import gksu
@@ -55,6 +55,9 @@ def xor_two_dicts(a, b):
 
 # class gui: {{{
 class gui:
+  pango_no_underline = 0
+  pango_underline_single = 1
+
   # def __setup_pkg_treeview__(self): {{{
   def __setup_pkg_treeview__(self):
     # checked, name, version, description 
@@ -256,6 +259,12 @@ class gui:
     'on_browse_preferences_button_clicked':\
         self.on_browse_preferences_button_clicked,
     'on_preferences_menu_activate': self.on_preferences_clicked
+    #'on_information_text_enter_notify_event': self.on_hyperlink_motion,
+    #'on_information_text_leave_notify_event':\
+    #  self.on_mainwindow_motion_notify_event,
+    #'on_mainwindow_enter_notify_event': self.on_mainwindow_enter_notify_event
+    #'on_information_text_motion_notify_event': self.on_hyperlink_motion,
+    #'on_mainwindow_motion_notify_event': self.on_mainwindow_motion_notify_event,
     #'on_systray_eventbox_button_press_event':\
     #    self.on_systray_eventbox_button_press_event,
     #'on_systray_eventbox_motion_notify_event':\
@@ -264,6 +273,7 @@ class gui:
     #    self.on_systray_eventbox_leave_notify_event
     }
     # end signals
+
     #self.pacman = pacman(self)
     self.treeview = None
     self.uid = posix.getuid()
@@ -273,6 +283,9 @@ class gui:
 
     self.pkgs_by_repo = {}
     self.pkgs_by_repo['no repository'] = []
+
+    self.url_tags = []
+    self.underlined_url = False
 
     self.not_installed = {}
     self.trayicon = None
@@ -309,6 +322,8 @@ class gui:
 
     #self.textview = self.all_widgets.get_widget("textview")
     self.main_window = self.all_widgets.get_widget("mainwindow")
+    #self.main_window.connect('enter_notify_event',\
+    #    self.on_mainwindow_enter_notify_event)
     #self.open_menu_item = self.all_widgets.get_widget('open1')
     # checkbox, name, version, packager, description
     self.treeview = self.all_widgets.get_widget('treeview')
@@ -328,6 +343,10 @@ class gui:
     
     #self.information_frame = self.all_widgets.get_widget("information_frame")
     self.information_text = self.all_widgets.get_widget('information_text')
+    #self.information_text.connect('enter_notify_event',\
+    #    self.on_hyperlink_motion)
+    #self.information_text.connect('leave_notify_event',\
+    #    self.on_mainwindow_motion_notify_event)
 
     #self.information_frame = gtk.Frame('ahaha')
     #self.vbox2.pack_end(self.information_frame)
@@ -443,6 +462,7 @@ class gui:
     self.pacman_log_file = preferences_pacman_log_file_text_entry.get_text()
 
     self.write_conf()
+
   # }}}
   
   # def on_alarm(self, signum, frame): {{{
@@ -463,6 +483,7 @@ class gui:
 
     #print 'setting alarm to: ', self.pkg_update_alarm
     #signal.alarm(self.pkg_update_alarm)
+
   # }}}
 
   # def on_pacman_log_activate(self, menuitem): {{{
@@ -487,6 +508,7 @@ class gui:
 
     pacman_log_dialog.run()
     pacman_log_dialog.hide()
+
   # }}}
 
   # def on_install_pkg_from_file_activate(self, menuitem): {{{
@@ -540,9 +562,9 @@ class gui:
           print 'ret: ', ret
           print 'ret_err: ', ret_err
       else:
-        return
+        return 
     else:
-      return
+      return 
     
   # }}}
 
@@ -608,14 +630,13 @@ class gui:
     treemodel, iter = selection.get_selected()
     info = ''
     if not iter:
-      return
+      return 
 
     if treeview == self.treeview:
       # treeview of pkgs
       name = treemodel.get_value(iter, 1)
       
       buffer = gtk.TextBuffer()
-      self.information_text.set_buffer(buffer)
       
       try:
         info = self.local_pkg_info[name]
@@ -637,11 +658,17 @@ class gui:
       else:
         self.__add_pkg_info_markuped_to_text_buffer__(buffer, info)
         #self.__add_pkg_info_markuped_to_pkg_info_label__(info)
+      self.information_text.set_buffer(buffer)
+      #tag_list = self.information_text.get_buffer().\
+      #    get_start_iter().get_tags()
+
+      #for tag in tag_list:
+      #  print tag.get_property('name')
 
     else: # treeview of repos
       repo = treemodel.get_value(iter, 0)
       if repo == 'Pseudo Repos' or repo == 'Repos':
-        return
+        return 
       # fill treeview with pkgs from 'repo'
       self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
   # }}}
@@ -656,12 +683,14 @@ class gui:
   # def on_quit_activate(self, menuitem): {{{
   def on_quit_activate(self, menuitem):
     gtk.main_quit()
+    return False
   # }}}
 
   # def on_destroy(self, widget, data=None): {{{
   def on_destroy(self, widget, data=None):
     if widget == self.main_window:
       gtk.main_quit()
+      return False
     else:
       self.update_db_popup.hide()
       return False
@@ -706,7 +735,7 @@ class gui:
         pacman_error_label.set_text(ret_err)
         pacman_error_dialog.run()
         pacman_error_dialog.hide()
-        return
+        return 
       #print ret, ret_err
       #self.shell.get_read_pipe()
       self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
@@ -721,7 +750,7 @@ class gui:
         no_updates_dialog = self.all_widgets.get_widget('no_updates_dialog')
         no_updates_dialog.run()
         no_updates_dialog.hide()
-        return
+        return 
 
       fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
       fresh_updates_label = self.all_widgets.get_widget('fresh_updates_label')
@@ -749,10 +778,12 @@ class gui:
       if fresh_updates_installed:
         self.__add_pkg_info_to_local_pkgs__(updates)
 
-      return
+      return 
     else:
       # display a warning window?? switch to root?? gksu???
       print 'not root!'
+
+      return 
   # }}}
 
   # def on_okbutton_clicked(self, button): {{{
@@ -770,7 +801,7 @@ class gui:
     pkgs_to_install = self.get_all_selected_packages(self.liststore)
 
     if pkgs_to_install == []:
-      return
+      return 
     
     self.install_packages_from_list(pkgs_to_install)
   # }}}
@@ -780,7 +811,7 @@ class gui:
     pkgs_to_remove = self.get_all_selected_packages(self.liststore)
 
     if pkgs_to_remove == []:
-      return
+      return 
     self.remove_packages_from_list(pkgs_to_remove)
   # }}}
 
@@ -788,7 +819,6 @@ class gui:
   def on_update_db_popup_delete_event(self, widget, event, data=None):
     self.update_db_popup.hide()
     self.update_db_popup.destroy()
-    return True
   # }}}
 
   # def on_search_clicked(self): {{{
@@ -843,7 +873,7 @@ class gui:
     treemodel, iter = selection.get_selected()
 
     if not iter:
-      return
+      return 
     else:
       self.refresh_pkgs_treeview()
   # }}}
@@ -862,7 +892,7 @@ class gui:
     selection = self.treeview.get_selection()
     treemodel, iter = selection.get_selected()
     if not iter:
-      return
+      return 
 
     name = treemodel.get_value(iter, 1)
     pkgs_to_install = [name]
@@ -874,11 +904,66 @@ class gui:
     selection = self.treeview.get_selection()
     treemodel, iter = selection.get_selected()
     if not iter:
-      return
+      return 
 
     name = treemodel.get_value(iter, 1)
     pkgs_to_remove = [name]
     self.remove_packages_from_list(pkgs_to_remove)
+  # }}}
+
+  # def on_mainwindow_enter_notify_event(self, widget, event): {{{
+  def on_mainwindow_enter_notify_event(self, widget, event):
+    print 'entered main window...'
+    print widget, event
+  # }}}
+    
+  # def on_mainwindow_motion_notify_event(self, widget, event, data = None): {{{
+  def on_mainwindow_motion_notify_event(self, widget, event, data = None):
+    print 'main_window!'
+    #x, y, mods = self.main_window.get_pointer()
+
+    #x, y = self.information_text.window_to_buffer_coords(gtk.TEXT_WINDOW_TEXT, x, y)
+    #iter = self.information_text.get_iter_at_location(x, y)
+    #buffer = iter.get_buffer()
+    tag_table = self.information_text.get_buffer().get_tag_table()
+    hyperlink_tag = tag_table.lookup('hyperlink')
+
+    if hyperlink_tag == None:
+      print 'main_window None!!'
+      return 
+    
+    hyperlink_tag.set_property('underline', self.pango_no_underline)
+    self.information_text.get_window(gtk.TEXT_WINDOW_TEXT).set_cursor(None)
+  # }}}
+  
+  # def on_hyperlink_motion(self, widget, event, data = None): {{{
+  def on_hyperlink_motion(self, widget, event, data = None):
+    print 'hyperlink!'
+    #x, y, mods = self.main_window.get_pointer()
+
+    #x, y = self.information_text.window_to_buffer_coords(gtk.TEXT_WINDOW_TEXT, x, y)
+    #iter = self.information_text.get_iter_at_location(x, y)
+    #buffer = iter.get_buffer()
+    #tags = iter.get_tags()
+    tag_table = self.information_text.get_buffer().get_tag_table()
+    hyperlink_tag = tag_table.lookup('hyperlink')
+
+    if hyperlink_tag == None:
+      print 'hyperlink None!!'
+      return 
+    
+    hyperlink_tag.set_property('underline', self.pango_underline_single)
+    self.information_text.get_window(gtk.TEXT_WINDOW_TEXT)\
+        .set_cursor(gtk.gdk.Cursor(gtk.gdk.HAND2))
+    self.underlined_url = hyperlink_tag
+
+  # }}}
+
+  # def on_hyperlink_clicked(self, tag, widget, event, iter, link): {{{
+  def on_hyperlink_clicked(self, tag, widget, event, iter, link):
+    print link
+    #os.execlp('firefox', link)
+    pass
   # }}}
 
   # def write_conf(self): {{{
@@ -1220,20 +1305,29 @@ class gui:
       if line != '':
         match_object = re.search(pattern, line)
         
-        bold_stuff = line[:match_object.start()+1]
-        normal_stuff = line[match_object.start()+1:]
-
         if match_object != None:
+          bold_stuff = line[:match_object.start()+1]
+          normal_stuff = line[match_object.start()+1:]
+
           text_buffer.insert_with_tags_by_name(iterator,
               bold_stuff, 'bold')
         
           if line.startswith('URL'):
-            #newtag = make_hyperlink_tag("my link", textbuffer)
             if hyperlink_tag == None:
-              hyperlink_tag = self.make_hyperlink_tag(normal_stuff, text_buffer, iterator)
+              hyperlink_tag = text_buffer.create_tag('hyperlink',
+                  foreground='blue', underline = self.pango_underline_single)
 
-            text_buffer.insert_with_tags(iterator, normal_stuff + '\n',\
-                hyperlink_tag)
+              def anonymous_hyperlink(tag,widget,event,iterator):
+                return self.on_hyperlink_clicked(tag,widget,event,iterator,normal_stuff)
+
+              #textbuffer.connect('motion_notify_event', self.on_hyperlink_motion)
+              hyperlink_tag.connect('event', anonymous_hyperlink)
+
+            #text_buffer.insert_with_tags(iterator, normal_stuff + '\n',\
+            #    hyperlink_tag)
+            text_buffer.insert_with_tags_by_name(iterator, normal_stuff +\
+                '\n', 'hyperlink')
+            self.url_tags.append(hyperlink_tag)
           else:
             text_buffer.insert(iterator, normal_stuff + '\n')
         else:
@@ -1497,23 +1591,5 @@ class gui:
     return (exit_status, dependencies, out)
   # }}}
 
-  # def hyperlink_handler(self, tag, widget, event, iter, link): {{{
-  def hyperlink_handler(self, tag, widget, event, iter, link):
-    #print link
-    #os.execlp('firefox', link)
-
-  # }}}
-
-  # def make_hyperlink_tag(self, userdata, textbuffer, iter): {{{
-  def make_hyperlink_tag(self, userdata, textbuffer, iter):
-   hyperlink_tag = textbuffer.create_tag('hyperlink', foreground='blue')
-   
-   def anonymous_hyperlink(tag,widget,event,iter):
-        return self.hyperlink_handler(tag,widget,event,iter,userdata)
-   
-   hyperlink_tag.connect('event', anonymous_hyperlink)
-   
-   return hyperlink_tag
- # }}}
 # }}}
 

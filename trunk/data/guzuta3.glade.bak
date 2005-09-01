@@ -1646,6 +1646,7 @@ of this License.
   <signal name="delete_event" handler="on_mainwindow_delete_event" last_modification_time="Thu, 18 Aug 2005 14:48:48 GMT"/>
   <signal name="destroy_event" handler="on_mainwindow_destroy_event" last_modification_time="Thu, 18 Aug 2005 14:49:45 GMT"/>
   <signal name="destroy" handler="on_mainwindow_destroy_event" last_modification_time="Thu, 18 Aug 2005 14:53:29 GMT"/>
+  <signal name="motion_notify_event" handler="on_mainwindow_motion_notify_event" last_modification_time="Thu, 01 Sep 2005 00:14:42 GMT"/>
 
   <child>
     <widget class="GtkVBox" id="vbox8">
@@ -2146,6 +2147,9 @@ Description</property>
 				  <property name="right_margin">0</property>
 				  <property name="indent">0</property>
 				  <property name="text" translatable="yes"></property>
+				  <signal name="motion_notify_event" handler="on_information_text_motion_notify_event" last_modification_time="Wed, 31 Aug 2005 23:04:18 GMT"/>
+				  <signal name="enter_notify_event" handler="on_information_text_enter_notify_event" last_modification_time="Thu, 01 Sep 2005 00:20:47 GMT"/>
+				  <signal name="leave_notify_event" handler="on_information_text_leave_notify_event" last_modification_time="Thu, 01 Sep 2005 00:21:29 GMT"/>
 				</widget>
 			      </child>
 			    </widget>
