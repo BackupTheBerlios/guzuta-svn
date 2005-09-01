@@ -303,6 +303,8 @@ class gui:
     self.pkg_update_alarm = 2 # 2 hours
     self.pkg_update_alarm_period = 1 # hours
 
+    self.browser = 'epiphany'
+
     self.read_conf()
 
     # setup the alarm handler
@@ -963,6 +965,7 @@ class gui:
   def on_hyperlink_clicked(self, tag, widget, event, iter, link):
     print link
     #os.execlp('firefox', link)
+    os.spawnlp(os.P_WAIT, self.browser, self.browser, link)
     pass
   # }}}
 
@@ -1314,11 +1317,14 @@ class gui:
         
           if line.startswith('URL'):
             if hyperlink_tag == None:
+              extra = normal_stuff
               hyperlink_tag = text_buffer.create_tag('hyperlink',
                   foreground='blue', underline = self.pango_underline_single)
 
               def anonymous_hyperlink(tag,widget,event,iterator):
-                return self.on_hyperlink_clicked(tag,widget,event,iterator,normal_stuff)
+                if event.type == gtk.gdk.BUTTON_PRESS:
+                  return self.on_hyperlink_clicked(tag,widget,event,iterator,\
+                      extra)
 
               #textbuffer.connect('motion_notify_event', self.on_hyperlink_motion)
               hyperlink_tag.connect('event', anonymous_hyperlink)
