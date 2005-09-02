@@ -643,13 +643,16 @@ class shell:
     
     (self.yesno, out) = self.__read_and_check_for_yesno__()
     
-    regex = re.compile('is up to date')
+    #print 'GGGG: ', self.yesno, out
+    regex = re.compile('is up to date|local version is newer')
     match = regex.search(out)
 
     if not match:
       return (False, out)
     elif match.span() != (0,0):
       return (True, out)
+    #elif self.yesno:
+    #  return (True, out)
   # }}}
     
   # def install_noconfirm(self, what = ''): {{{
@@ -703,6 +706,7 @@ class shell:
       #sys.stdin.flush()
    
       (found, output) = self.__is_already_installed__(what)
+      #print 'found = ', found
       
       self.pid = self.pacman.get_pid()
 

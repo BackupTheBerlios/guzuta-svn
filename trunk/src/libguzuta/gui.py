@@ -553,7 +553,7 @@ class gui:
         #if not iter:
         #  return
 
-        print 'installing: ' + pathname
+        #print 'installing: ' + pathname
         ret,ret_err = self.shell.install_pkg_from_file(pathname)
         if self.shell.get_exit_status() == 0:
           install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
@@ -805,6 +805,7 @@ class gui:
     if pkgs_to_install == []:
       return 
     
+    print 'installing the following packages...: ', pkgs_to_install
     self.install_packages_from_list(pkgs_to_install)
   # }}}
 
@@ -1029,6 +1030,7 @@ class gui:
     (retcode, output) = self.install_packages(list)
 
     # TODO: do the same for remove pkg, add 'Are you sure?' dialog to remove
+    #print 'retcode = ', retcode
     if retcode == False:
       # cancel
       (exit_status, out) = self.shell.install_part_3('n')
@@ -1040,7 +1042,7 @@ class gui:
       #exit_status = self.shell.install_packages_noconfirm(pkgs_to_install)
       out = self.shell.install_part_2('Y')
       (exit_status, out) = self.shell.install_part_3('Y')
-      self.__add_pkg_info_to_local_pkgs__(pkgs_to_install)
+      self.__add_pkg_info_to_local_pkgs__(list)
       self.refresh_pkgs_treeview()
       # TODO: check for proper pkg install, check for file conflicts, etc. Build
       # another popup
@@ -1435,7 +1437,7 @@ class gui:
       try:
         self.pkgs_by_repo[repo]
       except KeyError:
-        print 'duuh'
+        #print 'duuh'
         return
 
       for v in self.pkgs_by_repo[repo]:
@@ -1454,6 +1456,24 @@ class gui:
         #  installed_version = '--'
         #
         #self.liststore.append([False, v[0], installed_version, v[1]])
+      # }}}
+    else:
+      # something else {{{
+      for v in self.pkgs_by_repo[repo]:
+        
+        name = v[0] # name
+        try:
+          # repo, version, description
+          installed_version = self.local_pkgs[name][1]
+        except KeyError:
+          # not installed
+          #try:
+          #  self.not_installed[name]
+          #except KeyError:
+          #  self.not_installed[name] = None
+          installed_version = '--'
+        
+        self.liststore.append([False, v[0], installed_version, v[1]])
       # }}}
     self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
     self.treeview.set_model(self.liststore)
@@ -1505,6 +1525,7 @@ class gui:
         pkg_names_by_comma = pkg_names_by_comma + ', ' + pkg_name
     
     (ret, output) = self.shell.install_part_1(what)
+    #print 'ret, output', ret, output
 
     if ret:
       # is/are already up to date, get confirmation from user about forcing the
@@ -1525,6 +1546,7 @@ class gui:
       elif response2 == gtk.RESPONSE_OK:
         return (True, output)
     else:
+      # not installed, install
       return (None, output)
     #return ret
 

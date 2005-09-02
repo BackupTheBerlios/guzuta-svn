@@ -1049,7 +1049,7 @@
 	      <child>
 		<widget class="GtkLabel" id="label14">
 		  <property name="visible">True</property>
-		  <property name="label" translatable="yes">&lt;b&gt;Are you sure you want to remove the following packages?&lt;/b&gt;</property>
+		  <property name="label" translatable="yes">&lt;b&gt;Are you sure you want to uninstall the following packages?&lt;/b&gt;</property>
 		  <property name="use_underline">False</property>
 		  <property name="use_markup">True</property>
 		  <property name="justify">GTK_JUSTIFY_CENTER</property>
@@ -1647,6 +1647,7 @@ of this License.
   <signal name="destroy_event" handler="on_mainwindow_destroy_event" last_modification_time="Thu, 18 Aug 2005 14:49:45 GMT"/>
   <signal name="destroy" handler="on_mainwindow_destroy_event" last_modification_time="Thu, 18 Aug 2005 14:53:29 GMT"/>
   <signal name="motion_notify_event" handler="on_mainwindow_motion_notify_event" last_modification_time="Thu, 01 Sep 2005 00:14:42 GMT"/>
+  <signal name="enter_notify_event" handler="on_mainwindow_enter_notify_event" last_modification_time="Thu, 01 Sep 2005 00:33:31 GMT"/>
 
   <child>
     <widget class="GtkVBox" id="vbox8">
