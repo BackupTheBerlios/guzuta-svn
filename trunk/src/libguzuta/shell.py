@@ -929,7 +929,10 @@ class shell:
       all = self.__compile_pkg_info__(list)
 
       (self.pid, self.exit_status) = os.wait()
-      return all
+      if all == ['', '']:
+        return None
+      else:
+        return all
     else:
       (self.pid, self.exit_status) = os.wait()
       return None

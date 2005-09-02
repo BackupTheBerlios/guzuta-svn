@@ -515,6 +515,10 @@ class gui:
 
   # def on_install_pkg_from_file_activate(self, menuitem): {{{
   def on_install_pkg_from_file_activate(self, menuitem):
+    #self.liststore = gtk.ListStore('gboolean', str, str, str)
+
+    #self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
+
     pkg_filechooser_dialog =\
     self.all_widgets.get_widget('pkg_filechooser_dialog')
     
@@ -541,6 +545,7 @@ class gui:
 
       pkg = pathname[index+1:]
       pkg = pkg[:pkg.find('.')]
+      pkg = pkg[:pkg.rfind('-')]
 
       install_are_you_sure_label.set_text(pkg)
 
@@ -548,7 +553,7 @@ class gui:
       install_pkg_are_you_sure_dialog.hide()
 
       if response == gtk.RESPONSE_OK:
-        selection = treeview.get_selection()
+        selection = self.treeview.get_selection()
         treemodel, iter = selection.get_selected()
         #if not iter:
         #  return
@@ -559,7 +564,12 @@ class gui:
           install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
           install_pkg_popup.run()
           install_pkg_popup.hide()
-          self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
+          
+          self.__add_pkg_info_to_local_pkgs__([pkg])
+          #self.refresh_pkgs_treeview()
+          
+          #repo = 'no repository'
+          #self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
         else:
           print 'ret: ', ret
           print 'ret_err: ', ret_err
@@ -1577,8 +1587,13 @@ class gui:
         self.local_pkg_info[installed_pkg] = info
 
       if info == None:
-        info = self.remote_pkg_info[installed_pkg]
-        self.local_pkg_info[installed_pkg] = info
+        try:
+          info = self.remote_pkg_info[installed_pkg]
+          self.local_pkg_info[installed_pkg] = info
+        except KeyError:
+          info = self.shell.local_info(installed_pkg)
+          self.local_pkg_info[installed_pkg] = info
+
       n = len(info)
       repo = ''
       version = ''

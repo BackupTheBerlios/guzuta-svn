@@ -2,8 +2,10 @@
 =====
 
 * Use threads when calling self.shell.* and when spawning a browser with the
-  package URL (TOP PRIORITY)
-* Add download only menu
+  package URL (TOP PRIORITY) (use a dialog with progressbar going left to right
+  and back again
+* Add download from repo X menu/button/popup
+* Add download only menu/button/popup
 * List pkgs not associated with a repo, when installing them from a file
   directly
 * Add more tooltips where applicable

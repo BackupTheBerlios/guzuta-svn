@@ -2,14 +2,20 @@
 # -*- coding: UTF-8 -*
 # vim: set foldmethod=marker:
 
-import libpypac
+#import libpypac
+
+import libpypac_devel.libpypac_0 as libpypac_0 
+import libpypac_devel.libpypac_1 as libpypac_1
+import libpypac_devel.libpypac_2 as libpypac_2
+import libpypac_devel.libpypac_3 as libpypac_3
+import libpypac_devel.libpypac_misc as libpypac_misc
 
 # class libpypacshell: {{{
 class libpypacshell:
   # def __init__(): {{{
   def __init__(self):
     self.conf_list, self.server_list, self.noupgrade_list, self.ignore_list =\
-        libpypac.read_conf()
+        libpypac_0.read_conf()
     #self.test()
   # }}}
 
@@ -21,56 +27,57 @@ class libpypacshell:
     #print 'ignore_list: ', self.ignore_list
 
     print '====== exist_check ================'
-    print libpypac.exist_check('bash', self.server_list)
+    print libpypac_2.exist_check('bash', self.server_list)
     print '====== check_group ================'
-    print libpypac.check_group('gnome', self.server_list)
+    print libpypac_1.check_group('gnome', self.server_list)
     print '====== check_pack_group ==========='
-    print libpypac.check_pack_group('metacity', self.server_list)
+    print libpypac_1.check_pack_group('metacity', self.server_list)
     print '====== check_update ==============='
-    print libpypac.check_update(self.server_list, self.ignore_list)
+    #print libpypac_devel.check_update(self.server_list, self.ignore_list)
     print '====== dep_single ================='
-    # print libpypac.dep_install('abcde', self.server_list) # BUG?
-    print libpypac.dep_single('kernel26', self.server_list)
-    # print libpypac.desc_search('cdparanoia', self.server_list) # ???
+    print libpypac_2.dep_install('abcde', self.server_list) # BUG?
+    #print libpypac_devel.dep_single('kernel26', self.server_list)
+    print '====== desc_search ================'
+    print libpypac_1.search_desc('cdparanoia', self.server_list) # ???
     print '====== get_loc_pack ==============='
-    print libpypac.get_loc_pack('bash')
+    print libpypac_misc.get_loc_pack('bash')
     print '====== get_local_package =========='
-    print libpypac.get_local_package('bash')
+    print libpypac_devel.get_local_package('bash')
     print '====== list_locals ================'
-    print libpypac.list_locals()
+    print libpypac_devel.list_locals()
     print '====== list_not_installed ========='
-    print libpypac.list_not_installed(self.server_list) # FSCK!
+    print libpypac_devel.list_not_installed(self.server_list) # FSCK!
     print '====== loc_pack_info =============='
-    print libpypac.loc_pack_info('bash')
+    print libpypac_devel.loc_pack_info('bash')
     print '====== loc_size ==================='
-    print libpypac.loc_size()
-    #print libpypac.old_check('bash') # not needed I guess
+    print libpypac_devel.loc_size()
+    #print libpypac_devel.old_check('bash') # not needed I guess
     print '====== orphans ===================='
-    print libpypac.orphans()
-    #print libpypac.print_cache()
+    print libpypac_devel.orphans()
+    #print libpypac_devel.print_cache()
     print '====== provide_check =============='
-    print libpypac.provide_check('bmp-cvs', self.server_list)
+    print libpypac_devel.provide_check('bmp-cvs', self.server_list)
     print '====== provide_check_local ========'
-    print libpypac.provide_check_local('bmp-cvs')
+    print libpypac_devel.provide_check_local('bmp-cvs')
     print '====== require_check =============='
-    print libpypac.require_check('glibc')
+    print libpypac_devel.require_check('glibc')
     print '====== search_group ==============='
-    print libpypac.search_group('gnome', self.server_list)
+    print libpypac_devel.search_group('gnome', self.server_list)
     print '====== search ====================='
-    print libpypac.search('bash', self.server_list)
+    print libpypac_devel.search('bash', self.server_list)
   # }}}
   
   # def info(self, what = ''): {{{
   def info(self, what = ''):
     #self.test()
-    info = libpypac.pack_info(what, self.server_list)
+    info = libpypac_devel.pack_info(what, self.server_list)
     print 'info: ', info
     return info
   # }}}
 
   # def local_search(self, what= ''): {{{
   def local_search(self, what= ''):
-    ret = libpypac.search(what, self.server_list)
+    ret = libpypac_devel.search(what, self.server_list)
     print 'ret: ', ret
   # }}}
 # }}}
