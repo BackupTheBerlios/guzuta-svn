@@ -1,6 +1,7 @@
 0.0.3
 =====
 
+* Use a treeview or something better in the fresh_updates_dialog
 * Use threads when calling self.shell.* and when spawning a browser with the
   package URL (TOP PRIORITY) (use a dialog with progressbar going left to right
   and back again
@@ -13,3 +14,16 @@
   popups not redrawed, probably use a 'Please wait' type dialog, with some sort
   of progress dialog
 * Add pseudo-repos: Last Installed, Last Uninstalled
+* Add a popup menu/button to support 'download only'
+* Implement rollback (use log? use own file written from structures?)
+* List cache (/var/cache/pacman/pkg)
+* Erase cache selectively - by X days old, by X versions old...
+* List pkgs by maintainer - add a new column to treeview
+* List pkgs by size       - add a bew column to treeview
+* Sort the SIGALRM stuff why does it give KeyboardError
+* i18n
+* Show in a popup all the files of a pkg
+* Show in a popup the dependencies of a pkg
+* Sort the 'pkg is newer' when installing/upgrading
+* Use own trayicon stolen from quodlibet ;)
+* Make a guzuta.desktop

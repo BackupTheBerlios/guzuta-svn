@@ -285,29 +285,38 @@ class shell:
       pattern = '\n'
       results = re.split(pattern, out)
 
+      # TODO: use a treeview for this!
+      out2 = ''
       for result in results:
-        if result != '' and result.startswith('Targets'):
-          out = result
+        if result.startswith('Total Package Size'):
+          break
+        if result != '':
+          if out2 == '':
+            out2 = result
+          else:
+            out2 = out2 + '\n' + result
+
           pattern2 = '\s'
-          
           results2 = re.split(pattern2, result)
 
           for result2 in results2[1:]:
-            first_dash = result2.index('-')
-            last_dash = result2.rindex('-')
-            before_last_dash = result2[:last_dash].rindex('-')
+            if result2:
+              print 'result2: <%s>' % result2
+              first_dash = result2.index('-')
+              last_dash = result2.rindex('-')
+              before_last_dash = result2[:last_dash].rindex('-')
 
-            name = result2[:before_last_dash]
-            version = result2[before_last_dash+1:last_dash]
+              name = result2[:before_last_dash]
+              version = result2[before_last_dash+1:last_dash]
 
-            #updates.append((name, version))
-            updates.append(name)
-            
-          #print 'update list: ', updates
+              #updates.append((name, version))
+              updates.append(name)
+
+          #else:
 
       ret_err = self.pacman.get_err_pipe().read()
       #print 'ret_err: ', ret_err
-      return updates, out
+      return updates, out2
     else:
       (self.pid, self.exit_status) = os.wait()
 

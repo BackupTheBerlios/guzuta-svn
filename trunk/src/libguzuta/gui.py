@@ -764,6 +764,8 @@ class gui:
         no_updates_dialog.hide()
         return 
 
+      print 'updates: ', updates
+      print 'updates_text: ', updates_text
       fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
       fresh_updates_label = self.all_widgets.get_widget('fresh_updates_label')
 
