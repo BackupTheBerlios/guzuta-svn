@@ -931,12 +931,14 @@ class libpypacshell:
     if what == '':
       print 'Please specify a package to query for info'
       return
+    
     info_list, dep_list = libpypac_1.pack_info(what, self.repo_list)
     
-    retcode, repo, package, name, cache = libpypac.exist_check(name, server_list)
+    retcode, repo, package, exists = libpypac_2.exist_check(what, self.repo_list)
 
-    depends_list = libpypac_misc.serv_pack_depends_list(what, self.repo_list
+    depends_list = libpypac_misc.serv_pack_depends_list(what, self.repo_list)
     print 'new: ', info_list, dep_list
+
     # old stuff {{{
     self.run_pacman_with('-Si ' + what)
     

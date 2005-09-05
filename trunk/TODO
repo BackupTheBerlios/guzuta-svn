@@ -1,7 +1,6 @@
 0.0.3
 =====
 
-* Use a treeview or something better in the fresh_updates_dialog
 * Use threads when calling self.shell.* and when spawning a browser with the
   package URL (TOP PRIORITY) (use a dialog with progressbar going left to right
   and back again

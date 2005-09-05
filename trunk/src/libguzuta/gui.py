@@ -47,12 +47,6 @@ def xor_two_dicts(a, b):
   return ret
 # }}}
     
-#class trayicon:
-#  def __init__(self):
-#    t = egg.trayicon.TrayIcon('Test!')
-#    t.add(gtk.Label('Hello'))
-#    t.show_all()
-
 # class gui: {{{
 class gui:
   pango_no_underline = 0
@@ -396,6 +390,14 @@ class gui:
     pkg_filechooser_dialog =\
     self.all_widgets.get_widget('pkg_filechooser_dialog')
 
+    #pkg_filechooser_dialog = gtk.FileChooserDialog('Open package file...',
+    #    None,
+    #    gtk.FILE_CHOOSER_ACTION_OPEN,
+    #    (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+    #      gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+
+    #pkg_filechooser_dialog.set_default_response(gtk.RESPONSE_OK)
+
     preferences_pacman_log_file_text_entry =\
         self.all_widgets.get_widget('preferences_pacman_log_file_text_entry')
 
@@ -522,6 +524,14 @@ class gui:
     pkg_filechooser_dialog =\
     self.all_widgets.get_widget('pkg_filechooser_dialog')
     
+    #pkg_filechooser_dialog = gtk.FileChooserDialog('Open package file...',
+    #    None,
+    #    gtk.FILE_CHOOSER_ACTION_OPEN,
+    #    (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+    #      gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+
+    #pkg_filechooser_dialog.set_default_response(gtk.RESPONSE_OK)
+
     filter = gtk.FileFilter()
     filter.set_name('Pacman Files')
     filter.add_pattern('*.pkg.tar.gz')
@@ -738,8 +748,6 @@ class gui:
     if button == self.update_db:
       ret, ret_err = self.shell.updatedb()
       
-      #print self.shell.get_exit_status()
-
       if self.shell.get_exit_status() != 0:
         # something has gone horribly wrong
         pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
@@ -748,26 +756,25 @@ class gui:
         pacman_error_dialog.run()
         pacman_error_dialog.hide()
         return 
-      #print ret, ret_err
-      #self.shell.get_read_pipe()
+      
       self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
-      #self.update_db_popup.show()
       response = self.update_db_popup.run()
 
       self.update_db_popup.hide()
 
-      updates, updates_text = self.shell.get_fresh_updates()
-      #print 'updates: ', updates
+      updates = self.shell.get_fresh_updates()
       if updates == []:
         no_updates_dialog = self.all_widgets.get_widget('no_updates_dialog')
         no_updates_dialog.run()
         no_updates_dialog.hide()
         return 
 
-      print 'updates: ', updates
-      print 'updates_text: ', updates_text
       fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
       fresh_updates_label = self.all_widgets.get_widget('fresh_updates_label')
+
+      updates_text = 'Targets:'
+      for update in updates:
+        updates_text = updates_text + '\n' + update
 
       fresh_updates_label.set_text(updates_text)
 
@@ -780,24 +787,16 @@ class gui:
         self.shell.install_fresh_updates()
         fresh_updates_installed = True  
 
-      #for (pkg_name, pkg_version) in updates:
       # TODO: is this necessary?
       for pkg_name in updates:
         info = self.shell.info(pkg_name)
-        #print 'info: ', info
         #self.local_pkg_info[pkg_name] = info
-        #print self.local_pkg_info[pkg_name]
         self.remote_pkg_info[pkg_name] = info
-        #print self.local_pkgs
       if fresh_updates_installed:
         self.__add_pkg_info_to_local_pkgs__(updates)
-
-      return 
     else:
       # display a warning window?? switch to root?? gksu???
       print 'not root!'
-
-      return 
   # }}}
 
   # def on_okbutton_clicked(self, button): {{{
@@ -1184,8 +1183,8 @@ class gui:
     self.all_widgets.get_widget('update_db').set_sensitive(False)
     self.all_widgets.get_widget('install_pkg').set_sensitive(False)
     self.all_widgets.get_widget('remove_pkg').set_sensitive(False)
-    self.all_widgets.get_widget('install_pkg_from_file').set_sensitive(False)
-    self.all_widgets.get_widget('install_pkg_from_file_button').set_sensitive(False)
+    #self.all_widgets.get_widget('install_pkg_from_file').set_sensitive(False)
+    #self.all_widgets.get_widget('install_pkg_from_file_button').set_sensitive(False)
   # }}}
 
   # def populate_remote_pkg_info(self): {{{
