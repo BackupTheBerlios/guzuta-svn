@@ -121,6 +121,8 @@ class shell:
     self.PS1 = "#"
     self.greet = "Welcome to guzuta!\n" 
     self.prompt = self.PS1 + " "
+
+    self.prev_return = None
     
     #self.opt_names = 'h:j:k:'
     #self.long_opt_names = ''
@@ -175,6 +177,11 @@ class shell:
         'version': 'version'
     }
     # }}}
+
+  # def get_prev_return(self): {{{
+  def get_prev_return(self):
+    return self.prev_return
+  # }}}
 
   # def get_exit_status(self): {{{
   def get_exit_status(self):
@@ -243,6 +250,7 @@ class shell:
 
   # def updatedb(self, what = ''): {{{
   def updatedb(self, what = ''):
+    self.prev_return = None
     ret = self.run_pacman_with('-Sy')
     if self.pacman.get_pipeit() == True:
       ret = self.pacman.get_read_pipe().read()
@@ -253,22 +261,27 @@ class shell:
       #for s in ret_err:
       #  print 's = <%s>' %s
       #print ret,ret_err
-      return ret, ret_err
+      #return ret, ret_err
+      self.prev_return = ret, ret_err
     else:
       (self.pid, self.exit_status) = os.wait()
-      return None
+      #return None
+      self.prev_return = None
   # }}}
 
   # def install_fresh_updates(self): {{{
   def install_fresh_updates(self):
+    self.prev_return = None
     ret = self.run_pacman_with('-Su --noconfirm')
 
     (self.pid, self.exit_status) = os.wait()
-    return ret
+    #return ret
+    self.prev_return = ret
   # }}}
 
   # def get_fresh_updates(self): {{{
   def get_fresh_updates(self):
+    self.prev_return = None
     ret = self.run_pacman_with('-Su')
     
     # list of (pkg_name, version)
@@ -304,7 +317,8 @@ class shell:
               updates.append(name)
 
       ret_err = self.pacman.get_err_pipe().read()
-      return updates
+      #return updates
+      self.prev_return = updates
     else:
       (self.pid, self.exit_status) = os.wait()
 
@@ -472,6 +486,7 @@ class shell:
     
   # def local_search(self, what= ''): {{{
   def local_search(self, what= ''):
+    self.prev_return = None
     if what == '':
       self.run_pacman_with('-Qs \"\"')
     else:
@@ -487,14 +502,19 @@ class shell:
 
       (self.pid, self.exit_status) = os.wait()
       #print self.check(all)
-      return all
+      #return all
+      self.prev_return = all
+      return
     else:
       (self.pid, self.exit_status) = os.wait()
-      return None
+      #return None
+      self.prev_return = None
+      return
   # }}}
   
   # def repofiles2(self): {{{
   def repofiles2(self):
+    self.prev_return = None
     self.run_pacman_with('-Ss')
 
     if self.pacman.get_pipeit() == True:
@@ -504,10 +524,14 @@ class shell:
       (all, pkgs) = self.__compile_pkg_dict_2__(list)
 
       (self.pid, self.exit_status) = os.wait()
-      return (all, pkgs)
+      #return (all, pkgs)
+      self.prev_return = (all, pkgs)
+      return
     else:
       (self.pid, self.exit_status) = os.wait()
-      return None
+      #return None
+      self.prev_return = None
+      return
   # }}}
 
   # def __compile_from_repo_list_dict__(self, pacman_output): {{{
@@ -682,6 +706,7 @@ class shell:
 
   # def install_part_1(self, what = ''): {{{
   def install_part_1(self, what = ''):
+    self.prev_return = None
     if not self.__is_root__():
       print "You are not ROOT. Bye bye."
       return
@@ -707,9 +732,13 @@ class shell:
       
       self.pid = self.pacman.get_pid()
 
-      return (found, output)
+      #return (found, output)
+      self.prev_return = (found, output)
+      return
     else:
-      return (False, None)
+      #return (False, None)
+      self.prev_return = (False, None)
+      return
   # }}}
 
   # def install_part_2(self, txt_to_pacman): {{{
@@ -723,22 +752,28 @@ class shell:
   
   # def install_part_3(self, txt_to_pacman): {{{
   def install_part_3(self, txt_to_pacman): 
+    self.prev_return = None
     self.send_to_pacman(txt_to_pacman)
     # HACK
     (self.yesno, out) = self.__read_and_check_for_yesno__()
 
     (self.pid, self.exit_status) = os.wait()
     
-    return (self.exit_status, (self.yesno, out))
+    #return (self.exit_status, (self.yesno, out))
+    self.prev_return = (self.exit_status, (self.yesno, out))
+    return
   # }}}
 
   # def install_part_2_no_wait(self, txt_to_pacman): {{{
   def install_part_2_no_wait(self, txt_to_pacman):
+    self.prev_return = None
     self.send_to_pacman(txt_to_pacman)
     # HACK
     out = self.__read_and_check_for_yesno__()
 
-    return out
+    #return out
+    self.prev_return = out
+    return
   # }}}
   
   # def install(self, what = ''): {{{
@@ -841,8 +876,11 @@ class shell:
 
   # def install_pkg_from_file(self, pathname): {{{
   def install_pkg_from_file(self, pathname):
+    self.prev_return = None
     if pathname == '' or None:
-      return (None, None)
+      #return (None, None)
+      self.prev_return = (None, None)
+      return
     
     self.run_pacman_with('-U ' + pathname)
     
@@ -851,7 +889,9 @@ class shell:
     ret = self.pacman.get_read_pipe().read()
     ret_err = self.pacman.get_err_pipe().read()
 
-    return (ret, ret_err)
+    #return (ret, ret_err)
+    self.prev_return (ret, ret_err)
+    return
   # }}}
 
   # def install_packages_noconfirm(self, what = ''): {{{
@@ -892,6 +932,7 @@ class shell:
     if what == '':
       print 'Please specify a package to query for info'
       return
+    self.prev_return = None
     
     self.run_pacman_with('-Qi ' + what)
     
@@ -900,16 +941,21 @@ class shell:
 
       if list == '\n':
         (self.pid, self.exit_status) = os.wait()
-        return None
+        #return None
+        self.prev_return = None
+        return
 
       all = self.__compile_pkg_info__(list)
 
       (self.pid, self.exit_status) = os.wait()
-      return all
+      #return all
+      self.prev_return = all
+      return
     else:
       (self.pid, self.exit_status) = os.wait()
-      return None
-
+      #return None
+      self.prev_return = None
+      return
   # }}}
   
   # def info(self, what = ''): {{{
@@ -918,6 +964,7 @@ class shell:
       print 'Please specify a package to query for info'
       return
     
+    self.prev_return = None
     self.run_pacman_with('-Si ' + what)
     
     if self.pacman.get_pipeit() == True:
@@ -927,12 +974,18 @@ class shell:
 
       (self.pid, self.exit_status) = os.wait()
       if all == ['', '']:
-        return None
+        #return None
+        self.prev_return = None
+        return
       else:
-        return all
+        #return all
+        self.prev_return = all
+        return
     else:
       (self.pid, self.exit_status) = os.wait()
-      return None
+      #return None
+      self.prev_return = None
+      return
   # }}}
   
   #def remove_nodeps(self, what = ''): {{{
@@ -962,6 +1015,7 @@ class shell:
     if what == '':
       print 'Please specify a package to remove'
       return
+    self.prev_return = None
     self.run_pacman_with('-R ' + what)
     
     out = self.__capture_output__()
@@ -974,7 +1028,9 @@ class shell:
       for string in tmp:
         if string != '':
           dependencies.append(string[string.rfind(' ')+1:])
-    return (self.exit_status, dependencies, out)
+    #return (self.exit_status, dependencies, out)
+    self.prev_return = (self.exit_status, dependencies, out)
+    return
   # }}}
 
   # help, quit, version {{{

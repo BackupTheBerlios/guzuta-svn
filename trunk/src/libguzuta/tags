@@ -1,0 +1,186 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.5.4	//
+__add_pkg_info_markuped_to_pkg_info_label__	gui.py	/^  def __add_pkg_info_markuped_to_pkg_info_label__(self, lines,$/;"	m	class:gui	file:
+__add_pkg_info_markuped_to_text_buffer__	gui.py	/^  def __add_pkg_info_markuped_to_text_buffer__(self, text_buffer, lines,$/;"	m	class:gui	file:
+__add_pkg_info_to_local_pkgs__	gui.py	/^  def __add_pkg_info_to_local_pkgs__(self, pkg_list):$/;"	m	class:gui	file:
+__build_trayicon__	gui.py	/^  def __build_trayicon__(self):$/;"	m	class:gui	file:
+__capture_output__	libpypacshell.py	/^  def __capture_output__(self):$/;"	m	class:libpypacshell	file:
+__capture_output__	shell.py	/^  def __capture_output__(self):$/;"	m	class:shell	file:
+__compile_from_repo_list_dict__	libpypacshell.py	/^  def __compile_from_repo_list_dict__(self, pacman_output):$/;"	m	class:libpypacshell	file:
+__compile_from_repo_list_dict__	shell.py	/^  def __compile_from_repo_list_dict__(self, pacman_output):$/;"	m	class:shell	file:
+__compile_pkg_dict_2__	libpypacshell.py	/^  def __compile_pkg_dict_2__(self, pacman_output):$/;"	m	class:libpypacshell	file:
+__compile_pkg_dict_2__	shell.py	/^  def __compile_pkg_dict_2__(self, pacman_output):$/;"	m	class:shell	file:
+__compile_pkg_dict__	libpypacshell.py	/^  def __compile_pkg_dict__(self, pacman_output):$/;"	m	class:libpypacshell	file:
+__compile_pkg_dict__	shell.py	/^  def __compile_pkg_dict__(self, pacman_output):$/;"	m	class:shell	file:
+__compile_pkg_info__	libpypacshell.py	/^  def __compile_pkg_info__(self, pacman_output):$/;"	m	class:libpypacshell	file:
+__compile_pkg_info__	shell.py	/^  def __compile_pkg_info__(self, pacman_output):$/;"	m	class:shell	file:
+__disable_all_root_widgets__	gui.py	/^  def __disable_all_root_widgets__(self):$/;"	m	class:gui	file:
+__fill_treeview_with_pkgs_from_repo__	gui.py	/^  def __fill_treeview_with_pkgs_from_repo__(self, repo):$/;"	m	class:gui	file:
+__init__	gui.py	/^  def __init__(self, read_pipe = None, write_pipe = None):$/;"	m	class:gui
+__init__	libpypacshell.py	/^  def __init__(self, args = None, pacman_location = '\/usr\/bin\/pacman',$/;"	m	class:pacman
+__init__	libpypacshell.py	/^  def __init__(self, command_line, interactive = False):$/;"	m	class:libpypacshell
+__init__	shell.py	/^  def __init__(self, args = None, pacman_location = '\/usr\/bin\/pacman',$/;"	m	class:pacman
+__init__	shell.py	/^  def __init__(self, command_line, interactive = False):$/;"	m	class:shell
+__is_already_installed__	libpypacshell.py	/^  def __is_already_installed__(self, what):$/;"	m	class:libpypacshell	file:
+__is_already_installed__	shell.py	/^  def __is_already_installed__(self, what):$/;"	m	class:shell	file:
+__is_root__	gui.py	/^  def __is_root__(self):$/;"	m	class:gui	file:
+__is_root__	libpypacshell.py	/^  def __is_root__(self):$/;"	m	class:libpypacshell	file:
+__is_root__	shell.py	/^  def __is_root__(self):$/;"	m	class:shell	file:
+__read_and_check_for_yesno__	libpypacshell.py	/^  def __read_and_check_for_yesno__(self):$/;"	m	class:libpypacshell	file:
+__read_and_check_for_yesno__	shell.py	/^  def __read_and_check_for_yesno__(self):$/;"	m	class:shell	file:
+__refresh_pkgs_treeview__	gui.py	/^  def __refresh_pkgs_treeview__(self):$/;"	m	class:gui	file:
+__setup_pkg_treeview__	gui.py	/^  def __setup_pkg_treeview__(self):$/;"	m	class:gui	file:
+__setup_repo_treeview__	gui.py	/^  def __setup_repo_treeview__(self):$/;"	m	class:gui	file:
+anonymous_hyperlink	gui.py	/^              def anonymous_hyperlink(tag,widget,event,iterator):$/;"	m	class:gui
+check	libpypacshell.py	/^  def check(self, big_list):$/;"	m	class:libpypacshell
+check	shell.py	/^  def check(self, big_list):$/;"	m	class:shell
+get_all_selected_packages	gui.py	/^  def get_all_selected_packages(self, tree_model):$/;"	m	class:gui
+get_err_pipe	libpypacshell.py	/^  def get_err_pipe(self):$/;"	m	class:pacman
+get_err_pipe	shell.py	/^  def get_err_pipe(self):$/;"	m	class:pacman
+get_exit_status	libpypacshell.py	/^  def get_exit_status(self):$/;"	m	class:libpypacshell
+get_exit_status	shell.py	/^  def get_exit_status(self):$/;"	m	class:shell
+get_fresh_updates	libpypacshell.py	/^  def get_fresh_updates(self):$/;"	m	class:libpypacshell
+get_fresh_updates	shell.py	/^  def get_fresh_updates(self):$/;"	m	class:shell
+get_no_repository_pkgs	libpypacshell.py	/^  def get_no_repository_pkgs(self):$/;"	f
+get_no_repository_pkgs	shell.py	/^  def get_no_repository_pkgs(self):$/;"	f
+get_pid	libpypacshell.py	/^  def get_pid(self):$/;"	m	class:pacman
+get_pid	shell.py	/^  def get_pid(self):$/;"	m	class:pacman
+get_pipeit	libpypacshell.py	/^  def get_pipeit(self):$/;"	m	class:pacman
+get_pipeit	shell.py	/^  def get_pipeit(self):$/;"	m	class:pacman
+get_prev_return	shell.py	/^  def get_prev_return(self):$/;"	m	class:shell
+get_read_pipe	libpypacshell.py	/^  def get_read_pipe(self):$/;"	m	class:pacman
+get_read_pipe	shell.py	/^  def get_read_pipe(self):$/;"	m	class:pacman
+get_write_pipe	libpypacshell.py	/^  def get_write_pipe(self):$/;"	m	class:pacman
+get_write_pipe	shell.py	/^  def get_write_pipe(self):$/;"	m	class:pacman
+get_yesno	libpypacshell.py	/^  def get_yesno(self):$/;"	m	class:libpypacshell
+get_yesno	shell.py	/^  def get_yesno(self):$/;"	m	class:shell
+go	libpypacshell.py	/^  def go(self):$/;"	f
+go	shell.py	/^  def go(self):$/;"	f
+gui	gui.py	/^class gui:$/;"	c
+hello	thread_test.py	/^def hello(what):$/;"	f
+help	libpypacshell.py	/^  def help(self, what = ''):$/;"	m	class:libpypacshell
+help	shell.py	/^  def help(self, what = ''):$/;"	m	class:shell
+info	libpypacshell.py	/^  def info(self, what = ''):$/;"	m	class:libpypacshell
+info	shell.py	/^  def info(self, what = ''):$/;"	m	class:shell
+install	libpypacshell.py	/^  def install(self, what = ''):$/;"	m	class:libpypacshell
+install	shell.py	/^  def install(self, what = ''):$/;"	m	class:shell
+install_fresh_updates	libpypacshell.py	/^  def install_fresh_updates(self):$/;"	m	class:libpypacshell
+install_fresh_updates	shell.py	/^  def install_fresh_updates(self):$/;"	m	class:shell
+install_noconfirm	libpypacshell.py	/^  def install_noconfirm(self, what = ''):$/;"	m	class:libpypacshell
+install_noconfirm	shell.py	/^  def install_noconfirm(self, what = ''):$/;"	m	class:shell
+install_packages	gui.py	/^  def install_packages(self, pkg_list):$/;"	m	class:gui
+install_packages_from_list	gui.py	/^  def install_packages_from_list(self, list):$/;"	m	class:gui
+install_packages_noconfirm	libpypacshell.py	/^  def install_packages_noconfirm(self, pkg_list):$/;"	m	class:libpypacshell
+install_packages_noconfirm	shell.py	/^  def install_packages_noconfirm(self, pkg_list):$/;"	m	class:shell
+install_part_1	libpypacshell.py	/^  def install_part_1(self, what = ''):$/;"	m	class:libpypacshell
+install_part_1	shell.py	/^  def install_part_1(self, what = ''):$/;"	m	class:shell
+install_part_2	libpypacshell.py	/^  def install_part_2(self, txt_to_pacman):$/;"	m	class:libpypacshell
+install_part_2	shell.py	/^  def install_part_2(self, txt_to_pacman):$/;"	m	class:shell
+install_part_2_no_wait	libpypacshell.py	/^  def install_part_2_no_wait(self, txt_to_pacman):$/;"	m	class:libpypacshell
+install_part_2_no_wait	shell.py	/^  def install_part_2_no_wait(self, txt_to_pacman):$/;"	m	class:shell
+install_part_3	libpypacshell.py	/^  def install_part_3(self, txt_to_pacman): $/;"	m	class:libpypacshell
+install_part_3	shell.py	/^  def install_part_3(self, txt_to_pacman): $/;"	m	class:shell
+install_pkg_from_file	libpypacshell.py	/^  def install_pkg_from_file(self, pathname):$/;"	m	class:libpypacshell
+install_pkg_from_file	shell.py	/^  def install_pkg_from_file(self, pathname):$/;"	m	class:shell
+interactive	libpypacshell.py	/^  def interactive(self, what = ''):$/;"	m	class:libpypacshell
+interactive	shell.py	/^  def interactive(self, what = ''):$/;"	m	class:shell
+libpypacshell	libpypacshell.py	/^class libpypacshell:$/;"	c
+local_info	libpypacshell.py	/^  def local_info(self, what = ''):$/;"	m	class:libpypacshell
+local_info	shell.py	/^  def local_info(self, what = ''):$/;"	m	class:shell
+local_search	libpypacshell.py	/^  def local_search(self, what= ''):$/;"	m	class:libpypacshell
+local_search	shell.py	/^  def local_search(self, what= ''):$/;"	m	class:shell
+on_about_activate	gui.py	/^  def on_about_activate(self, menuitem):$/;"	m	class:gui
+on_alarm	gui.py	/^  def on_alarm(self, signum, frame):$/;"	m	class:gui
+on_browse_preferences_button_clicked	gui.py	/^  def on_browse_preferences_button_clicked(self, button):$/;"	m	class:gui
+on_clear_clicked	gui.py	/^  def on_clear_clicked(self, button):$/;"	m	class:gui
+on_cursor_changed	gui.py	/^  def on_cursor_changed(self, treeview):$/;"	m	class:gui
+on_delete_event	gui.py	/^  def on_delete_event(self, widget, event, data=None):$/;"	m	class:gui
+on_destroy	gui.py	/^  def on_destroy(self, widget, data=None):$/;"	m	class:gui
+on_hyperlink_clicked	gui.py	/^  def on_hyperlink_clicked(self, tag, widget, event, iter, link):$/;"	m	class:gui
+on_hyperlink_motion	gui.py	/^  def on_hyperlink_motion(self, widget, event, data = None):$/;"	m	class:gui
+on_install_pkg_clicked	gui.py	/^  def on_install_pkg_clicked(self, button):$/;"	m	class:gui
+on_install_pkg_from_file_activate	gui.py	/^  def on_install_pkg_from_file_activate(self, menuitem):$/;"	m	class:gui
+on_install_pkg_popup_delete_event	gui.py	/^  def on_install_pkg_popup_delete_event(self, widget, event, data=None):$/;"	m	class:gui
+on_install_pkg_popup_destroy	gui.py	/^  def on_install_pkg_popup_destroy(self, widget, data=None):$/;"	m	class:gui
+on_install_popup_menu_activate	gui.py	/^  def on_install_popup_menu_activate(self, menuitem):$/;"	m	class:gui
+on_mainwindow_enter_notify_event	gui.py	/^  def on_mainwindow_enter_notify_event(self, widget, event):$/;"	m	class:gui
+on_mainwindow_motion_notify_event	gui.py	/^  def on_mainwindow_motion_notify_event(self, widget, event, data = None):$/;"	m	class:gui
+on_okbutton2_clicked	gui.py	/^  def on_okbutton2_clicked(self, button):$/;"	m	class:gui
+on_okbutton_clicked	gui.py	/^  def on_okbutton_clicked(self, button):$/;"	m	class:gui
+on_pacman_log_activate	gui.py	/^  def on_pacman_log_activate(self, menuitem):$/;"	m	class:gui
+on_preferences_clicked	gui.py	/^  def on_preferences_clicked(self, button):$/;"	m	class:gui
+on_quit_activate	gui.py	/^  def on_quit_activate(self, menuitem):$/;"	m	class:gui
+on_remove_pkg_clicked	gui.py	/^  def on_remove_pkg_clicked(self, button):$/;"	m	class:gui
+on_remove_popup_menu_activate	gui.py	/^  def on_remove_popup_menu_activate(self, menuitem):$/;"	m	class:gui
+on_search_clicked	gui.py	/^  def on_search_clicked(self, button):$/;"	m	class:gui
+on_select_cursor_row	gui.py	/^  def on_select_cursor_row(self, treeview, start_editing):$/;"	m	class:gui
+on_systray_eventbox_button_press_event	gui.py	/^  def on_systray_eventbox_button_press_event(self, widget, event):$/;"	m	class:gui
+on_systray_eventbox_leave_notify_event	gui.py	/^  def on_systray_eventbox_leave_notify_event(self, widget, event):$/;"	m	class:gui
+on_systray_eventbox_motion_notify_event	gui.py	/^  def on_systray_eventbox_motion_notify_event(self, widget, event):$/;"	m	class:gui
+on_systray_popup_menu_preferences_activate	gui.py	/^  def on_systray_popup_menu_preferences_activate(self, menuitem):$/;"	m	class:gui
+on_systray_popup_menu_quit_activate	gui.py	/^  def on_systray_popup_menu_quit_activate(self, menuitem):$/;"	m	class:gui
+on_systray_popup_menu_show_window_activate	gui.py	/^  def on_systray_popup_menu_show_window_activate(self, menuitem):$/;"	m	class:gui
+on_treeview_button_press_event	gui.py	/^  def on_treeview_button_press_event(self, treeview, event):$/;"	m	class:gui
+on_update_db_clicked	gui.py	/^  def on_update_db_clicked(self, button):$/;"	m	class:gui
+on_update_db_popup_delete_event	gui.py	/^  def on_update_db_popup_delete_event(self, widget, event, data=None):$/;"	m	class:gui
+pacman	libpypacshell.py	/^class pacman:$/;"	c
+pacman	shell.py	/^class pacman:$/;"	c
+populate_local_pkg_list	gui.py	/^  def populate_local_pkg_list(self):$/;"	m	class:gui
+populate_pkg_lists	gui.py	/^  def populate_pkg_lists(self):$/;"	m	class:gui
+populate_pkgs_by_repo	gui.py	/^  def populate_pkgs_by_repo(self):$/;"	m	class:gui
+populate_remote_pkg_info	gui.py	/^  def populate_remote_pkg_info(self):$/;"	m	class:gui
+quit	libpypacshell.py	/^  def quit(self, what = ''):$/;"	m	class:libpypacshell
+quit	shell.py	/^  def quit(self, what = ''):$/;"	m	class:shell
+read_command	libpypacshell.py	/^  def read_command(self):$/;"	f
+read_command	shell.py	/^  def read_command(self):$/;"	f
+read_conf	gui.py	/^  def read_conf(self):$/;"	m	class:gui
+refresh_pkgs_treeview	gui.py	/^  def refresh_pkgs_treeview(self):$/;"	m	class:gui
+remove	libpypacshell.py	/^  def remove(self, what = ''):$/;"	m	class:libpypacshell
+remove	shell.py	/^  def remove(self, what = ''):$/;"	m	class:shell
+remove_noconfirm	libpypacshell.py	/^  def remove_noconfirm(self, what = ''):$/;"	m	class:libpypacshell
+remove_noconfirm	shell.py	/^  def remove_noconfirm(self, what = ''):$/;"	m	class:shell
+remove_nodeps	libpypacshell.py	/^  def remove_nodeps(self, what = ''):$/;"	m	class:libpypacshell
+remove_nodeps	shell.py	/^  def remove_nodeps(self, what = ''):$/;"	m	class:shell
+remove_packages	gui.py	/^  def remove_packages(self, pkg_list):$/;"	m	class:gui
+remove_packages_from_list	gui.py	/^  def remove_packages_from_list(self, list):$/;"	m	class:gui
+repofiles	libpypacshell.py	/^  def repofiles(self, what = ''):$/;"	m	class:libpypacshell
+repofiles	shell.py	/^  def repofiles(self, what = ''):$/;"	m	class:shell
+repofiles2	libpypacshell.py	/^  def repofiles2(self):$/;"	m	class:libpypacshell
+repofiles2	shell.py	/^  def repofiles2(self):$/;"	m	class:shell
+run	libpypacshell.py	/^  def run(self):$/;"	m	class:pacman
+run	shell.py	/^  def run(self):$/;"	m	class:pacman
+run_in_thread	gui.py	/^  def run_in_thread(self, method, args_dict):$/;"	m	class:gui
+run_pacman_with	libpypacshell.py	/^  def run_pacman_with(self, args):$/;"	f
+run_pacman_with	shell.py	/^  def run_pacman_with(self, args):$/;"	f
+search	libpypacshell.py	/^  def search(self, what = ''):$/;"	m	class:libpypacshell
+search	shell.py	/^  def search(self, what = ''):$/;"	m	class:shell
+send_to_pacman	libpypacshell.py	/^  def send_to_pacman(self, what):$/;"	m	class:libpypacshell
+send_to_pacman	shell.py	/^  def send_to_pacman(self, what):$/;"	m	class:shell
+set_args	libpypacshell.py	/^  def set_args(self, args):$/;"	m	class:pacman
+set_args	shell.py	/^  def set_args(self, args):$/;"	m	class:pacman
+set_executable	libpypacshell.py	/^  def set_executable(self, executable):$/;"	m	class:pacman
+set_executable	shell.py	/^  def set_executable(self, executable):$/;"	m	class:pacman
+set_pipeit	libpypacshell.py	/^  def set_pipeit(self, pipeit):$/;"	m	class:pacman
+set_pipeit	shell.py	/^  def set_pipeit(self, pipeit):$/;"	m	class:pacman
+set_pkg_update_alarm	gui.py	/^  def set_pkg_update_alarm(self, alarm_time, time_type):$/;"	m	class:gui
+set_shell	gui.py	/^  def set_shell(self, shell):$/;"	m	class:gui
+shell	shell.py	/^class shell:$/;"	c
+sigint	libpypacshell.py	/^  def sigint(self, signum, frame):$/;"	m	class:libpypacshell
+sigint	shell.py	/^  def sigint(self, signum, frame):$/;"	m	class:shell
+sigkill	libpypacshell.py	/^  def sigkill(self):$/;"	m	class:libpypacshell
+sigkill	shell.py	/^  def sigkill(self):$/;"	m	class:shell
+toggled	gui.py	/^  def toggled(self, toggle_renderer, path):$/;"	m	class:gui
+update	libpypacshell.py	/^  def update(self):$/;"	m	class:libpypacshell
+update	shell.py	/^  def update(self):$/;"	m	class:shell
+updatedb	libpypacshell.py	/^  def updatedb(self, what = ''):$/;"	m	class:libpypacshell
+updatedb	shell.py	/^  def updatedb(self, what = ''):$/;"	m	class:shell
+updatepkgs	libpypacshell.py	/^  def updatepkgs(self, what = ''):$/;"	m	class:libpypacshell
+updatepkgs	shell.py	/^  def updatepkgs(self, what = ''):$/;"	m	class:shell
+version	libpypacshell.py	/^  def version(self):$/;"	m	class:libpypacshell
+version	shell.py	/^  def version(self):$/;"	m	class:shell
+write_conf	gui.py	/^  def write_conf(self):$/;"	m	class:gui
+xor_two_dicts	gui.py	/^def xor_two_dicts(a, b):$/;"	f

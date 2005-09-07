@@ -13,6 +13,7 @@ import gtk.glade
 import pango
 import sys, os, posix
 import re
+import threading
 #import gksu
 
 import egg.trayicon
@@ -51,6 +52,14 @@ def xor_two_dicts(a, b):
 class gui:
   pango_no_underline = 0
   pango_underline_single = 1
+
+  # def run_in_thread(self, method, args_dict): {{{
+  def run_in_thread(self, method, args_dict):
+    th = threading.Thread(target=method, kwargs=args_dict)
+    print 'thread!!'
+    th.start()
+    th.join()
+  # }}}
 
   # def __setup_pkg_treeview__(self): {{{
   def __setup_pkg_treeview__(self):
@@ -476,7 +485,14 @@ class gui:
     self.systray_tooltips.set_tip(self.systray_eventbox,\
         'Checking for updates...')
     if self.main_window_hidden():
-      ret, ret_err = self.shell.updatedb()
+      #ret, ret_err = self.shell.updatedb()
+      self.run_in_thread(self.shell.updatedb, {})
+      
+      if self.shell.get_prev_return() == None:
+        print 'None!'
+        return None
+      
+      ret, ret_err = self.shell.get_prev_return()
 
       if self.shell.get_exit_status() != 0:
         systray_tooltip_text = 'Error updating database'
@@ -569,7 +585,15 @@ class gui:
         #  return
 
         #print 'installing: ' + pathname
-        ret,ret_err = self.shell.install_pkg_from_file(pathname)
+        #ret,ret_err = self.shell.install_pkg_from_file(pathname)
+        self.run_in_thread(self.shell.install_pkg_from_file,
+            {'pathname': pathname})
+        if self.shell.get_prev_return() == None:
+          print 'None!'
+          return None
+        
+        ret, ret_err = self.shell.get_prev_return()
+        
         if self.shell.get_exit_status() == 0:
           install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
           install_pkg_popup.run()
@@ -663,14 +687,23 @@ class gui:
       try:
         info = self.local_pkg_info[name]
       except KeyError:
-        info = self.shell.local_info(name)
+        #info = self.shell.local_info(name)
+        self.run_in_thread(self.shell.local_info, {'what': name})
+
+        info = self.shell.get_prev_return()
         self.local_pkg_info[name] = info
       
       if info == None:
         try:
           remote_info = self.remote_pkg_info[name]
         except KeyError:
-          remote_info = self.shell.info(name)
+          #remote_info = self.shell.info(name)
+          self.run_in_thread(self.shell.info, {'what': name})
+          if self.shell.get_prev_return() == None:
+            print 'None! CC2'
+            return None
+          
+          remote_info = self.shell.get_prev_return()
           self.remote_pkg_info[name] = remote_info
 
         self.__add_pkg_info_markuped_to_text_buffer__(buffer, remote_info,\
@@ -746,12 +779,19 @@ class gui:
   def on_update_db_clicked(self, button):
     #if button == self.update_db and self.__is_root__():
     if button == self.update_db:
-      ret, ret_err = self.shell.updatedb()
+      #ret, ret_err = self.shell.updatedb()
+      self.run_in_thread(self.shell.updatedb, {})
+      if self.shell.get_prev_return() == None:
+        print 'None!'
+        return None
+      
+      ret, ret_err = self.shell.get_prev_return()
       
       if self.shell.get_exit_status() != 0:
         # something has gone horribly wrong
         pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
-        pacman_error_dialog = self.all_widgets.get_widget('pacman_error_dialog')
+        pacman_error_dialog =\
+            self.all_widgets.get_widget('pacman_error_dialog')
         pacman_error_label.set_text(ret_err)
         pacman_error_dialog.run()
         pacman_error_dialog.hide()
@@ -762,7 +802,13 @@ class gui:
 
       self.update_db_popup.hide()
 
-      updates = self.shell.get_fresh_updates()
+      #updates = self.shell.get_fresh_updates()
+      self.run_in_thread(self.shell.get_fresh_updates, {})
+      if self.shell.get_prev_return() == None:
+        print 'None!'
+        return None
+      
+      updates = self.shell.get_prev_return()
       if updates == []:
         no_updates_dialog = self.all_widgets.get_widget('no_updates_dialog')
         no_updates_dialog.run()
@@ -784,12 +830,19 @@ class gui:
       fresh_updates_installed = False
       
       if response == gtk.RESPONSE_OK:
-        self.shell.install_fresh_updates()
+        #self.shell.install_fresh_updates()
+        self.run_in_thread(self.shell.install_fresh_updates, {})
         fresh_updates_installed = True  
 
       # TODO: is this necessary?
       for pkg_name in updates:
-        info = self.shell.info(pkg_name)
+        #info = self.shell.info(pkg_name)
+        self.run_in_thread(self.shell.info, {'what':pkg_name})
+        if self.shell.get_prev_return() == None:
+          print 'None!'
+          return None
+        
+        info = self.shell.get_prev_return()
         #self.local_pkg_info[pkg_name] = info
         self.remote_pkg_info[pkg_name] = info
       if fresh_updates_installed:
@@ -1044,15 +1097,33 @@ class gui:
     #print 'retcode = ', retcode
     if retcode == False:
       # cancel
-      (exit_status, out) = self.shell.install_part_3('n')
+      #(exit_status, out) = self.shell.install_part_3('n')
+      self.run_in_thread(self.shell.install_part_3, {'txt_to_pacman': 'n'})
+      if self.shell.get_prev_return() == None:
+        print 'None!'
+        return None
+      
+      (exit_status, out) = self.get_prev_return()
       print 'retcode was False, bailing now with exit_status: ',\
         exit_status, out
       return
     elif retcode == True:
       # force upgrade 
       #exit_status = self.shell.install_packages_noconfirm(pkgs_to_install)
-      out = self.shell.install_part_2('Y')
-      (exit_status, out) = self.shell.install_part_3('Y')
+      #out = self.shell.install_part_2('Y')
+      self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'Y'})
+      if self.shell.get_prev_return() == None:
+        print 'None!'
+        return None
+      
+      out = self.shell.get_prev_return()
+      #(exit_status, out) = self.shell.install_part_3('Y')
+      self.run_in_thread(self.shell.install_part_3, {'txt_to_pacman': 'Y'})
+      if self.shell.get_prev_return() == None:
+        print 'None!'
+        return None
+      
+      (exit_status, out) = self.get_prev_return()
       self.__add_pkg_info_to_local_pkgs__(list)
       self.refresh_pkgs_treeview()
       # TODO: check for proper pkg install, check for file conflicts, etc. Build
@@ -1075,12 +1146,14 @@ class gui:
       generic_cancel_ok.hide()
       
       if response3 == gtk.RESPONSE_OK: 
-        self.shell.install_part_2('Y')
+        #self.shell.install_part_2('Y')
+        self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'Y'})
         response = self.install_pkg_popup.run()
         self.__add_pkg_info_to_local_pkgs__(list)
         self.refresh_pkgs_treeview()
       elif response3 == gtk.RESPONSE_CANCEL:
-        self.shell.install_part_2('n')
+        #self.shell.install_part_2('n')
+        self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'n'})
 
       self.install_pkg_popup.hide()
 
@@ -1192,18 +1265,36 @@ class gui:
     for repo,v in self.pkgs_by_repo.iteritems():
       for pkg_desc in v:
         name = pkg_desc[0]
-        self.remote_pkg_info[name] = self.shell.info(name)
+        #self.remote_pkg_info[name] = self.shell.info(name)
+        self.run_in_thread(self.shell.info, {'what': name})
+        if self.shell.get_prev_return() == None:
+          print 'None!'
+          return None
+        
+        self.remote_pkg_info[name] = self.shell.get_prev_return()
   # }}}
 
   # def populate_local_pkg_list(self): {{{
   def populate_local_pkg_list(self):
-    self.local_pkgs = self.shell.local_search()
+    #self.local_pkgs = self.shell.local_search()
+    self.run_in_thread(self.shell.local_search, {})
+    if self.shell.get_prev_return() == None:
+      print 'None!'
+      return None
+    
+    self.local_pkgs = self.shell.get_prev_return()
   # }}}
 
   # def populate_pkgs_by_repo(self): {{{
   def populate_pkgs_by_repo(self):
     #(self.pkgs_by_repo, self.pkgs) = self.shell.repofiles()
-    (self.pkgs_by_repo, self.pkgs) = self.shell.repofiles2()
+    #(self.pkgs_by_repo, self.pkgs) = self.shell.repofiles2()
+    self.run_in_thread(self.shell.repofiles2, {})
+    if self.shell.get_prev_return() == None:
+      print 'None!'
+      return None
+    
+    (self.pkgs_by_repo, self.pkgs) = self.shell.get_prev_return()
   # }}}
 
   # def populate_pkg_lists(self): {{{
@@ -1535,7 +1626,13 @@ class gui:
       else:
         pkg_names_by_comma = pkg_names_by_comma + ', ' + pkg_name
     
-    (ret, output) = self.shell.install_part_1(what)
+    #(ret, output) = self.shell.install_part_1(what)
+    self.run_in_thread(self.shell.install_part_1, {'what': what})
+    if self.shell.get_prev_return() == None:
+      print 'None!'
+      return None
+    
+    (ret, output) = self.shell.get_prev_return()
     #print 'ret, output', ret, output
 
     if ret:
@@ -1584,7 +1681,13 @@ class gui:
         try:
           info = self.remote_pkg_info[installed_pkg]
         except KeyError:
-          info = self.shell.info(installed_pkg)
+          #info = self.shell.info(installed_pkg)
+          self.run_in_thread(self.shell.info, {'what': installed_pkg})
+          if self.shell.get_prev_return() == None:
+            print 'None!'
+            return None
+          
+          info = self.shell.get_prev_return()
         self.local_pkg_info[installed_pkg] = info
 
       if info == None:
@@ -1592,7 +1695,13 @@ class gui:
           info = self.remote_pkg_info[installed_pkg]
           self.local_pkg_info[installed_pkg] = info
         except KeyError:
-          info = self.shell.local_info(installed_pkg)
+          #info = self.shell.local_info(installed_pkg)
+          self.run_in_thread(self.shell.local_info, {'what': installed_pkg})
+          if self.shell.get_prev_return() == None:
+            print 'None!'
+            return None
+          
+          info = self.shell.get_prev_return()
           self.local_pkg_info[installed_pkg] = info
 
       n = len(info)
@@ -1631,7 +1740,13 @@ class gui:
       what = what + pkg_name + ' '
     
     #self.remove_noconfirm(what)
-    (exit_status, dependencies, out) = self.shell.remove(what)
+    #(exit_status, dependencies, out) = self.shell.remove(what)
+    self.run_in_thread(self.shell.remove, {'what': what})
+    if self.shell.get_prev_return() == None:
+      print 'None!'
+      return None
+    
+    (exit_status, dependencies, out) = self.shell.get_prev_return()
     return (exit_status, dependencies, out)
   # }}}
 
