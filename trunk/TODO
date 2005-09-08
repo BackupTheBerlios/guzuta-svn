@@ -20,6 +20,7 @@
 * List pkgs by maintainer - add a new column to treeview
 * List pkgs by size       - add a bew column to treeview
 * Sort the SIGALRM stuff why does it give KeyboardError
+  -- USE self.timer = gobject.timeout_add (100, progress_timeout, self)
 * i18n
 * Show in a popup all the files of a pkg
 * Show in a popup the dependencies of a pkg

@@ -486,6 +486,7 @@ class shell:
     
   # def local_search(self, what= ''): {{{
   def local_search(self, what= ''):
+    print 'local_search!!'
     self.prev_return = None
     if what == '':
       self.run_pacman_with('-Qs \"\"')
@@ -504,11 +505,13 @@ class shell:
       #print self.check(all)
       #return all
       self.prev_return = all
+      print 'Niiiice'
       return
     else:
       (self.pid, self.exit_status) = os.wait()
       #return None
       self.prev_return = None
+      print 'putting None!'
       return
   # }}}
   
