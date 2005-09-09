@@ -55,38 +55,38 @@ class gui:
   pango_no_underline = 0
   pango_underline_single = 1
 
+  # def progress_timeout(self, progress_bar): {{{
+  def progress_timeout(self):
+    if self.busy_window_hidden == False:
+      self.busy_progress_bar.pulse()
+    return True
+  # }}}
+
   # def try_sem(self): {{{
   def try_sem(self):
-    print 'TRY SEM!'
     while self.th != None and self.th.isAlive() == True:
-      print 'sleeping'
       time.sleep(1)
   # }}}
 
   # def try_sem_animate_progress_bar(self): {{{
   def try_sem_animate_progress_bar(self):
-    print 'TRY SEM ANIMATE'
-    busy_window = self.all_widgets.get_widget('busy_window')
-    busy_dialog = self.all_widgets.get_widget('busy_dialog')
-    busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar')
+    self.busy_window = self.all_widgets.get_widget('busy_window2')
+    self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+    self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar2')
 
-    busy_window.show()
+    self.busy_progress_bar.set_fraction(0.0)
 
-    #busy_dialog.run()
-    print 'isAlive 1: ', self.th.isAlive()
+    self.busy_window_hidden = False
+    self.busy_window.show_all()
+
     if self.th:
       while self.th.isAlive() == True:
-        busy_progress_bar.pulse()
         while gtk.events_pending():
           gtk.main_iteration(False)
         time.sleep(0.1)
-    #while self.th != None and self.th.isAlive() == True:
-    #  print 'isAlive: ', self.th.isAlive()
-    #  print 'animating progress bar'
-    #  busy_progress_bar.pulse()
 
-    busy_window.hide()
-    #busy_dialog.hide()
+    self.busy_window.hide()
+    self.busy_window_hidden = True
   # }}}
 
   # def run_in_thread(self, method, args_dict): {{{
@@ -250,12 +250,9 @@ class gui:
     fname = '/usr/share/guzuta/guzuta3.glade'
     if os.path.exists(fname):
       self.glade_file = fname
-      #print 'guzuta glade file found in <%s>' % fname
     else:
-      #print 'guzuta glade file not found in <%s>' % fname
       if os.path.exists('guzuta3.glade'):
         self.glade_file = 'guzuta3.glade'
-        #print 'guzuta glade file found in <%s>' % fname
       else:
         print __name__
         print os.getcwd()
@@ -420,6 +417,10 @@ class gui:
     
     self.__build_trayicon__()
 
+    self.busy_window = None
+    self.busy_window_hidden = True
+    self.timer = gobject.timeout_add (100, self.progress_timeout)
+
     self.main_window.show()
 
     # trayicon
@@ -500,8 +501,6 @@ class gui:
 
     preferences_dialog.run()
     preferences_dialog.hide()
-
-    #print 'combobox: ', interval_preferences_combobox.get_active()
 
     #if interval_preferences_combobox.get_active() == 1:
     #  # hours
@@ -619,7 +618,6 @@ class gui:
         #if not iter:
         #  return
 
-        #print 'installing: ' + pathname
         #ret,ret_err = self.shell.install_pkg_from_file(pathname)
         self.run_in_thread(self.shell.install_pkg_from_file,
             {'pathname': pathname})
@@ -780,6 +778,8 @@ class gui:
 
   # def on_quit_activate(self, menuitem): {{{
   def on_quit_activate(self, menuitem):
+    gobject.source_remove(self.timer)
+    self.timer = 0
     gtk.main_quit()
     return False
   # }}}
@@ -787,6 +787,8 @@ class gui:
   # def on_destroy(self, widget, data=None): {{{
   def on_destroy(self, widget, data=None):
     if widget == self.main_window:
+      gobject.source_remove(self.timer)
+      self.timer = 0
       gtk.main_quit()
       return False
     else:
@@ -1148,7 +1150,6 @@ class gui:
     (retcode, output) = self.install_packages(list)
 
     # TODO: do the same for remove pkg, add 'Are you sure?' dialog to remove
-    #print 'retcode = ', retcode
     if retcode == False:
       # cancel
       #(exit_status, out) = self.shell.install_part_3('n')
@@ -1336,7 +1337,6 @@ class gui:
 
   # def populate_local_pkg_list(self): {{{
   def populate_local_pkg_list(self):
-    print 'populate_local_pkg_list now'
     #self.local_pkgs = self.shell.local_search()
     self.run_in_thread(self.shell.local_search, {})
     #self.try_sem_animate_progress_bar()
@@ -1411,7 +1411,6 @@ class gui:
     for line in lines:
       line = line.strip()
       if line != '':
-        #print 'line: ', line
 
         try:
           if line.index('<'):
@@ -1423,7 +1422,6 @@ class gui:
         except ValueError:
           pass
 
-        #print 'line after replaces: <%s> '% line
         match_object = re.search(pattern, line)
         
         if match_object != None:
@@ -1452,7 +1450,6 @@ class gui:
         else:
           #text_buffer.insert(iterator, line + '\n')
           label_text = label_text + line.strip() + '\n'
-    #print 'setting label text to: <%s>' % label_text
     pkg_info_label.set_markup(label_text)
     #pkg_info_label.set_text(label_text)
   # }}}
@@ -1607,7 +1604,6 @@ class gui:
       try:
         self.pkgs_by_repo[repo]
       except KeyError:
-        #print 'duuh'
         return
 
       for v in self.pkgs_by_repo[repo]:
@@ -1702,7 +1698,6 @@ class gui:
       return None
     
     (ret, output) = self.shell.get_prev_return()
-    #print 'ret, output', ret, output
 
     if ret:
       # is/are already up to date, get confirmation from user about forcing the

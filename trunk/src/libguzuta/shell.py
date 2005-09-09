@@ -486,7 +486,6 @@ class shell:
     
   # def local_search(self, what= ''): {{{
   def local_search(self, what= ''):
-    print 'local_search!!'
     self.prev_return = None
     if what == '':
       self.run_pacman_with('-Qs \"\"')
@@ -505,13 +504,11 @@ class shell:
       #print self.check(all)
       #return all
       self.prev_return = all
-      print 'Niiiice'
       return
     else:
       (self.pid, self.exit_status) = os.wait()
       #return None
       self.prev_return = None
-      print 'putting None!'
       return
   # }}}
   
@@ -610,10 +607,8 @@ class shell:
     stream = None
 
     if self.pacman.get_pipeit():
-      #print 'read_pipe'
       stream = self.pacman.get_read_pipe()
     else:
-      #print 'stdout'
       stream = sys.stdout
 
     while len(line) == 1:
@@ -667,7 +662,6 @@ class shell:
     
     (self.yesno, out) = self.__read_and_check_for_yesno__()
     
-    #print 'GGGG: ', self.yesno, out
     regex = re.compile('is up to date|local version is newer')
     match = regex.search(out)
 
@@ -731,7 +725,6 @@ class shell:
       #sys.stdin.flush()
    
       (found, output) = self.__is_already_installed__(what)
-      #print 'found = ', found
       
       self.pid = self.pacman.get_pid()
 
@@ -893,7 +886,7 @@ class shell:
     ret_err = self.pacman.get_err_pipe().read()
 
     #return (ret, ret_err)
-    self.prev_return (ret, ret_err)
+    self.prev_return = (ret, ret_err)
     return
   # }}}
 

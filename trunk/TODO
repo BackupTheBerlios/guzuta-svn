@@ -2,8 +2,7 @@
 =====
 
 * Use threads when calling self.shell.* and when spawning a browser with the
-  package URL (TOP PRIORITY) (use a dialog with progressbar going left to right
-  and back again
+  package URL (Almost done!!!)
 * Add download from repo X menu/button/popup
 * Add download only menu/button/popup
 * List pkgs not associated with a repo, when installing them from a file
@@ -27,3 +26,9 @@
 * Sort the 'pkg is newer' when installing/upgrading
 * Use own trayicon stolen from quodlibet ;)
 * Make a guzuta.desktop
+* Make a click in the trayicon hide main window AND whatever popups are active
+  OR when a popup is active do not hide anything
+* Handle 'error: unsatisfied dependencies: 
+  abcde: requires cd-discid
+  abcde: requires id3v2' when installing from file
+* Make primary window not sensitive when poping up a dialog (???)
