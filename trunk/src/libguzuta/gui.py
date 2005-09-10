@@ -11,11 +11,7 @@ if gtk.pygtk_version < (2,3,90):
   raise SystemExit
 import gobject
 import gtk.glade
-import pango
-import sys, os, posix
-import re
-import threading
-import time
+import pango, sys, os, posix, re, threading, thread, time, glob
 #import gksu
 
 import egg.trayicon
@@ -186,8 +182,8 @@ class gui:
     iter0 = self.treestore_repos.append(None, ['Pseudo Repos'])
     self.treestore_repos.append(iter0, ['All'])
     self.treestore_repos.append(iter0, ['Installed'])
-    self.treestore_repos.append(iter0, ['Not installed'])
-    self.treestore_repos.append(iter0, ['No Repository'])
+    self.treestore_repos.append(iter0, ['Not Installed'])
+    self.treestore_repos.append(iter0, ['Explicitly Installed'])
     self.treestore_repos.append(iter0, ['Last Installed'])
     self.treestore_repos.append(iter0, ['Last Uninstalled'])
 
@@ -237,6 +233,21 @@ class gui:
         self.pkg_update_alarm_period = 0
         #print 'setting alarm to: ', alarm_time * 60
         #signal.alarm(alarm_time * 60)
+  # }}}
+
+  # def __expand_deps_list__(self, deps_list): {{{
+  def __expand_deps_list__(self, deps_list):
+    prefix = '/var/cache/pacman/pkg/'
+    
+    ret = []
+    for dep in deps_list:
+      full_path = os.path.join(prefix, dep)
+      matches = glob.glob(full_path + '*gz')
+      
+      # get latest version of dep
+      matches.sort(lambda x,y: cmp(x.lower(), y.lower()), str.lower, True)
+      ret.append(matches[0])
+    return ret
   # }}}
 
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
@@ -295,9 +306,13 @@ class gui:
     'on_systray_popup_menu_quit_activate':\
         self.on_systray_popup_menu_quit_activate,
     'on_preferences_clicked': self.on_preferences_clicked,
-    'on_browse_preferences_button_clicked':\
+    'on_preferences_menu_activate': self.on_preferences_clicked,
+    'on_preferences_pacman_log_button_clicked':\
         self.on_browse_preferences_button_clicked,
-    'on_preferences_menu_activate': self.on_preferences_clicked
+    'on_preferences_browser_button_clicked':\
+        self.on_preferences_browser_button_clicked
+    #'on_browse_preferences_button_clicked':\
+    #    self.on_browse_preferences_button_clicked,
     #'on_information_text_enter_notify_event': self.on_hyperlink_motion,
     #'on_information_text_leave_notify_event':\
     #  self.on_mainwindow_motion_notify_event,
@@ -449,14 +464,41 @@ class gui:
 
     #pkg_filechooser_dialog.set_default_response(gtk.RESPONSE_OK)
 
+    #preferences_pacman_log_file_text_entry =\
+    #    self.all_widgets.get_widget('preferences_pacman_log_file_text_entry')
+
     preferences_pacman_log_file_text_entry =\
-        self.all_widgets.get_widget('preferences_pacman_log_file_text_entry')
+        self.all_widgets.get_widget('preferences_pacman_log_text_entry2')
 
     response = pkg_filechooser_dialog.run()
     pkg_filechooser_dialog.hide()
 
     if response == gtk.RESPONSE_OK:
       preferences_pacman_log_file_text_entry.set_text(\
+          pkg_filechooser_dialog.get_filename())
+  # }}}
+
+  # def on_preferences_browser_button_clicked(self, button): {{{
+  def on_preferences_browser_button_clicked(self, button):
+    pkg_filechooser_dialog =\
+    self.all_widgets.get_widget('pkg_filechooser_dialog')
+
+    #pkg_filechooser_dialog = gtk.FileChooserDialog('Open package file...',
+    #    None,
+    #    gtk.FILE_CHOOSER_ACTION_OPEN,
+    #    (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+    #      gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+
+    #pkg_filechooser_dialog.set_default_response(gtk.RESPONSE_OK)
+
+    preferences_browser_text_entry =\
+        self.all_widgets.get_widget('preferences_browser_text_entry')
+
+    response = pkg_filechooser_dialog.run()
+    pkg_filechooser_dialog.hide()
+
+    if response == gtk.RESPONSE_OK:
+      preferences_browser_text_entry.set_text(\
           pkg_filechooser_dialog.get_filename())
   # }}}
     
@@ -468,7 +510,8 @@ class gui:
     interval_preferences_combobox =\
         self.all_widgets.get_widget('interval_preferences_combobox')
     
-    preferences_dialog = self.all_widgets.get_widget('preferences_dialog')
+    #preferences_dialog = self.all_widgets.get_widget('preferences_dialog')
+    preferences_dialog = self.all_widgets.get_widget('preferences_dialog2')
 
     #print self.pkg_update_alarm_period
 
@@ -490,14 +533,22 @@ class gui:
     
     #print 'depois: ', self.pkg_update_alarm
 
-    preferences_pacman_log_file_text_entry =\
-        self.all_widgets.get_widget('preferences_pacman_log_file_text_entry')
+    #preferences_pacman_log_file_text_entry =\
+    #    self.all_widgets.get_widget('preferences_pacman_log_file_text_entry')
     
+    preferences_pacman_log_file_text_entry =\
+        self.all_widgets.get_widget('preferences_pacman_log_text_entry2')
+    
+    preferences_browser_text_entry =\
+        self.all_widgets.get_widget('preferences_browser_text_entry')
+        
     if self.pacman_log_file == '':
       log_file = '/var/log/pacman.log'
     else:
       log_file = self.pacman_log_file
+
     preferences_pacman_log_file_text_entry.set_text(log_file)
+    preferences_browser_text_entry.set_text(self.browser)
 
     preferences_dialog.run()
     preferences_dialog.hide()
@@ -513,6 +564,8 @@ class gui:
     #      interval_preferences_spinbutton.get_value_as_int(), 0)
 
     self.pacman_log_file = preferences_pacman_log_file_text_entry.get_text()
+
+    self.browser = preferences_browser_text_entry.get_text()
 
     self.write_conf()
 
@@ -578,6 +631,7 @@ class gui:
     #self.liststore = gtk.ListStore('gboolean', str, str, str)
 
     #self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
+    install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
 
     pkg_filechooser_dialog =\
       self.all_widgets.get_widget('pkg_filechooser_dialog')
@@ -593,7 +647,8 @@ class gui:
 
     pkg_filechooser_dialog.hide()
     if response == gtk.RESPONSE_OK:
-      pathname = pkg_filechooser_dialog.get_filename()
+      #pathname = pkg_filechooser_dialog.get_filename()
+      path_list = pkg_filechooser_dialog.get_filenames()
       
       install_pkg_are_you_sure_dialog =\
       self.all_widgets.get_widget('install_pkg_are_you_sure_dialog')
@@ -601,13 +656,23 @@ class gui:
       install_are_you_sure_label =\
       self.all_widgets.get_widget('install_are_you_sure_label')
       
-      index = pathname.rfind('/')
+      label_text = ''
+      pkgs = []
+      for pathname in path_list:
+        index = pathname.rfind('/')
 
-      pkg = pathname[index+1:]
-      pkg = pkg[:pkg.find('.')]
-      pkg = pkg[:pkg.rfind('-')]
+        pkg = pathname[index+1:]
+        pkg = pkg[:pkg.find('.')]
+        pkg = pkg[:pkg.rfind('-')]
 
-      install_are_you_sure_label.set_text(pkg)
+        pkgs.append(pkg)
+
+        if label_text == '':
+          label_text = pkg
+        else:
+          label_text = label_text + pkg + '\n'
+
+      install_are_you_sure_label.set_text(label_text)
 
       response = install_pkg_are_you_sure_dialog.run()
       install_pkg_are_you_sure_dialog.hide()
@@ -619,8 +684,8 @@ class gui:
         #  return
 
         #ret,ret_err = self.shell.install_pkg_from_file(pathname)
-        self.run_in_thread(self.shell.install_pkg_from_file,
-            {'pathname': pathname})
+        self.run_in_thread(self.shell.install_pkg_from_files,
+            {'path_list': path_list})
 
         self.try_sem_animate_progress_bar()
 
@@ -631,18 +696,69 @@ class gui:
         ret, ret_err = self.shell.get_prev_return()
         
         if self.shell.get_exit_status() == 0:
-          install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
+          self.__add_pkg_info_to_local_pkgs__(pkgs)
+          
           install_pkg_popup.run()
           install_pkg_popup.hide()
           
-          self.__add_pkg_info_to_local_pkgs__([pkg])
           #self.refresh_pkgs_treeview()
           
           #repo = 'no repository'
           #self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
         else:
-          print 'ret: ', ret
-          print 'ret_err: ', ret_err
+          #print 'ret: ', ret
+          #print 'ret_err: ', ret_err
+
+          deps = []
+          if ret.index('requires'):
+            # dependencies required
+            dependencies_required_dialog =\
+                self.all_widgets.get_widget('dependencies_required_dialog')
+            dependencies_required_label =\
+                self.all_widgets.get_widget('dependencies_required_label')
+
+            pattern = 'requires\s([a-zA-Z0-9\-]*)'
+            regexp = re.compile(pattern)
+
+            iter = regexp.finditer(ret)
+
+            for match in iter:
+              string = ret[match.start()+len('requires '):match.end()]
+              #print 'string! <%s>' % string
+              deps.append(string)
+
+            label_text2 = ''
+
+            for dep in deps:
+              if label_text2 == '':
+                label_text2 = dep + '\n'
+              else:
+                label_text2 = label_text2 + dep + '\n'
+
+            dependencies_required_label.set_text(label_text2)
+
+            full_path_deps = self.__expand_deps_list__(deps)
+            
+            response_3 = dependencies_required_dialog.run()
+            dependencies_required_dialog.hide()
+
+            if response_3 == gtk.RESPONSE_OK:
+              print 'lista: ', path_list + full_path_deps
+              
+              self.run_in_thread(self.shell.install_pkg_from_files,
+                  {'path_list': path_list + full_path_deps})
+
+              self.try_sem_animate_progress_bar()
+              
+              self.__add_pkg_info_to_local_pkgs__(pkgs + deps)
+
+              install_pkg_popup.run()
+              install_pkg_popup.hide()
+            else:
+              return
+              
+            #while (match = regexp.match(ret)):
+            #  print 'dep: ', line[match]
       else:
         return 
     else:
@@ -925,7 +1041,6 @@ class gui:
     if pkgs_to_install == []:
       return 
     
-    print 'installing the following packages...: ', pkgs_to_install
     self.install_packages_from_list(pkgs_to_install)
   # }}}
 
@@ -1061,7 +1176,6 @@ class gui:
   
   # def on_hyperlink_motion(self, widget, event, data = None): {{{
   def on_hyperlink_motion(self, widget, event, data = None):
-    print 'hyperlink!'
     #x, y, mods = self.main_window.get_pointer()
 
     #x, y = self.information_text.window_to_buffer_coords(gtk.TEXT_WINDOW_TEXT, x, y)
@@ -1076,18 +1190,15 @@ class gui:
       return 
     
     hyperlink_tag.set_property('underline', self.pango_underline_single)
-    self.information_text.get_window(gtk.TEXT_WINDOW_TEXT)\
-        .set_cursor(gtk.gdk.Cursor(gtk.gdk.HAND2))
+    #self.information_text.get_window(gtk.TEXT_WINDOW_TEXT)\
+    #    .set_cursor(gtk.gdk.Cursor(gtk.gdk.HAND))
     self.underlined_url = hyperlink_tag
 
   # }}}
 
   # def on_hyperlink_clicked(self, tag, widget, event, iter, link): {{{
   def on_hyperlink_clicked(self, tag, widget, event, iter, link):
-    print link
-    #os.execlp('firefox', link)
-    os.spawnlp(os.P_WAIT, self.browser, self.browser, link)
-    pass
+    thread.start_new_thread(os.popen, (self.browser + ' ' + link, 'r'))
   # }}}
 
   # def write_conf(self): {{{
@@ -1103,6 +1214,7 @@ class gui:
     #conf_file.write('pkg_update_alarm_period = ' +\
     #    str(self.pkg_update_alarm_period) + '\n')
     conf_file.write('pacman_log_file = ' + self.pacman_log_file + '\n')
+    conf_file.write('browser = ' + self.browser + '\n')
     conf_file.close()
   # }}}
 
@@ -1130,6 +1242,9 @@ class gui:
       elif line.startswith('pacman_log_file ='):
         equal_pos = line.index('=')
         self.pacman_log_file = line[equal_pos+1:].strip()
+      elif line.startswith('browser ='):
+        equal_pos = line.index('=')
+        self.browser = line[equal_pos+1:].strip()
       elif line.startswith('pkg_update_alarm_period ='):
         #TODO: implement when auto update works. alarm is giving a keyboarderror
         #      ???
@@ -1425,10 +1540,6 @@ class gui:
         match_object = re.search(pattern, line)
         
         if match_object != None:
-          #text_buffer.insert_with_tags_by_name(iterator,
-          #    line[:match_object.start()+1], 'bold')
-          #text_buffer.insert(iterator, line[match_object.start()+1:] + '\n')
-          #print 'line altered: ',  line[:match_object.start()+1].strip()
           bold_stuff = line[:match_object.start()+1].strip()
           normal_stuff = line[match_object.start()+1:].strip()
           if bold_stuff.startswith('Size'):

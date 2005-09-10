@@ -870,6 +870,31 @@ class shell:
     # }}}
   # }}}
 
+  # def install_pkg_from_files(self, path_list): {{{
+  def install_pkg_from_files(self, path_list):
+    self.prev_return = None
+    if path_list == [] or None:
+      #return (None, None)
+      self.prev_return = (None, None)
+      return
+    
+    all_paths = ''
+
+    for pathname in path_list:
+      all_paths = all_paths + pathname + ' '
+      
+    self.run_pacman_with('-U ' + all_paths)
+    
+    (self.pid, self.exit_status) = os.wait()
+
+    ret = self.pacman.get_read_pipe().read()
+    ret_err = self.pacman.get_err_pipe().read()
+
+    #return (ret, ret_err)
+    self.prev_return = (ret, ret_err)
+    return
+  # }}}
+
   # def install_pkg_from_file(self, pathname): {{{
   def install_pkg_from_file(self, pathname):
     self.prev_return = None

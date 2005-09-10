@@ -1,6 +1,7 @@
 Guzuta 0.0.3 (2005)
  * Display package size in KB, MB, etc
  * Go to package url by clicking in the package information
+ * Dependency checking when installing from file
 
 Guzuta 0.0.2 (28 Aug 2005)
 
