@@ -1,7 +1,9 @@
 Guzuta 0.0.3 (2005)
- * Display package size in KB, MB, etc
- * Go to package url by clicking in the package information
- * Dependency checking when installing from file
+ * Display package size in KB, MB, etc.
+ * Go to package url by clicking in the package information.
+ * Dependency checking when installing from file.
+ * Added new option for specifying the browser to use when clicking in pkg URL.
+ * Speedups interfacing with pacman. Much better usability.
 
 Guzuta 0.0.2 (28 Aug 2005)
 

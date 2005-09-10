@@ -72,6 +72,8 @@ class gui:
 
     self.busy_progress_bar.set_fraction(0.0)
 
+    self.main_window.set_sensitive(False)
+
     self.busy_window_hidden = False
     self.busy_window.show_all()
 
@@ -83,6 +85,8 @@ class gui:
 
     self.busy_window.hide()
     self.busy_window_hidden = True
+    
+    self.main_window.set_sensitive(True)
   # }}}
 
   # def run_in_thread(self, method, args_dict): {{{
@@ -417,8 +421,11 @@ class gui:
     if not self.__is_root__():
       self.__disable_all_root_widgets__()
       not_root_dialog = self.all_widgets.get_widget('not_root_dialog')
+
+      self.main_window.set_sensitive(False)
       not_root_dialog.run()
       not_root_dialog.hide()
+      self.main_window.set_sensitive(True)
 
     #alarm_time = self.pkg_update_alarm / 60
     #spinbutton = self.all_widgets.get_widget('interval_preferences_spinbutton')
@@ -674,6 +681,7 @@ class gui:
 
       install_are_you_sure_label.set_text(label_text)
 
+      self.main_window.set_sensitive(False)
       response = install_pkg_are_you_sure_dialog.run()
       install_pkg_are_you_sure_dialog.hide()
 
@@ -701,6 +709,7 @@ class gui:
           install_pkg_popup.run()
           install_pkg_popup.hide()
           
+          self.main_window.set_sensitive(True)
           #self.refresh_pkgs_treeview()
           
           #repo = 'no repository'
@@ -709,6 +718,7 @@ class gui:
           #print 'ret: ', ret
           #print 'ret_err: ', ret_err
 
+          #TODO: more cases can happen here
           deps = []
           if ret.index('requires'):
             # dependencies required
@@ -738,25 +748,26 @@ class gui:
             dependencies_required_label.set_text(label_text2)
 
             full_path_deps = self.__expand_deps_list__(deps)
-            
+
             response_3 = dependencies_required_dialog.run()
             dependencies_required_dialog.hide()
 
             if response_3 == gtk.RESPONSE_OK:
               print 'lista: ', path_list + full_path_deps
-              
+
               self.run_in_thread(self.shell.install_pkg_from_files,
                   {'path_list': path_list + full_path_deps})
 
               self.try_sem_animate_progress_bar()
-              
+
               self.__add_pkg_info_to_local_pkgs__(pkgs + deps)
 
               install_pkg_popup.run()
               install_pkg_popup.hide()
             else:
               return
-              
+
+          self.main_window.set_sensitive(True)
             #while (match = regexp.match(ret)):
             #  print 'dep: ', line[match]
       else:
@@ -948,9 +959,9 @@ class gui:
       if self.shell.get_prev_return() == None:
         print 'None!'
         return None
-      
+
       ret, ret_err = self.shell.get_prev_return()
-      
+
       if self.shell.get_exit_status() != 0:
         # something has gone horribly wrong
         pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
@@ -960,7 +971,7 @@ class gui:
         pacman_error_dialog.run()
         pacman_error_dialog.hide()
         return 
-      
+
       self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
       response = self.update_db_popup.run()
 
