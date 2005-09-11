@@ -1691,13 +1691,14 @@ of this License.
 		  <child>
 		    <widget class="GtkImageMenuItem" id="install_pkg_from_file">
 		      <property name="visible">True</property>
+		      <property name="tooltip" translatable="yes">Installs package from a .tar.gz file</property>
 		      <property name="label" translatable="yes">_Install from file...</property>
 		      <property name="use_underline">True</property>
 		      <signal name="activate" handler="on_install_pkg_from_file_activate" last_modification_time="Tue, 23 Aug 2005 14:59:40 GMT"/>
 		      <accelerator key="I" modifiers="GDK_CONTROL_MASK" signal="activate"/>
 
 		      <child internal-child="image">
-			<widget class="GtkImage" id="image33">
+			<widget class="GtkImage" id="image40">
 			  <property name="visible">True</property>
 			  <property name="stock">gtk-yes</property>
 			  <property name="icon_size">1</property>
@@ -1758,13 +1759,14 @@ of this License.
 		  <child>
 		    <widget class="GtkImageMenuItem" id="pacman_log">
 		      <property name="visible">True</property>
+		      <property name="tooltip" translatable="yes">View pacman's log</property>
 		      <property name="label" translatable="yes">Pac_man log</property>
 		      <property name="use_underline">True</property>
 		      <signal name="activate" handler="on_pacman_log_activate" last_modification_time="Tue, 23 Aug 2005 17:16:53 GMT"/>
 		      <accelerator key="V" modifiers="GDK_CONTROL_MASK | GDK_SHIFT_MASK" signal="activate"/>
 
 		      <child internal-child="image">
-			<widget class="GtkImage" id="image34">
+			<widget class="GtkImage" id="image41">
 			  <property name="visible">True</property>
 			  <property name="stock">gtk-justify-fill</property>
 			  <property name="icon_size">1</property>
@@ -1881,6 +1883,23 @@ of this License.
 	  </child>
 
 	  <child>
+	    <widget class="GtkToolButton" id="install_from_repo_button">
+	      <property name="visible">True</property>
+	      <property name="label" translatable="yes">Install from ...</property>
+	      <property name="use_underline">True</property>
+	      <property name="stock_id">gtk-yes</property>
+	      <property name="visible_horizontal">True</property>
+	      <property name="visible_vertical">True</property>
+	      <property name="is_important">False</property>
+	      <signal name="clicked" handler="on_install_from_repo_button_clicked" last_modification_time="Sun, 11 Sep 2005 01:30:16 GMT"/>
+	    </widget>
+	    <packing>
+	      <property name="expand">False</property>
+	      <property name="homogeneous">True</property>
+	    </packing>
+	  </child>
+
+	  <child>
 	    <widget class="GtkToolButton" id="remove_pkg">
 	      <property name="visible">True</property>
 	      <property name="label" translatable="yes">Uninstall</property>
@@ -1889,7 +1908,7 @@ of this License.
 	      <property name="visible_horizontal">True</property>
 	      <property name="visible_vertical">True</property>
 	      <property name="is_important">False</property>
-	      <signal name="clicked" handler="on_remove_pkg_clicked" last_modification_time="Tue, 23 Aug 2005 16:32:15 GMT"/>
+	      <signal name="clicked" handler="on_remove_pkg_clicked" last_modification_time="Sun, 11 Sep 2005 01:28:54 GMT"/>
 	    </widget>
 	    <packing>
 	      <property name="expand">False</property>
@@ -1917,7 +1936,7 @@ of this License.
 	      <property name="visible_horizontal">True</property>
 	      <property name="visible_vertical">True</property>
 	      <property name="is_important">False</property>
-	      <signal name="clicked" handler="on_preferences_clicked" last_modification_time="Sat, 27 Aug 2005 00:56:43 GMT"/>
+	      <signal name="clicked" handler="on_preferences_clicked" last_modification_time="Sun, 11 Sep 2005 01:29:00 GMT"/>
 	    </widget>
 	    <packing>
 	      <property name="expand">False</property>
@@ -2317,7 +2336,7 @@ Description</property>
 	  <child>
 	    <widget class="GtkLabel" id="label22">
 	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">&lt;b&gt;No new updates available.&lt;/b&gt;</property>
+	      <property name="label" translatable="yes">&lt;b&gt;No new updates available&lt;/b&gt;</property>
 	      <property name="use_underline">False</property>
 	      <property name="use_markup">True</property>
 	      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -3341,14 +3360,37 @@ Description</property>
   <child>
     <widget class="GtkImageMenuItem" id="install_popup_menu">
       <property name="visible">True</property>
+      <property name="tooltip" translatable="yes">Install package</property>
       <property name="label" translatable="yes">_Install</property>
       <property name="use_underline">True</property>
       <signal name="activate" handler="on_install_popup_menu_activate" last_modification_time="Wed, 24 Aug 2005 20:28:20 GMT"/>
 
       <child internal-child="image">
-	<widget class="GtkImage" id="image22">
+	<widget class="GtkImage" id="image64">
 	  <property name="visible">True</property>
-	  <property name="stock">gtk-ok</property>
+	  <property name="stock">gtk-yes</property>
+	  <property name="icon_size">1</property>
+	  <property name="xalign">0.5</property>
+	  <property name="yalign">0.5</property>
+	  <property name="xpad">0</property>
+	  <property name="ypad">0</property>
+	</widget>
+      </child>
+    </widget>
+  </child>
+
+  <child>
+    <widget class="GtkImageMenuItem" id="install_from_popup_menu">
+      <property name="visible">True</property>
+      <property name="tooltip" translatable="yes">Install package from a specific repository</property>
+      <property name="label" translatable="yes">Install _from...</property>
+      <property name="use_underline">True</property>
+      <signal name="activate" handler="on_install_from_popup_menu_activate" last_modification_time="Sun, 11 Sep 2005 02:14:35 GMT"/>
+
+      <child internal-child="image">
+	<widget class="GtkImage" id="image65">
+	  <property name="visible">True</property>
+	  <property name="stock">gtk-yes</property>
 	  <property name="icon_size">1</property>
 	  <property name="xalign">0.5</property>
 	  <property name="yalign">0.5</property>
@@ -3362,12 +3404,13 @@ Description</property>
   <child>
     <widget class="GtkImageMenuItem" id="remove_popup_menu">
       <property name="visible">True</property>
+      <property name="tooltip" translatable="yes">Remove package</property>
       <property name="label" translatable="yes">_Remove</property>
       <property name="use_underline">True</property>
       <signal name="activate" handler="on_remove_popup_menu_activate" last_modification_time="Wed, 24 Aug 2005 20:29:19 GMT"/>
 
       <child internal-child="image">
-	<widget class="GtkImage" id="image23">
+	<widget class="GtkImage" id="image66">
 	  <property name="visible">True</property>
 	  <property name="stock">gtk-delete</property>
 	  <property name="icon_size">1</property>
@@ -4232,6 +4275,192 @@ Description</property>
 	    </widget>
 	    <packing>
 	      <property name="type">tab</property>
+	    </packing>
+	  </child>
+	</widget>
+	<packing>
+	  <property name="padding">0</property>
+	  <property name="expand">True</property>
+	  <property name="fill">True</property>
+	</packing>
+      </child>
+    </widget>
+  </child>
+</widget>
+
+<widget class="GtkDialog" id="repo_choice_dialog">
+  <property name="border_width">6</property>
+  <property name="title" translatable="yes"></property>
+  <property name="type">GTK_WINDOW_TOPLEVEL</property>
+  <property name="window_position">GTK_WIN_POS_CENTER_ON_PARENT</property>
+  <property name="modal">True</property>
+  <property name="resizable">False</property>
+  <property name="destroy_with_parent">False</property>
+  <property name="decorated">True</property>
+  <property name="skip_taskbar_hint">False</property>
+  <property name="skip_pager_hint">False</property>
+  <property name="type_hint">GDK_WINDOW_TYPE_HINT_DIALOG</property>
+  <property name="gravity">GDK_GRAVITY_NORTH_WEST</property>
+  <property name="focus_on_map">True</property>
+  <property name="has_separator">False</property>
+
+  <child internal-child="vbox">
+    <widget class="GtkVBox" id="dialog-vbox19">
+      <property name="visible">True</property>
+      <property name="homogeneous">False</property>
+      <property name="spacing">0</property>
+
+      <child internal-child="action_area">
+	<widget class="GtkHButtonBox" id="dialog-action_area19">
+	  <property name="visible">True</property>
+	  <property name="layout_style">GTK_BUTTONBOX_END</property>
+
+	  <child>
+	    <widget class="GtkButton" id="cancelbutton6">
+	      <property name="visible">True</property>
+	      <property name="can_default">True</property>
+	      <property name="can_focus">True</property>
+	      <property name="label">gtk-cancel</property>
+	      <property name="use_stock">True</property>
+	      <property name="relief">GTK_RELIEF_NORMAL</property>
+	      <property name="focus_on_click">True</property>
+	      <property name="response_id">-6</property>
+	    </widget>
+	  </child>
+
+	  <child>
+	    <widget class="GtkButton" id="okbutton14">
+	      <property name="visible">True</property>
+	      <property name="can_default">True</property>
+	      <property name="can_focus">True</property>
+	      <property name="label">gtk-ok</property>
+	      <property name="use_stock">True</property>
+	      <property name="relief">GTK_RELIEF_NORMAL</property>
+	      <property name="focus_on_click">True</property>
+	      <property name="response_id">-5</property>
+	    </widget>
+	  </child>
+	</widget>
+	<packing>
+	  <property name="padding">0</property>
+	  <property name="expand">False</property>
+	  <property name="fill">True</property>
+	  <property name="pack_type">GTK_PACK_END</property>
+	</packing>
+      </child>
+
+      <child>
+	<widget class="GtkHBox" id="hbox28">
+	  <property name="border_width">6</property>
+	  <property name="visible">True</property>
+	  <property name="homogeneous">False</property>
+	  <property name="spacing">12</property>
+
+	  <child>
+	    <widget class="GtkImage" id="image38">
+	      <property name="visible">True</property>
+	      <property name="stock">gtk-dialog-question</property>
+	      <property name="icon_size">6</property>
+	      <property name="xalign">0.5</property>
+	      <property name="yalign">0.5</property>
+	      <property name="xpad">0</property>
+	      <property name="ypad">0</property>
+	    </widget>
+	    <packing>
+	      <property name="padding">0</property>
+	      <property name="expand">True</property>
+	      <property name="fill">True</property>
+	    </packing>
+	  </child>
+
+	  <child>
+	    <widget class="GtkVBox" id="vbox21">
+	      <property name="border_width">6</property>
+	      <property name="visible">True</property>
+	      <property name="homogeneous">False</property>
+	      <property name="spacing">12</property>
+
+	      <child>
+		<widget class="GtkLabel" id="label60">
+		  <property name="visible">True</property>
+		  <property name="label" translatable="yes">&lt;b&gt;What repository do you wish to use?&lt;/b&gt;</property>
+		  <property name="use_underline">False</property>
+		  <property name="use_markup">True</property>
+		  <property name="justify">GTK_JUSTIFY_CENTER</property>
+		  <property name="wrap">True</property>
+		  <property name="selectable">False</property>
+		  <property name="xalign">0.5</property>
+		  <property name="yalign">0.5</property>
+		  <property name="xpad">0</property>
+		  <property name="ypad">0</property>
+		  <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
+		  <property name="width_chars">-1</property>
+		  <property name="single_line_mode">False</property>
+		  <property name="angle">0</property>
+		</widget>
+		<packing>
+		  <property name="padding">0</property>
+		  <property name="expand">False</property>
+		  <property name="fill">False</property>
+		</packing>
+	      </child>
+
+	      <child>
+		<widget class="GtkHBox" id="hbox29">
+		  <property name="border_width">6</property>
+		  <property name="visible">True</property>
+		  <property name="homogeneous">False</property>
+		  <property name="spacing">12</property>
+
+		  <child>
+		    <widget class="GtkLabel" id="label61">
+		      <property name="visible">True</property>
+		      <property name="label" translatable="yes">Repository:</property>
+		      <property name="use_underline">False</property>
+		      <property name="use_markup">False</property>
+		      <property name="justify">GTK_JUSTIFY_LEFT</property>
+		      <property name="wrap">False</property>
+		      <property name="selectable">False</property>
+		      <property name="xalign">0.5</property>
+		      <property name="yalign">0.5</property>
+		      <property name="xpad">0</property>
+		      <property name="ypad">0</property>
+		      <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
+		      <property name="width_chars">-1</property>
+		      <property name="single_line_mode">False</property>
+		      <property name="angle">0</property>
+		    </widget>
+		    <packing>
+		      <property name="padding">0</property>
+		      <property name="expand">False</property>
+		      <property name="fill">False</property>
+		    </packing>
+		  </child>
+
+		  <child>
+		    <widget class="GtkComboBox" id="repo_choice_combobox">
+		      <property name="visible">True</property>
+		      <property name="add_tearoffs">False</property>
+		      <property name="focus_on_click">True</property>
+		    </widget>
+		    <packing>
+		      <property name="padding">0</property>
+		      <property name="expand">True</property>
+		      <property name="fill">True</property>
+		    </packing>
+		  </child>
+		</widget>
+		<packing>
+		  <property name="padding">0</property>
+		  <property name="expand">True</property>
+		  <property name="fill">True</property>
+		</packing>
+	      </child>
+	    </widget>
+	    <packing>
+	      <property name="padding">0</property>
+	      <property name="expand">False</property>
+	      <property name="fill">False</property>
 	    </packing>
 	  </child>
 	</widget>

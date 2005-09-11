@@ -4,6 +4,8 @@ Guzuta 0.0.3 (2005)
  * Dependency checking when installing from file.
  * Added new option for specifying the browser to use when clicking in pkg URL.
  * Speedups interfacing with pacman. Much better usability.
+ * Added an install from repository button and popup menu.
+ * Quicker search capabilities.
 
 Guzuta 0.0.2 (28 Aug 2005)
 

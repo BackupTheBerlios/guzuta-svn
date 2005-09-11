@@ -314,7 +314,11 @@ class gui:
     'on_preferences_pacman_log_button_clicked':\
         self.on_browse_preferences_button_clicked,
     'on_preferences_browser_button_clicked':\
-        self.on_preferences_browser_button_clicked
+        self.on_preferences_browser_button_clicked,
+    'on_install_from_repo_button_clicked':\
+        self.on_install_from_repo_button_clicked,
+    'on_install_from_popup_menu_activate':\
+        self.on_install_from_popup_menu_activate
     #'on_browse_preferences_button_clicked':\
     #    self.on_browse_preferences_button_clicked,
     #'on_information_text_enter_notify_event': self.on_hyperlink_motion,
@@ -1064,17 +1068,51 @@ class gui:
     self.remove_packages_from_list(pkgs_to_remove)
   # }}}
 
+  # def on_install_from_repo_button_clicked(self, button): {{{
+  def on_install_from_repo_button_clicked(self, button):
+    # TODO: WARNING: To test this I have to use 'testing' repo :|
+    repo_choice_dialog = self.all_widgets.get_widget('repo_choice_dialog')
+    repo_choice_combobox = self.all_widgets.get_widget('repo_choice_combobox')
+
+    repo_liststore = gtk.ListStore(str)
+    
+    for repo in sorted(self.pkgs_by_repo.keys()):
+      #repo_choice_combobox.append_text(repo)
+      repo_liststore.append([repo])
+
+    repo_choice_combobox.set_model(repo_liststore)
+    
+    cell = gtk.CellRendererText()
+    repo_choice_combobox.pack_start(cell, True)
+    repo_choice_combobox.add_attribute(cell, 'text', 0)  
+    
+    repo_choice_combobox.set_active(0)
+
+    response = repo_choice_dialog.run()
+    repo_choice_dialog.hide()
+
+    if response == gtk.RESPONSE_OK:
+      repo_to_use = repo_choice_combobox.get_active_text()
+      
+      pkgs_to_install = self.get_all_selected_packages(self.liststore)
+
+      if pkgs_to_install == []:
+        return 
+    
+      self.install_packages_from_list(pkgs_to_install, repo_to_use)
+    else:
+      return
+  # }}}
+
   # def on_update_db_popup_delete_event(self, widget, event, data=None): {{{
   def on_update_db_popup_delete_event(self, widget, event, data=None):
     self.update_db_popup.hide()
     self.update_db_popup.destroy()
   # }}}
 
-  # def on_search_clicked(self): {{{
+  # def on_search_clicked(self, button): {{{
   def on_search_clicked(self, button):
     self.liststore = gtk.ListStore('gboolean', str, str, str)
-
-    self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
     regexp = re.compile(self.search_entry.get_text())
     search_combobox = self.all_widgets.get_widget('search_combobox')
@@ -1103,6 +1141,7 @@ class gui:
               installed_version = '--'
             self.liststore.append([False, name, installed_version, version])
           
+      self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
       self.treeview.set_model(self.liststore)
     else: # this should not happed but it stays here for completeness
       no_search_selected_dialog =\
@@ -1111,7 +1150,7 @@ class gui:
       no_search_selected_dialog.hide()
   # }}}
 
-  # def on_clear_clicked(self): {{{
+  # def on_clear_clicked(self, button): {{{
   def on_clear_clicked(self, button):
     # clear the search_entry
     self.search_entry.set_text('')
@@ -1127,16 +1166,24 @@ class gui:
       self.refresh_pkgs_treeview()
   # }}}
 
-  # def on_treeview_button_press_event(self): {{{
+  # def on_treeview_button_press_event(self, treeview, event): {{{
   def on_treeview_button_press_event(self, treeview, event):
     if event.button == 3:
       # display popup menu
+      x = int(event.x)
+      y = int(event.y)
+      pathinfo = treeview.get_path_at_pos(x, y)
+      if pathinfo != None:
+        path, col, cellx, celly = pathinfo
+        treeview.set_cursor(path, col, 0)
+
       popup_menu = self.all_widgets.get_widget('popup_menu')
 
       popup_menu.popup(None, None, None, event.button, event.get_time())
+      return True
   # }}}
 
-  # def on_install_popup_menu_activate(self): {{{
+  # def on_install_popup_menu_activate(self, menuitem): {{{
   def on_install_popup_menu_activate(self, menuitem):
     selection = self.treeview.get_selection()
     treemodel, iter = selection.get_selected()
@@ -1146,6 +1193,44 @@ class gui:
     name = treemodel.get_value(iter, 1)
     pkgs_to_install = [name]
     self.install_packages_from_list(pkgs_to_install)
+  # }}}
+
+  # def on_install_from_popup_menu_activate(self, menuitem): {{{
+  def on_install_from_popup_menu_activate(self, menuitem):
+    # TODO: WARNING: To test this I have to use 'testing' repo :|
+    repo_choice_dialog = self.all_widgets.get_widget('repo_choice_dialog')
+    repo_choice_combobox = self.all_widgets.get_widget('repo_choice_combobox')
+
+    repo_liststore = gtk.ListStore(str)
+    
+    for repo in sorted(self.pkgs_by_repo.keys()):
+      #repo_choice_combobox.append_text(repo)
+      repo_liststore.append([repo])
+
+    repo_choice_combobox.set_model(repo_liststore)
+    
+    cell = gtk.CellRendererText()
+    repo_choice_combobox.pack_start(cell, True)
+    repo_choice_combobox.add_attribute(cell, 'text', 0)  
+    
+    repo_choice_combobox.set_active(0)
+
+    response = repo_choice_dialog.run()
+    repo_choice_dialog.hide()
+
+    if response == gtk.RESPONSE_OK:
+      repo_to_use = repo_choice_combobox.get_active_text()
+
+      selection = self.treeview.get_selection()
+      treemodel, iter = selection.get_selected()
+      if not iter:
+        return 
+
+      name = treemodel.get_value(iter, 1)
+      pkgs_to_install = [name]
+      self.install_packages_from_list(pkgs_to_install, repo_to_use)
+    else:
+      return
   # }}}
 
   # def on_remove_popup_menu_activate(self): {{{
@@ -1270,10 +1355,10 @@ class gui:
         pass
   # }}}
   
-  # def install_packages_from_list(self, list): {{{
-  def install_packages_from_list(self, list):
+  # def install_packages_from_list(self, list, repo = ''): {{{
+  def install_packages_from_list(self, list, repo = ''):
     self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
-    (retcode, output) = self.install_packages(list)
+    (retcode, output) = self.install_packages(list, repo)
 
     # TODO: do the same for remove pkg, add 'Are you sure?' dialog to remove
     if retcode == False:
@@ -1799,8 +1884,8 @@ class gui:
       self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
   # }}}
 
-  # def install_packages(self, pkg_list): {{{
-  def install_packages(self, pkg_list):
+  # def install_packages(self, pkg_list, repo = ''): {{{
+  def install_packages(self, pkg_list, repo = ''):
     what = ''
     pkg_names_by_comma = ''
 
@@ -1813,7 +1898,7 @@ class gui:
         pkg_names_by_comma = pkg_names_by_comma + ', ' + pkg_name
     
     #(ret, output) = self.shell.install_part_1(what)
-    self.run_in_thread(self.shell.install_part_1, {'what': what})
+    self.run_in_thread(self.shell.install_part_1, {'what': what, 'repo': repo})
     self.try_sem_animate_progress_bar()
     if self.shell.get_prev_return() == None:
       print 'None!'

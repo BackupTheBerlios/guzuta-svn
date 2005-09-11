@@ -1,7 +1,6 @@
 0.0.3
 =====
 
-* Add download from repo X menu/button/popup
 * Add download only menu/button/popup
 * List pkgs not associated with a repo, when installing them from a file
   directly

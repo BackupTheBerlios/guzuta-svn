@@ -701,8 +701,8 @@ class shell:
     os.wait()
   # }}}
 
-  # def install_part_1(self, what = ''): {{{
-  def install_part_1(self, what = ''):
+  # def install_part_1(self, what = '', repo = ''): {{{
+  def install_part_1(self, what = '', repo = ''):
     self.prev_return = None
     if not self.__is_root__():
       print "You are not ROOT. Bye bye."
@@ -711,7 +711,10 @@ class shell:
       print 'Please specify a package to install'
       return
 
-    self.run_pacman_with('-S ' + what)
+    if repo == '':
+      self.run_pacman_with('-S ' + what)
+    else:
+      self.run_pacman_with('-S ' + repo + '/' + what)
 
     if self.pacman.get_pipeit():
       read_pipe = self.pacman.get_read_pipe()
