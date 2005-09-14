@@ -318,7 +318,11 @@ class gui:
     'on_install_from_repo_button_clicked':\
         self.on_install_from_repo_button_clicked,
     'on_install_from_popup_menu_activate':\
-        self.on_install_from_popup_menu_activate
+        self.on_install_from_popup_menu_activate,
+    'on_download_pkg_button_clicked':\
+        self.on_download_pkg_button_clicked,
+    'on_download_pkg_popup_menu_activate':\
+        self.on_download_pkg_button_clicked
     #'on_browse_preferences_button_clicked':\
     #    self.on_browse_preferences_button_clicked,
     #'on_information_text_enter_notify_event': self.on_hyperlink_motion,
@@ -462,6 +466,16 @@ class gui:
     gtk.gdk.threads_leave()
   # }}}
 
+  # def on_download_pkg_button_clicked(self, button): {{{
+  def on_download_pkg_button_clicked(self, button):
+    pkgs_to_download = self.get_all_selected_packages(self.liststore)
+
+    if pkgs_to_download == []:
+      return 
+    
+    self.download_packages_from_list(pkgs_to_download)
+  # }}}
+  
   # def on_browse_preferences_button_clicked(self, button): {{{
   def on_browse_preferences_button_clicked(self, button):
     pkg_filechooser_dialog =\
@@ -813,7 +827,6 @@ class gui:
     if event.button == 3: # right click
       # show popup menu
       systray_popup_menu = self.all_widgets.get_widget('systray_popup_menu')
-
       systray_popup_menu.popup(None, None, None, event.button, event.get_time())
   # }}}
 
@@ -1355,6 +1368,124 @@ class gui:
         pass
   # }}}
   
+  # def download_packages(self, pkg_list): {{{
+  def download_packages(self, pkg_list):
+    what = ''
+    pkg_names_by_comma = ''
+
+    for pkg_name in pkg_list:
+      what = what + pkg_name + ' '
+
+    self.run_in_thread(self.shell.download_part_1, {'what': what})
+    self.try_sem_animate_progress_bar()
+
+    if self.shell.get_prev_return() == None:
+      print 'None'
+      return
+
+    out = self.shell.get_prev_return()
+    exit_status = self.shell.get_exit_status()
+
+    if exit_status == 0:
+      download_pkgs_dialog = self.all_widgets.get_widget('download_pkgs_dialog')
+      download_pkgs_label =\
+        self.all_widgets.get_widget('download_pkgs_label')
+      download_pkgs_label.set_text(out[:-7])
+
+      response = download_pkgs_dialog.run()
+      download_pkgs_dialog.hide()
+
+      if response == gtk.RESPONSE_OK:
+        self.run_in_thread(self.shell.download_part_2, {'txt_to_pacman': 'Y'})
+        self.try_sem_animate_progress_bar()
+        return (True, out)
+      else:
+        self.run_in_thread(self.shell.download_part_2, {'txt_to_pacman': 'n'})
+        self.try_sem_animate_progress_bar()
+        return (False, out)
+  # }}}
+
+  # def download_packages_from_list(self, list): {{{
+  def download_packages_from_list(self, list):
+    downloaded_pkgs_dialog =\
+        self.all_widgets.get_widget('downloaded_pkgs_dialog')
+
+    downloaded_pkgs_label =\
+        self.all_widgets.get_widget('downloaded_pkgs_label')
+
+
+    (retcode, output) = self.download_packages(list)
+
+    if retcode == False:
+      return
+    txt = ''
+    for pkg_name in list:
+      if txt == '':
+        txt = pkg_name + '\n'
+      else:
+        txt = txt + pkg_name + '\n'
+
+    downloaded_pkgs_label.set_text(txt)
+
+    downloaded_pkgs_dialog.run()
+    downloaded_pkgs_dialog.hide()
+  # }}}
+  
+  # def install_packages(self, pkg_list, repo = ''): {{{
+  def install_packages(self, pkg_list, repo = ''):
+    what = ''
+    pkg_names_by_comma = ''
+
+    for pkg_name in pkg_list:
+      what = what + pkg_name + ' '
+      if pkg_names_by_comma == '':
+        # first
+        pkg_names_by_comma = pkg_name
+      else:
+        pkg_names_by_comma = pkg_names_by_comma + ', ' + pkg_name
+    
+    #(ret, output) = self.shell.install_part_1(what)
+    self.run_in_thread(self.shell.install_part_1, {'what': what, 'repo': repo})
+    self.try_sem_animate_progress_bar()
+    if self.shell.get_prev_return() == None:
+      print 'None!'
+      return None
+    
+    (ret, output) = self.shell.get_prev_return()
+
+    if ret:
+      # is/are already up to date, get confirmation from user about forcing the
+      # install of the package
+      
+      install_pkg_error = self.all_widgets.get_widget('install_pkg_error')
+      install_pkg_error_label =\
+      self.all_widgets.get_widget('install_pkg_error_label')
+      #install_pkg_error_label.set_use_markup(True)
+      text = '''<span weight="bold">Package(s) %s is(are) up to date.</span>
+<span weight="bold">Upgrade anyway?</span>''' % pkg_names_by_comma
+      install_pkg_error_label.set_markup(text)
+      response2 = install_pkg_error.run()
+
+      install_pkg_error.hide()
+      if response2 == gtk.RESPONSE_CANCEL:
+        return (False, output)
+      elif response2 == gtk.RESPONSE_OK:
+        return (True, output)
+    else:
+      # not installed, install
+      return (None, output)
+    #return ret
+
+    #retcode_dict = {}
+    #for pkg_name in pkg_list:
+    #  ret = self.shell.install(pkg_name)
+    #  if self.yesno:
+    #    #self.shell.send_to_pacman
+    #    pass
+    #  retcode_dict[pkg_name] = ret
+
+  # }}}
+
   # def install_packages_from_list(self, list, repo = ''): {{{
   def install_packages_from_list(self, list, repo = ''):
     self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
@@ -1882,61 +2013,6 @@ class gui:
       repo = treemodel.get_value(iter, 0)
       # fill treeview with pkgs from 'repo'
       self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
-  # }}}
-
-  # def install_packages(self, pkg_list, repo = ''): {{{
-  def install_packages(self, pkg_list, repo = ''):
-    what = ''
-    pkg_names_by_comma = ''
-
-    for pkg_name in pkg_list:
-      what = what + pkg_name + ' '
-      if pkg_names_by_comma == '':
-        # first
-        pkg_names_by_comma = pkg_name
-      else:
-        pkg_names_by_comma = pkg_names_by_comma + ', ' + pkg_name
-    
-    #(ret, output) = self.shell.install_part_1(what)
-    self.run_in_thread(self.shell.install_part_1, {'what': what, 'repo': repo})
-    self.try_sem_animate_progress_bar()
-    if self.shell.get_prev_return() == None:
-      print 'None!'
-      return None
-    
-    (ret, output) = self.shell.get_prev_return()
-
-    if ret:
-      # is/are already up to date, get confirmation from user about forcing the
-      # install of the package
-      
-      install_pkg_error = self.all_widgets.get_widget('install_pkg_error')
-      install_pkg_error_label =\
-      self.all_widgets.get_widget('install_pkg_error_label')
-      #install_pkg_error_label.set_use_markup(True)
-      text = '''<span weight="bold">Package(s) %s is(are) up to date.</span>
-<span weight="bold">Upgrade anyway?</span>''' % pkg_names_by_comma
-      install_pkg_error_label.set_markup(text)
-      response2 = install_pkg_error.run()
-
-      install_pkg_error.hide()
-      if response2 == gtk.RESPONSE_CANCEL:
-        return (False, output)
-      elif response2 == gtk.RESPONSE_OK:
-        return (True, output)
-    else:
-      # not installed, install
-      return (None, output)
-    #return ret
-
-    #retcode_dict = {}
-    #for pkg_name in pkg_list:
-    #  ret = self.shell.install(pkg_name)
-    #  if self.yesno:
-    #    #self.shell.send_to_pacman
-    #    pass
-    #  retcode_dict[pkg_name] = ret
-
   # }}}
 
   # def __add_pkg_info_to_local_pkgs__(self, pkg_list): {{{

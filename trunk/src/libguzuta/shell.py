@@ -701,6 +701,54 @@ class shell:
     os.wait()
   # }}}
 
+  # def download_part_1(self, what = ''): {{{
+  def download_part_1(self, what = ''):
+    self.prev_return = None
+    if not self.__is_root__():
+      print "You are not ROOT. Bye bye."
+      return
+    if what == '':
+      print 'Please specify a package to download'
+      return
+
+    self.run_pacman_with('-Sw ' + what)
+
+    if self.pacman.get_pipeit():
+      read_pipe = self.pacman.get_read_pipe()
+      write_pipe = self.pacman.get_write_pipe()
+
+      #read_pipe.flush()
+
+      #if write_pipe != None:
+      #   write_pipe.flush()
+      #sys.stdout.flush()
+      #sys.stdin.flush()
+   
+      #(found, output) = self.__is_already_installed__(what)
+      
+      (self.yesno, out) = self.__read_and_check_for_yesno__()
+
+      self.pid = self.pacman.get_pid()
+
+      #return (found, output)
+      self.prev_return = out
+      return
+    else:
+      #return (False, None)
+      self.prev_return = None
+      return
+  # }}}
+  
+  # def download_part_2(self, txt_to_pacman): {{{
+  def download_part_2(self, txt_to_pacman):
+    self.prev_return = None
+    self.send_to_pacman(txt_to_pacman)
+    out = self.__capture_output__()
+
+    self.prev_return = out
+    return
+  # }}}
+
   # def install_part_1(self, what = '', repo = ''): {{{
   def install_part_1(self, what = '', repo = ''):
     self.prev_return = None
@@ -742,11 +790,13 @@ class shell:
 
   # def install_part_2(self, txt_to_pacman): {{{
   def install_part_2(self, txt_to_pacman):
+    self.prev_return = None
     self.send_to_pacman(txt_to_pacman)
     # HACK
     (self.yesno, out) = self.__read_and_check_for_yesno__()
 
-    return out
+    self.prev_return = out
+    return
   # }}}
   
   # def install_part_3(self, txt_to_pacman): {{{
@@ -1033,13 +1083,13 @@ class shell:
   # def remove(self, what = ''): {{{
   def remove(self, what = ''):
     uid = posix.getuid()
+    self.prev_return = None
     if uid != 0:
       print "You are not ROOT. Bye bye."
       return
     if what == '':
       print 'Please specify a package to remove'
       return
-    self.prev_return = None
     self.run_pacman_with('-R ' + what)
     
     out = self.__capture_output__()
@@ -1054,6 +1104,26 @@ class shell:
           dependencies.append(string[string.rfind(' ')+1:])
     #return (self.exit_status, dependencies, out)
     self.prev_return = (self.exit_status, dependencies, out)
+    return
+  # }}}
+
+  # def download(self, what = ''): {{{
+  def download(self, what = ''):
+    uid = posix.getuid()
+    self.prev_return = None
+    if uid != 0:
+      print "You are not ROOT. Bye bye."
+      return
+    if what == '':
+      print 'Please specify a package to remove'
+      return
+    print 'running <%s>' % ('-Sw ' + what)
+    self.run_pacman_with('-Sw ' + what)
+
+    #out = self.__capture_output__()
+    (pid, self.exit_status) = os.wait()
+
+    self.prev_return = (self.exit_status, out)
     return
   # }}}
 
