@@ -28,6 +28,8 @@ def xor_two_dicts(a, b):
   # if key,value exist in both dicts, scrap
   # else put it in ret
   for key, value in a.iteritems():
+    if key == '':
+      print 'empty key'
     try:
       b[key]
       not_ret[key] = value
@@ -35,6 +37,8 @@ def xor_two_dicts(a, b):
       ret[key] = value
 
   for key, value in b.iteritems():
+    if key == '':
+      print 'empty key2'
     try:
       not_ret[key]
     except KeyError:
@@ -66,9 +70,9 @@ class gui:
 
   # def try_sem_animate_progress_bar(self): {{{
   def try_sem_animate_progress_bar(self):
-    self.busy_window = self.all_widgets.get_widget('busy_window2')
-    self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
-    self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar2')
+    self.busy_window = self.all_widgets.get_widget('busy_window')
+    #self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+    self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar')
 
     self.busy_progress_bar.set_fraction(0.0)
 
@@ -492,7 +496,7 @@ class gui:
     #    self.all_widgets.get_widget('preferences_pacman_log_file_text_entry')
 
     preferences_pacman_log_file_text_entry =\
-        self.all_widgets.get_widget('preferences_pacman_log_text_entry2')
+        self.all_widgets.get_widget('preferences_pacman_log_text_entry')
 
     response = pkg_filechooser_dialog.run()
     pkg_filechooser_dialog.hide()
@@ -535,7 +539,7 @@ class gui:
         self.all_widgets.get_widget('interval_preferences_combobox')
     
     #preferences_dialog = self.all_widgets.get_widget('preferences_dialog')
-    preferences_dialog = self.all_widgets.get_widget('preferences_dialog2')
+    preferences_dialog = self.all_widgets.get_widget('preferences_dialog')
 
     #print self.pkg_update_alarm_period
 
@@ -561,7 +565,7 @@ class gui:
     #    self.all_widgets.get_widget('preferences_pacman_log_file_text_entry')
     
     preferences_pacman_log_file_text_entry =\
-        self.all_widgets.get_widget('preferences_pacman_log_text_entry2')
+        self.all_widgets.get_widget('preferences_pacman_log_text_entry')
     
     preferences_browser_text_entry =\
         self.all_widgets.get_widget('preferences_browser_text_entry')
@@ -860,6 +864,8 @@ class gui:
     if treeview == self.treeview:
       # treeview of pkgs
       name = treemodel.get_value(iter, 1)
+
+      print 'name:<%s>' % name
       
       buffer = gtk.TextBuffer()
       

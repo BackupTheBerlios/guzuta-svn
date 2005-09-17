@@ -1,11 +1,9 @@
 0.0.3
 =====
 
-* Erase cache selectively - by X days old, by X versions old...
-* Sort the SIGALRM stuff why does it give KeyboardError
-  --> USE self.timer = gobject.timeout_add (100, progress_timeout, self)
 * Show in a popup all the files of a pkg
 * Show in a popup the dependencies of a pkg
+* Erase cache selectively - by X days old, by X versions old...
 * Sort the 'pkg is newer' when installing/upgrading
 * Use own trayicon stolen from quodlibet ;)
 * Make a guzuta.desktop
@@ -15,6 +13,8 @@
 0.0.4
 =====
 
+* Sort the SIGALRM stuff why does it give KeyboardError
+  --> USE self.timer = gobject.timeout_add (100, progress_timeout, self)
 * List pkgs not associated with a repo, when installing them from a file
   directly
 * Add pseudo-repos: Last Installed, Last Uninstalled

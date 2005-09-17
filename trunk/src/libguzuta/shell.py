@@ -527,7 +527,7 @@ class shell:
   # def search(self, what = ''): {{{
   def search(self, what = ''):
     if what == '':
-      self.run_pacman_with('-Ss')
+      self.run_pacman_with('-Ss \"\"')
     else:
       self.run_pacman_with('-Ss ' + what)
 
@@ -578,7 +578,7 @@ class shell:
   # def repofiles2(self): {{{
   def repofiles2(self):
     self.prev_return = None
-    self.run_pacman_with('-Ss')
+    self.run_pacman_with('-Ss \"\"')
 
     if self.pacman.get_pipeit() == True:
 
