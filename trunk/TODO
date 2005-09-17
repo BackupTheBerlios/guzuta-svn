@@ -1,19 +1,9 @@
 0.0.3
 =====
 
-* List pkgs not associated with a repo, when installing them from a file
-  directly
-* Add more tooltips where applicable
-* Add pseudo-repos: Last Installed, Last Uninstalled
-* Add a popup menu/button to support 'download only'
-* Implement rollback (use log? use own file written from structures?)
-* List cache (/var/cache/pacman/pkg)
 * Erase cache selectively - by X days old, by X versions old...
-* List pkgs by maintainer - add a new column to treeview
-* List pkgs by size       - add a bew column to treeview
 * Sort the SIGALRM stuff why does it give KeyboardError
   --> USE self.timer = gobject.timeout_add (100, progress_timeout, self)
-* i18n
 * Show in a popup all the files of a pkg
 * Show in a popup the dependencies of a pkg
 * Sort the 'pkg is newer' when installing/upgrading
@@ -21,4 +11,18 @@
 * Make a guzuta.desktop
 * Make a click in the trayicon hide main window AND whatever popups are active
   OR when a popup is active do not hide anything
-* Make primary window not sensitive when poping up a dialog (???)
+
+0.0.4
+=====
+
+* List pkgs not associated with a repo, when installing them from a file
+  directly
+* Add pseudo-repos: Last Installed, Last Uninstalled
+* Implement rollback (use log? use own file written from structures?)
+* List pkgs by maintainer - add a new column to treeview
+* List pkgs by size       - add a bew column to treeview
+
+Undefined:
+=========
+
+* i18n

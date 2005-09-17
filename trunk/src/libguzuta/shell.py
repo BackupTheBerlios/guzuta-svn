@@ -123,6 +123,7 @@ class shell:
     self.prompt = self.PS1 + " "
 
     self.prev_return = None
+    self.REASON_EXPLICIT = 0
     
     #self.opt_names = 'h:j:k:'
     #self.long_opt_names = ''
@@ -279,6 +280,62 @@ class shell:
     self.prev_return = ret
   # }}}
 
+  # def get_fresh_updates_part_1(self): {{{
+  def get_fresh_updates_part_1(self):
+    self.prev_return = None
+    ret = self.run_pacman_with('-Su')
+    
+    if self.pacman.get_pipeit() == True:
+      (self.yesno, out) = self.__read_and_check_for_yesno__()
+    else:
+      (self.pid, self.exit_status) = os.wait()
+
+    self.prev_return = (self.yesno, out)
+  # }}}
+
+  # def get_fresh_updates_part_2(self, pacman_upgrade, out): {{{
+  def get_fresh_updates_part_2(self, pacman_upgrade, out):
+    self.prev_return = None
+    # list of (pkg_name, version)
+    updates = []
+
+    if self.yesno:
+      self.send_to_pacman('n')
+
+    out2 = ''
+    if pacman_upgrade:
+      (self.yesno, out2) = self.__read_and_check_for_yesno__()
+      self.send_to_pacman('n')
+    (self.pid, self.exit_status) = os.wait()
+
+    pattern = '\n'
+    if out2 != '':
+      out = out2
+    results = re.split(pattern, out)
+
+    for result in results:
+      if result.startswith('Total Package Size'):
+        break
+      if result != '':
+        pattern2 = '\s'
+        results2 = re.split(pattern2, result)
+
+        for result2 in results2[1:]:
+          if result2:
+            first_dash = result2.index('-')
+            last_dash = result2.rindex('-')
+            before_last_dash = result2[:last_dash].rindex('-')
+
+            name = result2[:before_last_dash]
+            version = result2[before_last_dash+1:last_dash]
+
+            updates.append(name)
+
+    ret_err = self.pacman.get_err_pipe().read()
+    #return updates
+    self.prev_return = updates
+  # }}}
+  
   # def get_fresh_updates(self): {{{
   def get_fresh_updates(self):
     self.prev_return = None
@@ -289,6 +346,12 @@ class shell:
 
     if self.pacman.get_pipeit() == True:
       (self.yesno, out) = self.__read_and_check_for_yesno__()
+
+      if out.index('Upgrade pacman first?'):
+        self.send_to_pacman('n')
+        (self.pid, self.exit_status) = os.wait()
+        self.prev_return = True
+        return
 
       if self.yesno:
       #if self.pid != 0:
@@ -1245,40 +1308,6 @@ the terms of the GNU General Public License'''
     #else:
     #  (self.pid, self.exit_status) = os.wait()
     # }}}
-  # }}}
-
-  # def get_no_repository_pkgs(self): {{{
-  def get_no_repository_pkgs(self):
-    local_dir = '/var/lib/pacman/local'
-
-    ret = []
-    checked = {}
-    
-    # TODO:
-    for pkg_dir in sorted(os.listdir(local_dir)):
-      for file in os.listdir(os.path.join(local_dir, pkg_dir)):
-        print os.path.join(local_dir, pkg_dir, file)
-      #pkg_name = pkg_dir[:pkg_dir.index('-')]
-      #info = self.info(pkg_name)
-      #try:
-      #  checked[pkg_name]
-      #  print 'already checked: ', pkg_name
-      #  continue
-      #except KeyError:
-      #  checked[pkg_name] = None
-      #print 'pkg_name <%s>' %pkg_name
-
-      #try:
-      #  repository = info[0][info[0].rindex(':')+2:]
-      #  if repository != 'current' and repository != 'extra' \
-      #    and repository != 'community':
-      #      print 'repo: <%s>' % repository
-      #      name = info[1][info[1].rindex(':')+2:]
-      #      version = info[2][info[2].rindex(':')+2:]
-      #      print name, version
-      #      #ret.append((name, version, description))
-      #except ValueError:
-      #  print 'no info: ',pkg_name
   # }}}
 # }}}
 

@@ -11,7 +11,7 @@ if gtk.pygtk_version < (2,3,90):
   raise SystemExit
 import gobject
 import gtk.glade
-import pango, sys, os, posix, re, threading, thread, time, glob
+import pango, sys, os, os.path, posix, re, threading, thread, time, glob
 #import gksu
 
 import egg.trayicon
@@ -187,9 +187,9 @@ class gui:
     self.treestore_repos.append(iter0, ['All'])
     self.treestore_repos.append(iter0, ['Installed'])
     self.treestore_repos.append(iter0, ['Not Installed'])
-    self.treestore_repos.append(iter0, ['Explicitly Installed'])
-    self.treestore_repos.append(iter0, ['Last Installed'])
-    self.treestore_repos.append(iter0, ['Last Uninstalled'])
+    #self.treestore_repos.append(iter0, ['Explicitly Installed'])
+    #self.treestore_repos.append(iter0, ['Last Installed'])
+    #self.treestore_repos.append(iter0, ['Last Uninstalled'])
 
     iter1 = self.treestore_repos.append(None, ['Repos'])
     for repo, v in self.pkgs_by_repo.iteritems():
@@ -322,7 +322,9 @@ class gui:
     'on_download_pkg_button_clicked':\
         self.on_download_pkg_button_clicked,
     'on_download_pkg_popup_menu_activate':\
-        self.on_download_pkg_button_clicked
+        self.on_download_pkg_button_clicked,
+    'on_cache_menu_activate':
+      self.on_cache_menu_activate
     #'on_browse_preferences_button_clicked':\
     #    self.on_browse_preferences_button_clicked,
     #'on_information_text_enter_notify_event': self.on_hyperlink_motion,
@@ -456,9 +458,6 @@ class gui:
     # trayicon
     self.trayicon.show_all()
     
-    
-    #self.shell.get_no_repository_pkgs()
-
     #print self.remote_pkg_info
 
     gtk.gdk.threads_enter()
@@ -964,38 +963,40 @@ class gui:
   #  print 'column :',column
   # }}}
 
-  # def on_update_db_clicked(self, button): {{{
-  def on_update_db_clicked(self, button):
+  # def on_update_db_clicked(self, button, skip_update_db = False): {{{
+  def on_update_db_clicked(self, button, skip_update_db = False):
     #if button == self.update_db and self.__is_root__():
     if button == self.update_db:
       #ret, ret_err = self.shell.updatedb()
-      self.run_in_thread(self.shell.updatedb, {})
+      if not skip_update_db:
+        self.run_in_thread(self.shell.updatedb, {})
 
-      self.try_sem_animate_progress_bar()
+        self.try_sem_animate_progress_bar()
 
-      if self.shell.get_prev_return() == None:
-        print 'None!'
-        return None
+        if self.shell.get_prev_return() == None:
+          print 'None!'
+          return None
 
-      ret, ret_err = self.shell.get_prev_return()
+        ret, ret_err = self.shell.get_prev_return()
 
-      if self.shell.get_exit_status() != 0:
-        # something has gone horribly wrong
-        pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
-        pacman_error_dialog =\
-            self.all_widgets.get_widget('pacman_error_dialog')
-        pacman_error_label.set_text(ret_err)
-        pacman_error_dialog.run()
-        pacman_error_dialog.hide()
-        return 
+        if self.shell.get_exit_status() != 0:
+          # something has gone horribly wrong
+          pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
+          pacman_error_dialog =\
+              self.all_widgets.get_widget('pacman_error_dialog')
+          pacman_error_label.set_text(ret_err)
+          pacman_error_dialog.run()
+          pacman_error_dialog.hide()
+          return 
 
-      self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
-      response = self.update_db_popup.run()
+        self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
+        response = self.update_db_popup.run()
 
-      self.update_db_popup.hide()
+        self.update_db_popup.hide()
 
       #updates = self.shell.get_fresh_updates()
-      self.run_in_thread(self.shell.get_fresh_updates, {})
+      #self.run_in_thread(self.shell.get_fresh_updates, {})
+      self.run_in_thread(self.shell.get_fresh_updates_part_1, {})
 
       self.try_sem_animate_progress_bar()
 
@@ -1003,7 +1004,38 @@ class gui:
         print 'None!'
         return None
       
+      yesno, out = self.shell.get_prev_return()
+      
+      try:
+        out.index('Upgrade pacman first?')
+        # this means there's a new version of pacman to upgrade
+        # to upgrade it
+        pacman_upgrade_dialog =\
+          self.all_widgets.get_widget('pacman_upgrade_dialog')
+        
+        response = pacman_upgrade_dialog.run()
+        pacman_upgrade_dialog.hide()
+        
+        if response == gtk.RESPONSE_OK:
+          self.run_in_thread(self.shell.get_fresh_updates_part_2,
+              {'pacman_upgrade': True, 'out': out})
+          self.install_packages_from_list(['pacman'])
+
+          self.try_sem_animate_progress_bar()
+
+          self.on_update_db_clicked(button, True)
+          
+        else:
+          self.run_in_thread(self.shell.get_fresh_updates_part_2,
+              {'pacman_upgrade': True, 'out': out})
+          self.try_sem_animate_progress_bar()
+      except ValueError:
+        self.run_in_thread(self.shell.get_fresh_updates_part_2,
+            {'pacman_upgrade': False, 'out': out})
+        self.try_sem_animate_progress_bar()
+        
       updates = self.shell.get_prev_return()
+
       if updates == []:
         no_updates_dialog = self.all_widgets.get_widget('no_updates_dialog')
         no_updates_dialog.run()
@@ -1308,6 +1340,67 @@ class gui:
   # def on_hyperlink_clicked(self, tag, widget, event, iter, link): {{{
   def on_hyperlink_clicked(self, tag, widget, event, iter, link):
     thread.start_new_thread(os.popen, (self.browser + ' ' + link, 'r'))
+  # }}}
+
+  # def on_cache_menu_activate(self, menuitem): {{{
+  def on_cache_menu_activate(self, menuitem):
+    cache_dialog = self.all_widgets.get_widget('cache_dialog')
+
+    cache_treeview = self.all_widgets.get_widget('cache_treeview')
+
+    cache_liststore = gtk.TreeStore(str, str)
+    
+    textrenderer = gtk.CellRendererText()
+
+    pkg_cache_name_column = gtk.TreeViewColumn('Name')
+    pkg_cache_name_column.set_sort_column_id(0)
+    pkg_cache_name_column.pack_start(textrenderer)
+    pkg_cache_name_column.set_attributes(textrenderer, text=0)
+
+
+    pkg_cache_version_column = gtk.TreeViewColumn('Version')
+    pkg_cache_version_column.set_sort_column_id(1)
+    pkg_cache_version_column.pack_start(textrenderer)
+    pkg_cache_version_column.set_attributes(textrenderer, text=1)
+
+    cache_treeview.append_column(pkg_cache_name_column)
+    cache_treeview.append_column(pkg_cache_version_column)
+    
+    cache_pkgs = self.get_cache_pkgs()
+
+    already_seen = {}
+    
+    for package in cache_pkgs:
+      # strip '.pkg.tar.gz'
+      index = package.index('.pkg.tar.gz')
+      tmp = package[:index]
+      version_index = tmp[:tmp.rindex('-')].rindex('-')
+      pkg_name = tmp[:version_index]
+      pkg_version = tmp[version_index+1:]
+      
+      try:
+        iter_old = already_seen[pkg_name]
+        cache_liststore.append(iter_old, [pkg_name, pkg_version])
+      except KeyError:
+        iter = cache_liststore.append(None, [pkg_name, None])
+        cache_liststore.append(iter, [pkg_name, pkg_version])
+        already_seen[pkg_name] = iter
+    cache_treeview.set_model(cache_liststore)
+
+    cache_dialog.run()
+    cache_dialog.hide()
+  # }}}
+
+  # def get_cache_pkgs(self): {{{
+  def get_cache_pkgs(self):
+    cache_dir = '/var/cache/pacman/pkg'
+
+    ret = []
+    
+    for pkg_name in sorted(os.listdir(cache_dir)):
+      if not os.path.isdir(os.path.join(cache_dir, pkg_name)):
+        ret.append(pkg_name)
+    return ret
   # }}}
 
   # def write_conf(self): {{{
@@ -2099,6 +2192,5 @@ class gui:
     (exit_status, dependencies, out) = self.shell.get_prev_return()
     return (exit_status, dependencies, out)
   # }}}
-
 # }}}
 

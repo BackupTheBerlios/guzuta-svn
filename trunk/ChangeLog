@@ -7,6 +7,8 @@ Guzuta 0.0.3 (2005)
  * Added an install from repository button and popup menu.
  * Quicker search capabilities.
  * Download only pkg button and popup.
+ * Cache listing.
+ * Fixed bug when pacman upgrading itself.
 
 Guzuta 0.0.2 (28 Aug 2005)
 
