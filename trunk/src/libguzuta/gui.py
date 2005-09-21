@@ -28,8 +28,8 @@ def xor_two_dicts(a, b):
   # if key,value exist in both dicts, scrap
   # else put it in ret
   for key, value in a.iteritems():
-    if key == '':
-      print 'empty key'
+    #if key == '':
+    #  print 'empty key'
     try:
       b[key]
       not_ret[key] = value
@@ -37,8 +37,8 @@ def xor_two_dicts(a, b):
       ret[key] = value
 
   for key, value in b.iteritems():
-    if key == '':
-      print 'empty key2'
+    #if key == '':
+    #  print 'empty key2'
     try:
       not_ret[key]
     except KeyError:
@@ -774,7 +774,7 @@ class gui:
             dependencies_required_dialog.hide()
 
             if response_3 == gtk.RESPONSE_OK:
-              print 'lista: ', path_list + full_path_deps
+              #print 'lista: ', path_list + full_path_deps
 
               self.run_in_thread(self.shell.install_pkg_from_files,
                   {'path_list': path_list + full_path_deps})
@@ -865,7 +865,7 @@ class gui:
       # treeview of pkgs
       name = treemodel.get_value(iter, 1)
 
-      print 'name:<%s>' % name
+      #print 'name:<%s>' % name
       
       buffer = gtk.TextBuffer()
       
@@ -1083,8 +1083,16 @@ class gui:
         info = self.shell.get_prev_return()
         #self.local_pkg_info[pkg_name] = info
         self.remote_pkg_info[pkg_name] = info
+      
       if fresh_updates_installed:
         self.__add_pkg_info_to_local_pkgs__(updates)
+        
+        pkgs_updated_dialog = self.all_widgets.get_widget('pkgs_updated_dialog')
+        pkgs_updated_label = self.all_widgets.get_widget('pkgs_updated_label')
+        pkgs_updated_label.set_text(updates_text)
+
+        pkgs_updated_dialog.run()
+        pkgs_updated_dialog.hide()
     else:
       # display a warning window?? switch to root?? gksu???
       print 'not root!'
@@ -1165,7 +1173,10 @@ class gui:
   def on_search_clicked(self, button):
     self.liststore = gtk.ListStore('gboolean', str, str, str)
 
-    regexp = re.compile(self.search_entry.get_text())
+    try:
+      regexp = re.compile(self.search_entry.get_text())
+    except sre_constants.error:
+      pass
     search_combobox = self.all_widgets.get_widget('search_combobox')
     # search current, extra, community
     # self.pkgs_by_repo: dict of repos with lists of pairs with
@@ -1380,9 +1391,10 @@ class gui:
       # strip '.pkg.tar.gz'
       index = package.index('.pkg.tar.gz')
       tmp = package[:index]
-      version_index = tmp[:tmp.rindex('-')].rindex('-')
-      pkg_name = tmp[:version_index]
-      pkg_version = tmp[version_index+1:]
+      #version_index = tmp[:tmp.rindex('-')].rindex('-')
+      #pkg_name = tmp[:version_index]
+      #pkg_version = tmp[version_index+1:]
+      pkg_name, pkg_version = self.split_pkg_name(tmp)
       
       try:
         iter_old = already_seen[pkg_name]
@@ -1395,6 +1407,26 @@ class gui:
 
     cache_dialog.run()
     cache_dialog.hide()
+  # }}}
+
+  # def split_pkg_name(self, pkg_name): {{{
+  def split_pkg_name(self, pkg_name):
+    if pkg_name == '':
+      return None
+    version_index = pkg_name[:pkg_name.rindex('-')].rindex('-')
+    pkg_name2 = pkg_name[:version_index]
+    pkg_version = pkg_name[version_index+1:]
+    return pkg_name2, pkg_version
+  # }}}
+  
+  # def get_pkg_name(self, pkg_name): {{{
+  def get_pkg_name(self, pkg_name):
+    if pkg_name == '':
+      return None
+    version_index = pkg_name[:pkg_name.rindex('-')].rindex('-')
+    pkg_name2 = pkg_name[:version_index]
+    #pkg_version = pkg_name[version_index+1:]
+    return pkg_name2
   # }}}
 
   # def get_cache_pkgs(self): {{{
@@ -1530,6 +1562,21 @@ class gui:
     downloaded_pkgs_dialog.hide()
   # }}}
   
+  # def get_dependencies(self, pkgs_installed, output): {{{
+  def get_dependencies(self, pkgs_installed, output):
+    output_list = output.splitlines()
+    for line in output_list:
+      if line.startswith('Targets'):
+        #deps_list = [self.split_pkg_name(x) for x in (line.split(' ')[1:])]
+        deps_list = [self.get_pkg_name(x) for x in (line.split(' ')[1:])]
+        break
+    deps_list2 = []
+    for dep_name in deps_list:
+      if dep_name not in pkgs_installed:
+        deps_list2.append(dep_name)
+    return deps_list2
+  # }}}
+
   # def install_packages(self, pkg_list, repo = ''): {{{
   def install_packages(self, pkg_list, repo = ''):
     what = ''
@@ -1551,6 +1598,11 @@ class gui:
       return None
     
     (ret, output) = self.shell.get_prev_return()
+    
+    deps = self.get_dependencies(pkg_list, output)
+
+    #print 'output1: ', output
+    #print 'ret: ', ret
 
     if ret:
       # is/are already up to date, get confirmation from user about forcing the
@@ -1567,12 +1619,12 @@ class gui:
 
       install_pkg_error.hide()
       if response2 == gtk.RESPONSE_CANCEL:
-        return (False, output)
+        return (False, output, deps)
       elif response2 == gtk.RESPONSE_OK:
-        return (True, output)
+        return (True, output, deps)
     else:
       # not installed, install
-      return (None, output)
+      return (None, output, deps)
     #return ret
 
     #retcode_dict = {}
@@ -1587,9 +1639,13 @@ class gui:
 
   # def install_packages_from_list(self, list, repo = ''): {{{
   def install_packages_from_list(self, list, repo = ''):
+    #print 'installing: '
+    #for i in list:
+    #  print i
     self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
-    (retcode, output) = self.install_packages(list, repo)
+    (retcode, output, deps) = self.install_packages(list, repo)
 
+    #print 'retcode: ', retcode
     # TODO: do the same for remove pkg, add 'Are you sure?' dialog to remove
     if retcode == False:
       # cancel
@@ -1646,11 +1702,41 @@ class gui:
       
       if response3 == gtk.RESPONSE_OK: 
         #self.shell.install_part_2('Y')
-        self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'Y'})
+        self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'Y',
+            'wait': True})
         self.try_sem_animate_progress_bar()
+
+        (out, exit_status) = self.shell.get_prev_return()
+
+        #print 'exit_status: ', exit_status
+        print 'out3: ', out
+
+        if exit_status:
+          generic_error_dialog =\
+            self.all_widgets.get_widget('generic_error_dialog')
+          generic_error_label =\
+            self.all_widgets.get_widget('generic_error_label')
+          
+          generic_error_label.set_text(out)
+
+          response = generic_error_dialog.run()
+          generic_error_dialog.hide()
+
+          if response == gtk.RESPONSE_OK:
+            #force
+            self.run_in_thread(self.shell.install_force_noconfirm,\
+                {'list': list})
+            self.try_sem_animate_progress_bar()
+          elif response == gtk.RESPONSE_CANCEL:
+            return
+        
         response = self.install_pkg_popup.run()
-        self.__add_pkg_info_to_local_pkgs__(list)
+        # TODO: do this for the dependencies to.
+        #       replace list with list + deps or something like that.
+        #self.__add_pkg_info_to_local_pkgs__(list)
+        self.__add_pkg_info_to_local_pkgs__(list + deps)
         self.refresh_pkgs_treeview()
+
       elif response3 == gtk.RESPONSE_CANCEL:
         #self.shell.install_part_2('n')
         self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'n'})

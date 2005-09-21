@@ -1,6 +1,7 @@
 0.0.3
 =====
 
+* Make popup not appear when selecting packages with checkbox
 * Show in a popup all the files of a pkg
 * Show in a popup the dependencies of a pkg
 * Erase cache selectively - by X days old, by X versions old...

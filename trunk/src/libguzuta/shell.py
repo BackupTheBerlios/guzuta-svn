@@ -750,6 +750,22 @@ class shell:
     os.wait()
   # }}}
   
+  # def install_force_noconfirm(self, list): {{{
+  def install_force_noconfirm(self, list):
+    if not self.__is_root__():
+      print "You are not ROOT. Bye bye."
+      return
+
+    what = ''
+
+    for pkg_name in list:
+      what = what + ' ' + pkg_name
+
+    self.run_pacman_with('-Sf ' + what + ' --noconfirm')
+
+    os.wait()
+  # }}}
+  
   # def remove_noconfirm(self, what = ''): {{{
   def remove_noconfirm(self, what = ''):
     if not self.__is_root__():
@@ -851,14 +867,16 @@ class shell:
       return
   # }}}
 
-  # def install_part_2(self, txt_to_pacman): {{{
-  def install_part_2(self, txt_to_pacman):
+  # def install_part_2(self, txt_to_pacman, wait = False): {{{
+  def install_part_2(self, txt_to_pacman, wait = False):
     self.prev_return = None
     self.send_to_pacman(txt_to_pacman)
     # HACK
     (self.yesno, out) = self.__read_and_check_for_yesno__()
 
-    self.prev_return = out
+    if wait:
+      (self.pid, self.exit_status) = os.wait()
+    self.prev_return = (out, self.get_exit_status())
     return
   # }}}
   
@@ -1031,7 +1049,7 @@ class shell:
     return
   # }}}
 
-  # def install_packages_noconfirm(self, what = ''): {{{
+  # def install_packages_noconfirm(self, pkg_list): {{{
   def install_packages_noconfirm(self, pkg_list):
     if not self.__is_root__():
       print "You are not ROOT. Bye bye."
