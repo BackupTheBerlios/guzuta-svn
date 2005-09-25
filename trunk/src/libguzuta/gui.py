@@ -862,6 +862,14 @@ class gui:
       return 
 
     if treeview == self.treeview:
+      (tuple, column) = treeview.get_cursor()
+
+      renderers = column.get_cell_renderers()
+
+      # don't show a popup if the column is a CellRendererToggle
+      if type(renderers[0]) is gtk.CellRendererToggle:
+        return
+
       # treeview of pkgs
       name = treemodel.get_value(iter, 1)
 
