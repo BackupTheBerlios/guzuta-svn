@@ -429,6 +429,7 @@ class gui:
     self.__setup_repo_treeview__()
 
     self.all_widgets.get_widget('search_combobox').set_active(0)
+    self.all_widgets.get_widget('cache_combobox').set_active(0)
     #TODO: implement when auto update works. alarm is giving a keyboarderror
     #self.all_widgets.get_widget('interval_preferences_combobox').set_active(0)
     
@@ -1369,9 +1370,11 @@ class gui:
 
   # def on_cache_menu_activate(self, menuitem): {{{
   def on_cache_menu_activate(self, menuitem):
-    cache_dialog = self.all_widgets.get_widget('cache_dialog')
+    #cache_dialog = self.all_widgets.get_widget('cache_dialog')
+    cache_dialog = self.all_widgets.get_widget('cache_dialog2')
 
-    cache_treeview = self.all_widgets.get_widget('cache_treeview')
+    #cache_treeview = self.all_widgets.get_widget('cache_treeview')
+    cache_treeview = self.all_widgets.get_widget('cache_treeview2')
 
     cache_liststore = gtk.TreeStore(str, str)
     
@@ -1388,8 +1391,14 @@ class gui:
     pkg_cache_version_column.pack_start(textrenderer)
     pkg_cache_version_column.set_attributes(textrenderer, text=1)
 
+    pkg_cache_days_column = gtk.TreeViewColumn('Days')
+    pkg_cache_days_column.set_sort_column_id(2)
+    pkg_cache_days_column.pack_start(textrenderer)
+    pkg_cache_days_column.set_attributes(textrenderer, text=2)
+
     cache_treeview.append_column(pkg_cache_name_column)
     cache_treeview.append_column(pkg_cache_version_column)
+    #cache_treeview.append_column(pkg_cache_days_column)
     
     cache_pkgs = self.get_cache_pkgs()
 
@@ -2006,6 +2015,7 @@ class gui:
     # add text accordingly, 'bolding' the 'Name    :', etc
     for line in lines:
       if line != '':
+
         match_object = re.search(pattern, line)
         
         if match_object != None:
@@ -2015,7 +2025,19 @@ class gui:
           text_buffer.insert_with_tags_by_name(iterator,
               bold_stuff, 'bold')
         
-          if line.startswith('URL'):
+          if bold_stuff.startswith('Size'):
+            raw_size = int(normal_stuff)
+            kb_size = raw_size / 1024
+            normal_stuff = str(kb_size) + ' KB'
+            if kb_size > 1024:
+              mb_size = kb_size / 1024
+              normal_stuff = str(mb_size) + ' MB'
+              if mb_size > 1024:
+                gb_size = mb_size / 1024
+                normal_stuff = str(gb_size) + ' GB'
+            text_buffer.insert(iterator, normal_stuff +\
+                '\n')
+          elif line.startswith('URL'):
             if hyperlink_tag == None:
               extra = normal_stuff
               hyperlink_tag = text_buffer.create_tag('hyperlink',
