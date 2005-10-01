@@ -1405,7 +1405,8 @@ class gui:
     
     cache_pkgs = self.get_cache_pkgs()
 
-    already_seen = {}
+    self.already_seen = {}
+    self.pkg_versions = {}
     
     for package in cache_pkgs:
       # strip '.pkg.tar.gz'
@@ -1417,16 +1418,90 @@ class gui:
       pkg_name, pkg_version = self.split_pkg_name(tmp)
       
       try:
-        iter_old = already_seen[pkg_name]
+        iter_old = self.already_seen[pkg_name]
+        self.pkg_versions[pkg_name]
         cache_liststore.append(iter_old, [pkg_name, pkg_version])
       except KeyError:
         iter = cache_liststore.append(None, [pkg_name, None])
         cache_liststore.append(iter, [pkg_name, pkg_version])
-        already_seen[pkg_name] = iter
+        self.already_seen[pkg_name] = iter
+
+      try:
+        self.pkg_versions[pkg_name].append(pkg_version)
+      except KeyError:
+        self.pkg_versions[pkg_name] = [pkg_version]
+
     cache_treeview.set_model(cache_liststore)
 
-    cache_dialog.run()
+    #print self.pkg_versions
+
+    response = cache_dialog.run()
+
+    if response == gtk.RESPONSE_YES:
+      # cleanup cache
+      cache_combobox = self.all_widgets.get_widget('cache_combobox')
+      clean_by = cache_combobox.get_active_text()
+      cache_spinbutton = self.all_widgets.get_widget('cache_spinbutton')
+      clean_threshold = cache_spinbutton.get_value_as_int()
+      self.cleanup_cache(clean_by, clean_threshold)
+    else:
+      pass
     cache_dialog.hide()
+  # }}}
+
+  # def cleanup_cache(self, clean_by, clean_threshold): {{{
+  def cleanup_cache(self, clean_by, clean_threshold):
+    cache_dir = '/var/cache/pacman/pkg'
+    time_now = time.time()
+    print 'now is: ', int(time_now)
+    
+    already_cleaned = {}
+    
+    for package in sorted(os.listdir(cache_dir)):
+      index = package.index('.pkg.tar.gz')
+      tmp = package[:index]
+      pkg_name, pkg_version = self.split_pkg_name(tmp)
+
+      if not os.path.isdir(os.path.join(cache_dir, package)):
+        # do the cleanup
+        path = os.path.join(cache_dir, package)
+
+        if clean_by == 'Days':
+          # cleanup by days {{{
+          mtime = os.stat(path).st_mtime
+          clean_secs = clean_threshold * 24 * 60 * 60
+          if time_now - mtime >= clean_secs:
+            #print 'pkg %s is to be cleaned.' % package
+            length = len(self.pkg_versions[pkg_name])
+            if length > 1:
+              # more than one version
+              if self.pkg_versions[pkg_name][length-1] != pkg_version:
+                # not trying to clean the last version
+                #print 'cache: ', ((pkg_name, pkg_version),\
+                #    self.pkg_versions[pkg_name])
+                print 'removing: ', path
+                del self.pkg_versions[pkg_name][0]
+                #os.remove(path)
+              else:
+                print 'trying to clean the last version: ',\
+                  ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
+            else:
+              print 'there is only one version in cache: ',\
+                  ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
+          # }}}
+        else:
+          # cleanup by version {{{
+          length = len(self.pkg_versions[pkg_name])
+          if length > clean_threshold:
+            #versions_to_clean = length - clean_threshold
+            print 'removing: ', path
+            del self.pkg_versions[pkg_name][0]
+            #os.remove(path)
+          else:
+            print 'there are only ', length
+            print 'versions in cache: ',\
+                ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
+          # }}}
   # }}}
 
   # def split_pkg_name(self, pkg_name): {{{
@@ -1913,7 +1988,6 @@ class gui:
       if out.index('could not open sync database'):
         print 'It seems there is a database that needs sync\'ing: \n' + out 
         print 'Guzuta will take care of this for you and resume normal startup.'
-        #self.shell.updatedb()
         self.run_in_thread(self.shell.updatedb, {})
         self.try_sem()
 

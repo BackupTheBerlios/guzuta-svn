@@ -12,6 +12,8 @@ Guzuta 0.0.3 (2005)
  * When selecting packages using the 'Selected' column, do not display
    information and popup.
  * Use own trayicon.
+ * Fixed bug when adding a new repo to /etc/pacman.conf and not sync'ing. Guzuta
+   now does this on startup if needed.
 
 Guzuta 0.0.2 (28 Aug 2005)
 

@@ -1,12 +1,6 @@
 0.0.3
 =====
 
-* When adding a new repository (like a user repository), the pkg treeview does
-  not display well. and pacman -Ss "" says this: error:
-  
-  could not open sync database: shadowhand
-       have you used --refresh yet?
-  FIX THIS ;)
 * Erase cache selectively - by X days old, by X versions old...
 * Show in a popup all the files of a pkg
 * Show in a popup the dependencies of a pkg
