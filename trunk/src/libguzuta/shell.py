@@ -662,6 +662,26 @@ class shell:
     return uid == 0
   # }}}
 
+  # def __capture_stderr__(self): {{{
+  def __capture_stderr__(self):
+    line = 'a'
+    out = ''
+
+    stream = None
+
+    if self.pacman.get_pipeit():
+      stream = self.pacman.get_err_pipe()
+    else:
+      stream = sys.stdout
+
+    while len(line) == 1:
+      #print stream
+      line = stream.read(1)
+      out = out + line
+
+    return out
+  # }}}
+
   # def __capture_output__(self): {{{
   def __capture_output__(self):
     line = 'a'

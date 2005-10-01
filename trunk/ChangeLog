@@ -10,7 +10,8 @@ Guzuta 0.0.3 (2005)
  * Cache listing.
  * Fixed bug when pacman upgrading itself.
  * When selecting packages using the 'Selected' column, do not display
-   information and popup
+   information and popup.
+ * Use own trayicon.
 
 Guzuta 0.0.2 (28 Aug 2005)
 

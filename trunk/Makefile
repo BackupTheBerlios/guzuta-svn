@@ -2,9 +2,9 @@ trayicon.so:
 	cd src/trayicon/ && make DESTDIR=$(DESTDIR)
 
 install: trayicon.so
-	mkdir $(DESTDIR)/lib/guzuta/
-	cp src/trayicon/build/lib*/trayicon.so $(DESTDIR)/lib/guzuta/
+	mkdir -p $(DESTDIR)lib/guzuta/
 	python ./setup.py install --root=$(DESTDIR)
+	cp src/trayicon/build/lib*/trayicon.so $(DESTDIR)usr/lib/python2.4/site-packages/libguzuta/
 
 clean:
 	cd src/trayicon/ && make clean

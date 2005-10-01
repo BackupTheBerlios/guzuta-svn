@@ -14,7 +14,9 @@ import gtk.glade
 import pango, sys, os, os.path, posix, re, threading, thread, time, glob
 #import gksu
 
-import egg.trayicon
+#import egg.trayicon
+# "our" trayicon
+import trayicon
 import signal
 
 from shell import *
@@ -93,11 +95,12 @@ class gui:
     self.main_window.set_sensitive(True)
   # }}}
 
-  # def run_in_thread(self, method, args_dict): {{{
-  def run_in_thread(self, method, args_dict):
+  # def run_in_thread(self, method, args_dict, wait=False): {{{
+  def run_in_thread(self, method, args_dict, wait=False):
     self.th = threading.Thread(target=method, kwargs=args_dict)
     self.th.start()
-    #th.join()
+    if wait:
+      th.join()
   # }}}
 
   # def __setup_pkg_treeview__(self): {{{
@@ -1830,7 +1833,8 @@ class gui:
 
   # def __build_trayicon__(self): {{{
   def __build_trayicon__(self):
-    self.trayicon = egg.trayicon.TrayIcon('Tray!')
+    #self.trayicon = egg.trayicon.TrayIcon('Tray!')
+    self.trayicon = trayicon.TrayIcon('Tray!')
 
     self.systray_eventbox = gtk.EventBox()
 
@@ -1902,9 +1906,23 @@ class gui:
     #self.try_sem_animate_progress_bar()
     self.try_sem()
 
-    if self.shell.get_prev_return() == None:
-      print 'None!'
-      return None
+    exit_status = self.shell.get_exit_status()
+
+    if exit_status:
+      out = self.shell.__capture_stderr__()
+      if out.index('could not open sync database'):
+        print 'It seems there is a database that needs sync\'ing: \n' + out 
+        print 'Guzuta will take care of this for you and resume normal startup.'
+        #self.shell.updatedb()
+        self.run_in_thread(self.shell.updatedb, {})
+        self.try_sem()
+
+        self.run_in_thread(self.shell.repofiles2, {})
+        self.try_sem()
+    else:
+      if self.shell.get_prev_return() == None:
+        print 'None!'
+        return None
     
     (self.pkgs_by_repo, self.pkgs) = self.shell.get_prev_return()
   # }}}

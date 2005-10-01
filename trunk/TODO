@@ -11,7 +11,6 @@
 * Show in a popup all the files of a pkg
 * Show in a popup the dependencies of a pkg
 * Sort the 'pkg is newer' when installing/upgrading
-* Use own trayicon stolen from quodlibet ;)
 * Make a guzuta.desktop
 * Make a click in the trayicon hide main window AND whatever popups are active
   OR when a popup is active do not hide anything
