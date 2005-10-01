@@ -740,9 +740,6 @@ class gui:
           #repo = 'no repository'
           #self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
         else:
-          #print 'ret: ', ret
-          #print 'ret_err: ', ret_err
-
           #TODO: more cases can happen here
           deps = []
           if ret.index('requires'):
@@ -759,7 +756,6 @@ class gui:
 
             for match in iter:
               string = ret[match.start()+len('requires '):match.end()]
-              #print 'string! <%s>' % string
               deps.append(string)
 
             label_text2 = ''
@@ -778,8 +774,6 @@ class gui:
             dependencies_required_dialog.hide()
 
             if response_3 == gtk.RESPONSE_OK:
-              #print 'lista: ', path_list + full_path_deps
-
               self.run_in_thread(self.shell.install_pkg_from_files,
                   {'path_list': path_list + full_path_deps})
 
@@ -1471,17 +1465,14 @@ class gui:
           mtime = os.stat(path).st_mtime
           clean_secs = clean_threshold * 24 * 60 * 60
           if time_now - mtime >= clean_secs:
-            #print 'pkg %s is to be cleaned.' % package
             length = len(self.pkg_versions[pkg_name])
             if length > 1:
               # more than one version
               if self.pkg_versions[pkg_name][length-1] != pkg_version:
                 # not trying to clean the last version
-                #print 'cache: ', ((pkg_name, pkg_version),\
-                #    self.pkg_versions[pkg_name])
-                print 'removing: ', path
+                #print 'removing: ', path
                 del self.pkg_versions[pkg_name][0]
-                #os.remove(path)
+                os.remove(path)
               else:
                 print 'trying to clean the last version: ',\
                   ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
@@ -1493,14 +1484,14 @@ class gui:
           # cleanup by version {{{
           length = len(self.pkg_versions[pkg_name])
           if length > clean_threshold:
-            #versions_to_clean = length - clean_threshold
-            print 'removing: ', path
+            #print 'removing: ', path
             del self.pkg_versions[pkg_name][0]
-            #os.remove(path)
+            os.remove(path)
           else:
-            print 'there are only ', length
-            print 'versions in cache: ',\
-                ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
+            #print 'there are only ', length
+            #print 'versions in cache: ',\
+            #    ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
+            pass
           # }}}
   # }}}
 
@@ -1872,7 +1863,6 @@ class gui:
         self.remove_dependencies_broken =\
         self.all_widgets.get_widget('remove_dependencies_broken')
        
-        #for dep in dependencies:
         self.remove_dependencies_broken.set_text(out.rstrip())
         response = self.remove_pkg_error.run()
         self.remove_pkg_error.hide()
@@ -1895,15 +1885,6 @@ class gui:
         # }}}
 
         self.refresh_pkgs_treeview()
-
-    #try:
-    #  print self.local_pkg_info['abcm2ps']
-    #except KeyError:
-    #  print 'not found in local'
-    #try:
-    #  print self.remote_pkg_info['abcm2ps']
-    #except KeyError:
-    #  print 'not found in remote'
   # }}}
 
   # def __build_trayicon__(self): {{{

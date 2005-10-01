@@ -3225,7 +3225,7 @@ Description</property>
       <signal name="activate" handler="on_install_popup_menu_activate" last_modification_time="Wed, 24 Aug 2005 20:28:20 GMT"/>
 
       <child internal-child="image">
-	<widget class="GtkImage" id="image95">
+	<widget class="GtkImage" id="image108">
 	  <property name="visible">True</property>
 	  <property name="stock">gtk-yes</property>
 	  <property name="icon_size">1</property>
@@ -3247,7 +3247,7 @@ Description</property>
       <signal name="activate" handler="on_install_from_popup_menu_activate" last_modification_time="Sun, 11 Sep 2005 02:14:35 GMT"/>
 
       <child internal-child="image">
-	<widget class="GtkImage" id="image96">
+	<widget class="GtkImage" id="image109">
 	  <property name="visible">True</property>
 	  <property name="stock">gtk-yes</property>
 	  <property name="icon_size">1</property>
@@ -3278,7 +3278,7 @@ Description</property>
       <signal name="activate" handler="on_download_pkg_popup_menu_activate" last_modification_time="Wed, 14 Sep 2005 14:13:16 GMT"/>
 
       <child internal-child="image">
-	<widget class="GtkImage" id="image97">
+	<widget class="GtkImage" id="image110">
 	  <property name="visible">True</property>
 	  <property name="stock">gtk-go-down</property>
 	  <property name="icon_size">1</property>
@@ -3295,12 +3295,12 @@ Description</property>
     <widget class="GtkImageMenuItem" id="remove_popup_menu">
       <property name="visible">True</property>
       <property name="tooltip" translatable="yes">Remove package</property>
-      <property name="label" translatable="yes">_Remove</property>
+      <property name="label" translatable="yes">_Uninstall</property>
       <property name="use_underline">True</property>
       <signal name="activate" handler="on_remove_popup_menu_activate" last_modification_time="Wed, 24 Aug 2005 20:29:19 GMT"/>
 
       <child internal-child="image">
-	<widget class="GtkImage" id="image98">
+	<widget class="GtkImage" id="image111">
 	  <property name="visible">True</property>
 	  <property name="stock">gtk-delete</property>
 	  <property name="icon_size">1</property>
