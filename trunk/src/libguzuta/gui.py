@@ -82,6 +82,7 @@ class gui:
 
     self.busy_window_hidden = False
     self.busy_window.show_all()
+    self.busy_window_on = True
 
     if self.th:
       while self.th.isAlive() == True:
@@ -91,6 +92,7 @@ class gui:
 
     self.busy_window.hide()
     self.busy_window_hidden = True
+    self.busy_window_on = False
     
     self.main_window.set_sensitive(True)
   # }}}
@@ -224,14 +226,17 @@ class gui:
       # minutes. if so, warn
       if alarm_time < 40:
         generic_cancel_ok = self.all_widgets.get_widget('generic_cancel_ok')
+        self.current_dialog = generic_cancel_ok
         generic_cancel_ok_label =\
-        self.all_widgets.get_widget('generic_cancel_ok_label')
+          self.all_widgets.get_widget('generic_cancel_ok_label')
         text = """<b>Warning</b>\nThe time lapse between automatic update checks
         is very short.\nAre you sure you want to keep this value?"""
         generic_cancel_ok_label.set_markup(text)
 
+        self.current_dialog_on = True
         response = generic_cancel_ok.run()
         generic_cancel_ok.hide()
+        self.current_dialog_on = False
         if response == gtk.RESPONSE_OK:
           self.pkg_update_alarm = alarm_time
           self.pkg_update_alarm_period = 0
@@ -372,6 +377,11 @@ class gui:
     self.systray_tooltips.enable()
 
     self.main_window_hidden = False
+    self.busy_window_on = False
+    self.busy_window_hidden = False
+    self.current_dialog = None
+    self.current_dialog_on = False
+    self.current_dialog_hidden = False
     
     self.pacman_log_file = '/var/log/pacman.log'
     
@@ -439,10 +449,13 @@ class gui:
     if not self.__is_root__():
       self.__disable_all_root_widgets__()
       not_root_dialog = self.all_widgets.get_widget('not_root_dialog')
+      self.current_dialog = not_root_dialog
 
       self.main_window.set_sensitive(False)
+      self.current_dialog_on = True
       not_root_dialog.run()
       not_root_dialog.hide()
+      self.current_dialog_on = False
       self.main_window.set_sensitive(True)
 
     #alarm_time = self.pkg_update_alarm / 60
@@ -486,7 +499,8 @@ class gui:
   # def on_browse_preferences_button_clicked(self, button): {{{
   def on_browse_preferences_button_clicked(self, button):
     pkg_filechooser_dialog =\
-    self.all_widgets.get_widget('pkg_filechooser_dialog')
+      self.all_widgets.get_widget('pkg_filechooser_dialog')
+    self.current_dialog = pkg_filechooser_dialog
 
     #pkg_filechooser_dialog = gtk.FileChooserDialog('Open package file...',
     #    None,
@@ -502,8 +516,10 @@ class gui:
     preferences_pacman_log_file_text_entry =\
         self.all_widgets.get_widget('preferences_pacman_log_text_entry')
 
+    self.current_dialog_on = True
     response = pkg_filechooser_dialog.run()
     pkg_filechooser_dialog.hide()
+    self.current_dialog_on = False
 
     if response == gtk.RESPONSE_OK:
       preferences_pacman_log_file_text_entry.set_text(\
@@ -513,7 +529,8 @@ class gui:
   # def on_preferences_browser_button_clicked(self, button): {{{
   def on_preferences_browser_button_clicked(self, button):
     pkg_filechooser_dialog =\
-    self.all_widgets.get_widget('pkg_filechooser_dialog')
+      self.all_widgets.get_widget('pkg_filechooser_dialog')
+    self.current_dialog = pkg_filechooser_dialog
 
     #pkg_filechooser_dialog = gtk.FileChooserDialog('Open package file...',
     #    None,
@@ -526,8 +543,10 @@ class gui:
     preferences_browser_text_entry =\
         self.all_widgets.get_widget('preferences_browser_text_entry')
 
+    self.current_dialog_on = True
     response = pkg_filechooser_dialog.run()
     pkg_filechooser_dialog.hide()
+    self.current_dialog_on = False
 
     if response == gtk.RESPONSE_OK:
       preferences_browser_text_entry.set_text(\
@@ -537,13 +556,14 @@ class gui:
   # def on_preferences_clicked(self, button): {{{
   def on_preferences_clicked(self, button):
     interval_preferences_spinbutton =\
-    self.all_widgets.get_widget('interval_preferences_spinbutton')
+      self.all_widgets.get_widget('interval_preferences_spinbutton')
     
     interval_preferences_combobox =\
         self.all_widgets.get_widget('interval_preferences_combobox')
     
     #preferences_dialog = self.all_widgets.get_widget('preferences_dialog')
     preferences_dialog = self.all_widgets.get_widget('preferences_dialog')
+    self.current_dialog = preferences_dialog
 
     #print self.pkg_update_alarm_period
 
@@ -582,8 +602,10 @@ class gui:
     preferences_pacman_log_file_text_entry.set_text(log_file)
     preferences_browser_text_entry.set_text(self.browser)
 
+    self.current_dialog_on = True
     preferences_dialog.run()
     preferences_dialog.hide()
+    self.current_dialog_on = False
 
     #if interval_preferences_combobox.get_active() == 1:
     #  # hours
@@ -648,13 +670,16 @@ class gui:
     for line in lines:
       buffer.insert(start, line, len(line))
     pacman_log_dialog = self.all_widgets.get_widget('pacman_log_dialog')
+    self.current_dialog = pacman_log_dialog
 
     pacman_log_textview = self.all_widgets.get_widget('pacman_log_textview')
 
     pacman_log_textview.set_buffer(buffer)
 
+    self.current_dialog_on = True
     pacman_log_dialog.run()
     pacman_log_dialog.hide()
+    self.current_dialog_on = False
 
   # }}}
 
@@ -667,6 +692,7 @@ class gui:
 
     pkg_filechooser_dialog =\
       self.all_widgets.get_widget('pkg_filechooser_dialog')
+    self.current_dialog = pkg_filechooser_dialog
     
     filter = gtk.FileFilter()
     filter.set_name('Pacman Files')
@@ -675,18 +701,21 @@ class gui:
     pkg_filechooser_dialog.add_filter(filter)
 
     pkg_filechooser_dialog.set_current_folder('/var/cache/pacman/pkg/')
+    self.current_dialog_on = True
     response = pkg_filechooser_dialog.run()
 
     pkg_filechooser_dialog.hide()
+    self.current_dialog_on = False
     if response == gtk.RESPONSE_OK:
       #pathname = pkg_filechooser_dialog.get_filename()
       path_list = pkg_filechooser_dialog.get_filenames()
       
       install_pkg_are_you_sure_dialog =\
       self.all_widgets.get_widget('install_pkg_are_you_sure_dialog')
+      self.current_dialog = install_pkg_are_you_sure_dialog
 
       install_are_you_sure_label =\
-      self.all_widgets.get_widget('install_are_you_sure_label')
+        self.all_widgets.get_widget('install_are_you_sure_label')
       
       label_text = ''
       pkgs = []
@@ -707,8 +736,10 @@ class gui:
       install_are_you_sure_label.set_text(label_text)
 
       self.main_window.set_sensitive(False)
+      self.current_dialog_on = True
       response = install_pkg_are_you_sure_dialog.run()
       install_pkg_are_you_sure_dialog.hide()
+      self.current_dialog_on = False
 
       if response == gtk.RESPONSE_OK:
         selection = self.treeview.get_selection()
@@ -731,8 +762,11 @@ class gui:
         if self.shell.get_exit_status() == 0:
           self.__add_pkg_info_to_local_pkgs__(pkgs)
           
+          self.current_dialog = install_pkg_popup
+          self.current_dialog_on = True
           install_pkg_popup.run()
           install_pkg_popup.hide()
+          self.current_dialog_on = False
           
           self.main_window.set_sensitive(True)
           #self.refresh_pkgs_treeview()
@@ -746,6 +780,7 @@ class gui:
             # dependencies required
             dependencies_required_dialog =\
                 self.all_widgets.get_widget('dependencies_required_dialog')
+            self.current_dialog = dependencies_required_dialog
             dependencies_required_label =\
                 self.all_widgets.get_widget('dependencies_required_label')
 
@@ -770,8 +805,10 @@ class gui:
 
             full_path_deps = self.__expand_deps_list__(deps)
 
+            self.current_dialog_on = True
             response_3 = dependencies_required_dialog.run()
             dependencies_required_dialog.hide()
+            self.current_dialog_on = False
 
             if response_3 == gtk.RESPONSE_OK:
               self.run_in_thread(self.shell.install_pkg_from_files,
@@ -783,6 +820,7 @@ class gui:
 
               install_pkg_popup.run()
               install_pkg_popup.hide()
+              self.current_dialog_on = False
             else:
               return
 
@@ -822,6 +860,23 @@ class gui:
       else:
         self.main_window.hide()
         self.main_window_hidden = True
+      
+      if self.busy_window_on:
+        if self.busy_window_hidden:
+          self.busy_window.show()
+          self.busy_window_hidden = False
+        else:
+          self.busy_window.hide()
+          self.busy_window_hidden = True
+
+      #if self.current_dialog_on:
+      #  if self.current_dialog_hidden:
+      #    self.current_dialog.show()
+      #    self.current_dialog_hidden = False
+      #  else:
+      #    self.current_dialog.hide()
+      #    self.current_dialog_hidden = True
+
     if event.button == 2: # middle click
       # do nothing?
       pass
@@ -846,9 +901,12 @@ class gui:
   # def on_about_activate(self): {{{
   def on_about_activate(self, menuitem):
     about_dialog = self.all_widgets.get_widget('about_dialog')
+    self.current_dialog = about_dialog
 
+    self.current_dialog_on = True
     about_dialog.run()
     about_dialog.hide()
+    self.current_dialog_on = False
   # }}}
 
   # def on_cursor_changed(self, treeview): {{{
@@ -996,15 +1054,21 @@ class gui:
           pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
           pacman_error_dialog =\
               self.all_widgets.get_widget('pacman_error_dialog')
+          self.current_dialog = pacman_error_dialog
           pacman_error_label.set_text(ret_err)
+          self.current_dialog_on = True
           pacman_error_dialog.run()
           pacman_error_dialog.hide()
+          self.current_dialog_on = False
           return 
 
         self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
+        self.current_dialog = self.update_db_popup
+        self.current_dialog_on = True
         response = self.update_db_popup.run()
 
         self.update_db_popup.hide()
+        self.current_dialog_on = False
 
       #updates = self.shell.get_fresh_updates()
       #self.run_in_thread(self.shell.get_fresh_updates, {})
@@ -1016,17 +1080,32 @@ class gui:
         print 'None!'
         return None
       
-      yesno, out = self.shell.get_prev_return()
+      (yesno, out, err) = self.shell.get_prev_return()
       
+      if err:
+        pacman_error_dialog =\
+            self.all_widgets.get_widget('pacman_error_dialog')
+        self.current_dialog = pacman_error_dialog
+        pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
+        pacman_error_label.set_text(err)
+        self.current_dialog_on = True
+        pacman_error_dialog.run()
+        pacman_error_dialog.hide()
+        self.current_dialog_on = False
+        return
+
       try:
         out.index('Upgrade pacman first?')
         # this means there's a new version of pacman to upgrade
         # to upgrade it
         pacman_upgrade_dialog =\
           self.all_widgets.get_widget('pacman_upgrade_dialog')
+        self.current_dialog = pacman_upgrade_dialog
         
+        self.current_dialog_on = True
         response = pacman_upgrade_dialog.run()
         pacman_upgrade_dialog.hide()
+        self.current_dialog_on = False
         
         if response == gtk.RESPONSE_OK:
           self.run_in_thread(self.shell.get_fresh_updates_part_2,
@@ -1045,16 +1124,21 @@ class gui:
         self.run_in_thread(self.shell.get_fresh_updates_part_2,
             {'pacman_upgrade': False, 'out': out})
         self.try_sem_animate_progress_bar()
+
         
       updates = self.shell.get_prev_return()
 
       if updates == []:
         no_updates_dialog = self.all_widgets.get_widget('no_updates_dialog')
+        self.current_dialog = no_updates_dialog
+        self.current_dialog_on = True
         no_updates_dialog.run()
         no_updates_dialog.hide()
+        self.current_dialog_on = False
         return 
 
       fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
+      self.current_dialog = fresh_updates_dialog
       fresh_updates_label = self.all_widgets.get_widget('fresh_updates_label')
 
       updates_text = 'Targets:'
@@ -1063,8 +1147,10 @@ class gui:
 
       fresh_updates_label.set_text(updates_text)
 
+      self.current_dialog_on = True
       response = fresh_updates_dialog.run()
       fresh_updates_dialog.hide()
+      self.current_dialog_on = False
       
       fresh_updates_installed = False
       
@@ -1094,11 +1180,14 @@ class gui:
         self.__add_pkg_info_to_local_pkgs__(updates)
         
         pkgs_updated_dialog = self.all_widgets.get_widget('pkgs_updated_dialog')
+        self.current_dialog = pkgs_updated_dialog
         pkgs_updated_label = self.all_widgets.get_widget('pkgs_updated_label')
         pkgs_updated_label.set_text(updates_text)
 
+        self.current_dialog_on = True
         pkgs_updated_dialog.run()
         pkgs_updated_dialog.hide()
+        self.current_dialog_on = False
     else:
       # display a warning window?? switch to root?? gksu???
       print 'not root!'
@@ -1137,6 +1226,7 @@ class gui:
   def on_install_from_repo_button_clicked(self, button):
     # TODO: WARNING: To test this I have to use 'testing' repo :|
     repo_choice_dialog = self.all_widgets.get_widget('repo_choice_dialog')
+    self.current_dialog = repo_choice_dialog
     repo_choice_combobox = self.all_widgets.get_widget('repo_choice_combobox')
 
     repo_liststore = gtk.ListStore(str)
@@ -1153,8 +1243,10 @@ class gui:
     
     repo_choice_combobox.set_active(0)
 
+    self.current_dialog_on = True
     response = repo_choice_dialog.run()
     repo_choice_dialog.hide()
+    self.current_dialog_on = False
 
     if response == gtk.RESPONSE_OK:
       repo_to_use = repo_choice_combobox.get_active_text()
@@ -1213,9 +1305,12 @@ class gui:
       self.treeview.set_model(self.liststore)
     else: # this should not happed but it stays here for completeness
       no_search_selected_dialog =\
-      self.all_widgets.get_widget('no_search_selected_dialog')
+        self.all_widgets.get_widget('no_search_selected_dialog')
+      self.current_dialog = no_search_selected_dialog
+      self.current_dialog_on = True
       no_search_selected_dialog.run()
       no_search_selected_dialog.hide()
+      self.current_dialog_on = False
   # }}}
 
   # def on_clear_clicked(self, button): {{{
@@ -1267,6 +1362,7 @@ class gui:
   def on_install_from_popup_menu_activate(self, menuitem):
     # TODO: WARNING: To test this I have to use 'testing' repo :|
     repo_choice_dialog = self.all_widgets.get_widget('repo_choice_dialog')
+    self.current_dialog = repo_choice_dialog
     repo_choice_combobox = self.all_widgets.get_widget('repo_choice_combobox')
 
     repo_liststore = gtk.ListStore(str)
@@ -1283,8 +1379,10 @@ class gui:
     
     repo_choice_combobox.set_active(0)
 
+    self.current_dialog_on = True
     response = repo_choice_dialog.run()
     repo_choice_dialog.hide()
+    self.current_dialog_on = False
 
     if response == gtk.RESPONSE_OK:
       repo_to_use = repo_choice_combobox.get_active_text()
@@ -1369,6 +1467,7 @@ class gui:
   def on_cache_menu_activate(self, menuitem):
     #cache_dialog = self.all_widgets.get_widget('cache_dialog')
     cache_dialog = self.all_widgets.get_widget('cache_dialog2')
+    self.current_dialog = cache_dialog
 
     #cache_treeview = self.all_widgets.get_widget('cache_treeview')
     cache_treeview = self.all_widgets.get_widget('cache_treeview2')
@@ -1429,6 +1528,7 @@ class gui:
 
     #print self.pkg_versions
 
+    self.current_dialog_on = True
     response = cache_dialog.run()
 
     if response == gtk.RESPONSE_YES:
@@ -1441,6 +1541,7 @@ class gui:
     else:
       pass
     cache_dialog.hide()
+    self.current_dialog_on = False
   # }}}
 
   # def cleanup_cache(self, clean_by, clean_threshold): {{{
@@ -1450,7 +1551,7 @@ class gui:
     print 'now is: ', int(time_now)
     
     already_cleaned = {}
-    
+    cleaned = []
     for package in sorted(os.listdir(cache_dir)):
       index = package.index('.pkg.tar.gz')
       tmp = package[:index]
@@ -1472,6 +1573,7 @@ class gui:
                 # not trying to clean the last version
                 #print 'removing: ', path
                 del self.pkg_versions[pkg_name][0]
+                cleaned.add(path)
                 os.remove(path)
               else:
                 print 'trying to clean the last version: ',\
@@ -1485,7 +1587,11 @@ class gui:
           length = len(self.pkg_versions[pkg_name])
           if length > clean_threshold:
             #print 'removing: ', path
-            del self.pkg_versions[pkg_name][0]
+            i = 0
+            while i < clean_threshold:
+              del self.pkg_versions[pkg_name][0]
+              i = i + 1
+            cleaned.add(path)
             os.remove(path)
           else:
             #print 'there are only ', length
@@ -1493,6 +1599,7 @@ class gui:
             #    ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
             pass
           # }}}
+    print 'pkgs cleaned: ', cleaned
   # }}}
 
   # def split_pkg_name(self, pkg_name): {{{
@@ -1605,12 +1712,15 @@ class gui:
 
     if exit_status == 0:
       download_pkgs_dialog = self.all_widgets.get_widget('download_pkgs_dialog')
+      self.current_dialog = download_pkgs_dialog
       download_pkgs_label =\
         self.all_widgets.get_widget('download_pkgs_label')
       download_pkgs_label.set_text(out[:-7])
 
+      self.current_dialog_on = True
       response = download_pkgs_dialog.run()
       download_pkgs_dialog.hide()
+      self.current_dialog_on = False
 
       if response == gtk.RESPONSE_OK:
         self.run_in_thread(self.shell.download_part_2, {'txt_to_pacman': 'Y'})
@@ -1626,6 +1736,7 @@ class gui:
   def download_packages_from_list(self, list):
     downloaded_pkgs_dialog =\
         self.all_widgets.get_widget('downloaded_pkgs_dialog')
+    self.current_dialog = downloaded_pkgs_dialog
 
     downloaded_pkgs_label =\
         self.all_widgets.get_widget('downloaded_pkgs_label')
@@ -1644,8 +1755,10 @@ class gui:
 
     downloaded_pkgs_label.set_text(txt)
 
+    self.current_dialog_on = True
     downloaded_pkgs_dialog.run()
     downloaded_pkgs_dialog.hide()
+    self.current_dialog_on = False
   # }}}
   
   # def get_dependencies(self, pkgs_installed, output): {{{
@@ -1695,15 +1808,18 @@ class gui:
       # install of the package
       
       install_pkg_error = self.all_widgets.get_widget('install_pkg_error')
+      self.current_dialog = install_pkg_error
       install_pkg_error_label =\
-      self.all_widgets.get_widget('install_pkg_error_label')
+        self.all_widgets.get_widget('install_pkg_error_label')
       #install_pkg_error_label.set_use_markup(True)
       text = '''<span weight="bold">Package(s) %s is(are) up to date.</span>
 <span weight="bold">Upgrade anyway?</span>''' % pkg_names_by_comma
       install_pkg_error_label.set_markup(text)
+      self.current_dialog_on = True
       response2 = install_pkg_error.run()
 
       install_pkg_error.hide()
+      self.current_dialog_on = False
       if response2 == gtk.RESPONSE_CANCEL:
         return (False, output, deps)
       elif response2 == gtk.RESPONSE_OK:
@@ -1774,17 +1890,20 @@ class gui:
     else:
       # display generic_cancel_ok, all went well, prompt user for action
       generic_cancel_ok = self.all_widgets.get_widget('generic_cancel_ok')
+      self.current_dialog = generic_cancel_ok
 
       generic_cancel_ok_label =\
-      self.all_widgets.get_widget('generic_cancel_ok_label')
+        self.all_widgets.get_widget('generic_cancel_ok_label')
 
       text = '''<span weight="bold">Warning</span>
 %s''' % output[:-7]
 
       generic_cancel_ok_label.set_markup(text)
+      self.current_dialog_on = True
       response3 = generic_cancel_ok.run()
 
       generic_cancel_ok.hide()
+      self.current_dialog_on = False
       
       if response3 == gtk.RESPONSE_OK: 
         #self.shell.install_part_2('Y')
@@ -1800,13 +1919,16 @@ class gui:
         if exit_status:
           generic_error_dialog =\
             self.all_widgets.get_widget('generic_error_dialog')
+          self.current_dialog = generic_error_dialog
           generic_error_label =\
             self.all_widgets.get_widget('generic_error_label')
           
           generic_error_label.set_text(out)
 
+          self.current_dialog_on = True
           response = generic_error_dialog.run()
           generic_error_dialog.hide()
+          self.current_dialog_on = False
 
           if response == gtk.RESPONSE_OK:
             #force
@@ -1816,6 +1938,8 @@ class gui:
           elif response == gtk.RESPONSE_CANCEL:
             return
         
+        self.current_dialog = self.install_pkg_popup
+        self.current_dialog_on = True
         response = self.install_pkg_popup.run()
         # TODO: do this for the dependencies to.
         #       replace list with list + deps or something like that.
@@ -1829,15 +1953,16 @@ class gui:
         self.try_sem_animate_progress_bar()
 
       self.install_pkg_popup.hide()
+      self.current_dialog_on = False
 
     #self.install_pkg_popup.hide()
   # }}}
 
   # def remove_packages_from_list(self, list): {{{
   def remove_packages_from_list(self, list):
-    self.remove_pkg_popup = self.all_widgets.get_widget('remove_pkg_popup')
     remove_pkg_are_you_sure =\
-    self.all_widgets.get_widget('remove_pkg_are_you_sure')
+      self.all_widgets.get_widget('remove_pkg_are_you_sure')
+    self.current_dialog = remove_pkg_are_you_sure
 
     are_you_sure_label = self.all_widgets.get_widget('are_you_sure_label')
 
@@ -1848,8 +1973,10 @@ class gui:
       text = text + pkg_name + '\n'
 
     are_you_sure_label.set_text(text)
+    self.current_dialog_on = True
     response = remove_pkg_are_you_sure.run()
     remove_pkg_are_you_sure.hide()
+    self.current_dialog_on = False
 
     if response == gtk.RESPONSE_CANCEL:
       return
@@ -1860,19 +1987,26 @@ class gui:
       if exit_status != 0:
         # error ocurred
         self.remove_pkg_error = self.all_widgets.get_widget('remove_pkg_error')
+        self.current_dialog = self.remove_pkg_error
         self.remove_dependencies_broken =\
-        self.all_widgets.get_widget('remove_dependencies_broken')
+          self.all_widgets.get_widget('remove_dependencies_broken')
        
         self.remove_dependencies_broken.set_text(out.rstrip())
+        self.current_dialog_on = True
         response = self.remove_pkg_error.run()
         self.remove_pkg_error.hide()
+        self.current_dialog_on = False
       else:
+        self.remove_pkg_popup = self.all_widgets.get_widget('remove_pkg_popup')
+        self.current_dialog = self.remove_pkg_popup
+        self.current_dialog_on = True
         response = self.remove_pkg_popup.run()
 
         if response == gtk.RESPONSE_OK:
           # force
           pass
         self.remove_pkg_popup.hide()
+        self.current_dialog_on = False
 
         # for removed_pkg in list: {{{
         for removed_pkg in list:

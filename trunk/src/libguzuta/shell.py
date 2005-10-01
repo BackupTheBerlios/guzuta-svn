@@ -284,13 +284,15 @@ class shell:
   def get_fresh_updates_part_1(self):
     self.prev_return = None
     ret = self.run_pacman_with('-Su')
-    
+   
+    err = ''
     if self.pacman.get_pipeit() == True:
       (self.yesno, out) = self.__read_and_check_for_yesno__()
+      err = self.__capture_stderr__()
     else:
       (self.pid, self.exit_status) = os.wait()
 
-    self.prev_return = (self.yesno, out)
+    self.prev_return = (self.yesno, out, err)
   # }}}
 
   # def get_fresh_updates_part_2(self, pacman_upgrade, out): {{{
@@ -672,10 +674,9 @@ class shell:
     if self.pacman.get_pipeit():
       stream = self.pacman.get_err_pipe()
     else:
-      stream = sys.stdout
+      stream = sys.stderr
 
     while len(line) == 1:
-      #print stream
       line = stream.read(1)
       out = out + line
 
@@ -695,7 +696,6 @@ class shell:
       stream = sys.stdout
 
     while len(line) == 1:
-      #print stream
       line = stream.read(1)
       out = out + line
 
