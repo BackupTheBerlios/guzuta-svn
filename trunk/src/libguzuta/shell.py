@@ -288,7 +288,9 @@ class shell:
     err = ''
     if self.pacman.get_pipeit() == True:
       (self.yesno, out) = self.__read_and_check_for_yesno__()
-      err = self.__capture_stderr__()
+      self.exit_status = self.get_exit_status()
+      if self.exit_status != 0:
+        err = self.__capture_stderr__()
     else:
       (self.pid, self.exit_status) = os.wait()
 

@@ -12,9 +12,7 @@ if gtk.pygtk_version < (2,3,90):
 import gobject
 import gtk.glade
 import pango, sys, os, os.path, posix, re, threading, thread, time, glob
-#import gksu
 
-#import egg.trayicon
 # "our" trayicon
 import trayicon
 import signal
@@ -30,8 +28,6 @@ def xor_two_dicts(a, b):
   # if key,value exist in both dicts, scrap
   # else put it in ret
   for key, value in a.iteritems():
-    #if key == '':
-    #  print 'empty key'
     try:
       b[key]
       not_ret[key] = value
@@ -39,8 +35,6 @@ def xor_two_dicts(a, b):
       ret[key] = value
 
   for key, value in b.iteritems():
-    #if key == '':
-    #  print 'empty key2'
     try:
       not_ret[key]
     except KeyError:
