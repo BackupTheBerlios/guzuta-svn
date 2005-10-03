@@ -1,0 +1,14 @@
+[Desktop Entry]
+Encoding=UTF-8
+GenericName=Packages manager
+GenericName[pt]=Gestor de pacotes
+Comment=Guzuta is an easy to use, user friendly and yet powerful Gtk interface
+to the package manager program 'pacman'.
+Comment[pt]=O Guzuta é uma interface gráfica poderosa mas ao mesmo tempo fácil
+de usar do programa gestor de pacotes 'pacman' em Gtk.
+Name=Guzuta
+Exec=gksu guzuta
+Icon=/usr/share/guzuta/guzuta_icon_transparent.png
+Type=Application
+Terminal=false
+Categories=Application;System Tools;

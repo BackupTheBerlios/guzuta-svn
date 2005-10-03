@@ -16,6 +16,8 @@ Guzuta 0.0.3 (2005)
    now does this on startup if needed.
  * Fixed bug when looking for new updates and pacman reporting an error.
  * Erase cache selectively by X days old or by X versions old.
+ * Show in a popup all the files of a package.
+ * It now has a .desktop .
 
 Guzuta 0.0.2 (28 Aug 2005)
 

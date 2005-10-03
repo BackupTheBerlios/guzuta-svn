@@ -1,16 +1,12 @@
-0.0.3
-=====
-
-* Make a click in the trayicon hide main window AND whatever popups are active
-  OR when a popup is active do not hide anything
-* Implement auto updates when minimized to systray
-* Show in a popup all the files of a pkg
-* Show in a popup the dependencies of a pkg
-* Make a guzuta.desktop
-
 0.0.4
 =====
 
+* Show in a popup the dependencies of a pkg
+* Implement auto updates when minimized to systray
+* Make a click in the trayicon hide main window AND whatever popups are active
+  OR when a popup is active do not hide anything
+* Have a pseudo console for pacman output. Use gobject.io_add_watch() on the
+  pipes (stdout and stderr).
 * Sort the SIGALRM stuff why does it give KeyboardError
   --> USE self.timer = gobject.timeout_add (100, progress_timeout, self)
 * List pkgs not associated with a repo, when installing them from a file

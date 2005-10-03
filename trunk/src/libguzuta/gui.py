@@ -330,7 +330,9 @@ class gui:
     'on_download_pkg_popup_menu_activate':\
         self.on_download_pkg_button_clicked,
     'on_cache_menu_activate':
-      self.on_cache_menu_activate
+      self.on_cache_menu_activate,
+    'on_view_files_popup_menu_activate':
+      self.on_view_files_popup_menu_activate
     #'on_browse_preferences_button_clicked':\
     #    self.on_browse_preferences_button_clicked,
     #'on_information_text_enter_notify_event': self.on_hyperlink_motion,
@@ -479,7 +481,7 @@ class gui:
     gtk.main()
     gtk.gdk.threads_leave()
   # }}}
-
+  
   # def on_download_pkg_button_clicked(self, button): {{{
   def on_download_pkg_button_clicked(self, button):
     pkgs_to_download = self.get_all_selected_packages(self.liststore)
@@ -914,6 +916,8 @@ class gui:
     if treeview == self.treeview:
       (tuple, column) = treeview.get_cursor()
 
+      if not column:
+        return
       renderers = column.get_cell_renderers()
 
       # don't show a popup if the column is a CellRendererToggle
@@ -1403,6 +1407,36 @@ class gui:
     name = treemodel.get_value(iter, 1)
     pkgs_to_remove = [name]
     self.remove_packages_from_list(pkgs_to_remove)
+  # }}}
+
+  # def on_view_files_popup_menu_activate(self, menuitem): {{{
+  def on_view_files_popup_menu_activate(self, menuitem):
+    selection = self.treeview.get_selection()
+    treemodel, iter = selection.get_selected()
+    if not iter:
+      return 
+
+    name = treemodel.get_value(iter, 1)
+    
+    pkg_files_dialog = self.all_widgets.get_widget('pkg_files_dialog')
+
+    pkg_files_textview = self.all_widgets.get_widget('pkg_files_textview')
+    
+    buffer = pkg_files_textview.get_buffer()
+
+    self.run_in_thread(self.shell.get_pkg_files, {'what': name})
+    self.try_sem()
+    
+    exit_status, text = self.shell.get_prev_return()
+
+    if exit_status:
+      return
+    buffer.insert_at_cursor(text)
+
+    self.current_dialog = pkg_files_dialog
+    pkg_files_dialog.run()
+    pkg_files_dialog.hide()
+    self.current_dialog_on = False
   # }}}
 
   # def on_mainwindow_enter_notify_event(self, widget, event): {{{
@@ -1976,7 +2010,7 @@ class gui:
       return
     else:
       (exit_status, dependencies, out) =\
-      self.remove_packages(list)
+        self.remove_packages(list)
 
       if exit_status != 0:
         # error ocurred

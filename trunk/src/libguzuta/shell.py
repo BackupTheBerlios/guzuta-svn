@@ -1209,6 +1209,26 @@ class shell:
     self.prev_return = (self.exit_status, dependencies, out)
     return
   # }}}
+  
+  # def get_pkg_files(self, what = ''): {{{
+  def get_pkg_files(self, what = ''):
+    uid = posix.getuid()
+    self.prev_return = None
+    if uid != 0:
+      print "You are not ROOT. Bye bye."
+      return
+    if what == '':
+      print 'Please specify a package to remove'
+      return
+    
+    self.run_pacman_with('-Ql ' + what)
+
+    out = self.__capture_output__()
+    (pid, self.exit_status) = os.wait()
+
+    self.prev_return = (self.exit_status, out)
+    return
+  # }}}
 
   # def download(self, what = ''): {{{
   def download(self, what = ''):
