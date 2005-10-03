@@ -1,4 +1,4 @@
-Guzuta 0.0.3 (2005)
+Guzuta 0.0.3 (04 Oct 2005)
  * Display package size in KB, MB, etc.
  * Go to package url by clicking in the package information.
  * Dependency checking when installing from file.
