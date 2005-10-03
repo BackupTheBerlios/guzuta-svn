@@ -442,6 +442,26 @@ class gui:
     #TODO: implement when auto update works. alarm is giving a keyboarderror
     #self.all_widgets.get_widget('interval_preferences_combobox').set_active(0)
     
+    #alarm_time = self.pkg_update_alarm / 60
+    #spinbutton = self.all_widgets.get_widget('interval_preferences_spinbutton')
+    #interval_preferences_combobox =\
+    #  self.all_widgets.get_widget('interval_preferences_combobox')
+
+    #interval_preferences_combobox.set_active(self.pkg_update_alarm_period)
+    #spinbutton.set_value(alarm_time)
+
+    self.all_widgets.signal_autoconnect(signals_dict)
+    
+    self.busy_window = None
+    self.busy_window_hidden = True
+    self.timer = gobject.timeout_add (100, self.progress_timeout)
+
+    self.main_window.show()
+
+    self.__build_trayicon__()
+    # trayicon
+    self.trayicon.show_all()
+    
     if not self.__is_root__():
       self.__disable_all_root_widgets__()
       not_root_dialog = self.all_widgets.get_widget('not_root_dialog')
@@ -453,28 +473,8 @@ class gui:
       not_root_dialog.hide()
       self.current_dialog_on = False
       self.main_window.set_sensitive(True)
+      sys.exit(1)
 
-    #alarm_time = self.pkg_update_alarm / 60
-    #spinbutton = self.all_widgets.get_widget('interval_preferences_spinbutton')
-    #interval_preferences_combobox =\
-    #  self.all_widgets.get_widget('interval_preferences_combobox')
-
-    #interval_preferences_combobox.set_active(self.pkg_update_alarm_period)
-    #spinbutton.set_value(alarm_time)
-
-    self.all_widgets.signal_autoconnect(signals_dict)
-    
-    self.__build_trayicon__()
-
-    self.busy_window = None
-    self.busy_window_hidden = True
-    self.timer = gobject.timeout_add (100, self.progress_timeout)
-
-    self.main_window.show()
-
-    # trayicon
-    self.trayicon.show_all()
-    
     #print self.remote_pkg_info
 
     gtk.gdk.threads_enter()
