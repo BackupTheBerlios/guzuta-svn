@@ -1,0 +1,15 @@
+Guzuta 0.0.3
+============
+
+Introduction:
+=============
+
+Guzuta is a pygtk front end to ArchLinux's package manager pacman.
+
+Install:
+========
+make install
+
+Contact:
+========
+trankas@gmail.com
