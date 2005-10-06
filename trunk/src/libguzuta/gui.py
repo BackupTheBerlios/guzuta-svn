@@ -272,13 +272,15 @@ class gui:
 
     print 'working in: ', self.cwd
     
-    fname = '/usr/share/guzuta/guzuta3.glade'
+    #fname = '/usr/share/guzuta/guzuta3.glade'
+    fname = self.cwd + '/share/guzuta/guzuta3.glade'
     if os.path.exists(fname):
       self.glade_file = fname
+    elif os.path.exists('guzuta3.glade'):
+      self.glade_file = 'guzuta3.glade'
+    elif os.path.exists('/usr/share/guzuta/guzuta3.glade'):
+      self.glade_file = '/usr/share/guzuta/guzuta3.glade'
     else:
-      if os.path.exists('guzuta3.glade'):
-        self.glade_file = 'guzuta3.glade'
-      else:
         print __name__
         print os.getcwd()
         print 'no glade file found!'
