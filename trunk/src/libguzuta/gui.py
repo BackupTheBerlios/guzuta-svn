@@ -2092,6 +2092,10 @@ class gui:
     self.all_widgets.get_widget('install_pkg_from_file').set_sensitive(False)
     self.all_widgets.get_widget('install_from_repo_button').set_sensitive(False)
     self.all_widgets.get_widget('install_pkg_from_file_button').set_sensitive(False)
+    self.all_widgets.get_widget('install_popup_menu').set_sensitive(False)
+    self.all_widgets.get_widget('install_from_popup_menu').set_sensitive(False)
+    self.all_widgets.get_widget('download_pkg_popup_menu').set_sensitive(False)
+    self.all_widgets.get_widget('remove_popup_menu').set_sensitive(False)
   # }}}
 
   # def populate_remote_pkg_info(self): {{{

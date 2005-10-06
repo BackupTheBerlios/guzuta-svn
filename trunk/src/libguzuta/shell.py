@@ -1214,9 +1214,9 @@ class shell:
   def get_pkg_files(self, what = ''):
     uid = posix.getuid()
     self.prev_return = None
-    if uid != 0:
-      print "You are not ROOT. Bye bye."
-      return
+    #if uid != 0:
+    #  print "You are not ROOT. Bye bye."
+    #  return
     if what == '':
       print 'Please specify a package to remove'
       return
