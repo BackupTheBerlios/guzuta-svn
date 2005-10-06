@@ -1,5 +1,7 @@
 0.0.4
 =====
+* change "/usr/share" bla bla to honour the DESTDIR
+* add support for groups
 
 0.0.5
 =====

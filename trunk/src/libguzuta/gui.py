@@ -267,6 +267,10 @@ class gui:
     gtk.gdk.threads_init()
     
     self.th = None
+
+    self.cwd = os.environ['PWD']
+
+    print 'working in: ', self.cwd
     
     fname = '/usr/share/guzuta/guzuta3.glade'
     if os.path.exists(fname):
@@ -2073,7 +2077,20 @@ class gui:
     
     img = gtk.Image()
     #img.set_from_stock(gtk.STOCK_MISSING_IMAGE, gtk.ICON_SIZE_MENU)
-    img.set_from_file('/usr/share/guzuta/guzuta_icon_transparent.png')
+    try:
+      pixbuf =\
+        gtk.gdk.pixbuf_new_from_file(self.cwd + \
+          '/share/guzuta/guzuta_icon_transparent.png')
+    except gobject.GError:
+      try:
+        pixbuf =\
+            gtk.gdk.pixbuf_new_from_file(\
+              '/usr/share/guzuta/guzuta_icon_transparent.png'\
+            )
+      except gobject.GError:
+        print 'systray icon not found, bailing out'
+        sys.exit(1)
+    img.set_from_pixbuf(pixbuf)
     self.systray_eventbox.add(img)
     
     self.trayicon.add(self.systray_eventbox)

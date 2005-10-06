@@ -3270,7 +3270,7 @@ Description</property>
       <signal name="activate" handler="on_install_popup_menu_activate" last_modification_time="Wed, 24 Aug 2005 20:28:20 GMT"/>
 
       <child internal-child="image">
-	<widget class="GtkImage" id="image111">
+	<widget class="GtkImage" id="image120">
 	  <property name="visible">True</property>
 	  <property name="stock">gtk-yes</property>
 	  <property name="icon_size">1</property>
@@ -3292,7 +3292,7 @@ Description</property>
       <signal name="activate" handler="on_install_from_popup_menu_activate" last_modification_time="Sun, 11 Sep 2005 02:14:35 GMT"/>
 
       <child internal-child="image">
-	<widget class="GtkImage" id="image112">
+	<widget class="GtkImage" id="image121">
 	  <property name="visible">True</property>
 	  <property name="stock">gtk-yes</property>
 	  <property name="icon_size">1</property>
@@ -3323,7 +3323,7 @@ Description</property>
       <signal name="activate" handler="on_download_pkg_popup_menu_activate" last_modification_time="Wed, 14 Sep 2005 14:13:16 GMT"/>
 
       <child internal-child="image">
-	<widget class="GtkImage" id="image113">
+	<widget class="GtkImage" id="image122">
 	  <property name="visible">True</property>
 	  <property name="stock">gtk-go-down</property>
 	  <property name="icon_size">1</property>
@@ -3345,7 +3345,7 @@ Description</property>
       <signal name="activate" handler="on_remove_popup_menu_activate" last_modification_time="Wed, 24 Aug 2005 20:29:19 GMT"/>
 
       <child internal-child="image">
-	<widget class="GtkImage" id="image114">
+	<widget class="GtkImage" id="image123">
 	  <property name="visible">True</property>
 	  <property name="stock">gtk-delete</property>
 	  <property name="icon_size">1</property>
