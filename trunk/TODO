@@ -1,6 +1,9 @@
 0.0.4
 =====
 
+0.0.5
+=====
+
 * Show in a popup the dependencies of a pkg
 * Implement auto updates when minimized to systray
 * Make a click in the trayicon hide main window AND whatever popups are active

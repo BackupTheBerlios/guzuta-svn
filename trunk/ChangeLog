@@ -1,3 +1,7 @@
+Guzuta 0.0.4 (2005)
+ * Do not quit when not running as root.
+ * Makefile fixed.
+
 Guzuta 0.0.3 (04 Oct 2005)
  * Display package size in KB, MB, etc.
  * Go to package url by clicking in the package information.

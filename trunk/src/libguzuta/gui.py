@@ -463,6 +463,7 @@ class gui:
     self.trayicon.show_all()
     
     if not self.__is_root__():
+      gtk.gdk.threads_enter()
       self.__disable_all_root_widgets__()
       not_root_dialog = self.all_widgets.get_widget('not_root_dialog')
       self.current_dialog = not_root_dialog
@@ -473,7 +474,8 @@ class gui:
       not_root_dialog.hide()
       self.current_dialog_on = False
       self.main_window.set_sensitive(True)
-      sys.exit(1)
+      gtk.gdk.threads_leave()
+      #sys.exit(1)
 
     #print self.remote_pkg_info
 
@@ -2082,8 +2084,14 @@ class gui:
     self.all_widgets.get_widget('update_db').set_sensitive(False)
     self.all_widgets.get_widget('install_pkg').set_sensitive(False)
     self.all_widgets.get_widget('remove_pkg').set_sensitive(False)
-    #self.all_widgets.get_widget('install_pkg_from_file').set_sensitive(False)
-    #self.all_widgets.get_widget('install_pkg_from_file_button').set_sensitive(False)
+    self.all_widgets.get_widget('cache_combobox').set_sensitive(False)
+    self.all_widgets.get_widget('cache_spinbutton').set_sensitive(False)
+    self.all_widgets.get_widget('cache_cleanup_label').set_sensitive(False)
+    self.all_widgets.get_widget('download_pkg_button').set_sensitive(False)
+    self.all_widgets.get_widget('cleanup_cache_button').set_sensitive(False)
+    self.all_widgets.get_widget('install_pkg_from_file').set_sensitive(False)
+    self.all_widgets.get_widget('install_from_repo_button').set_sensitive(False)
+    self.all_widgets.get_widget('install_pkg_from_file_button').set_sensitive(False)
   # }}}
 
   # def populate_remote_pkg_info(self): {{{
