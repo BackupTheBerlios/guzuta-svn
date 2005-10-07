@@ -5948,7 +5948,7 @@ Versions</property>
 	<widget class="GtkExpander" id="console_expander">
 	  <property name="visible">True</property>
 	  <property name="can_focus">True</property>
-	  <property name="expanded">True</property>
+	  <property name="expanded">False</property>
 	  <property name="spacing">0</property>
 
 	  <child>
