@@ -1369,6 +1369,16 @@ the terms of the GNU General Public License'''
     #  (self.pid, self.exit_status) = os.wait()
     # }}}
   # }}}
+  
+  # def get_read_pipe(self): {{{
+  def get_read_pipe(self):
+    return self.pacman.get_read_pipe()
+  # }}}
+
+  # def get_err_pipe(self): {{{
+  def get_err_pipe(self):
+    return self.pacman.get_err_pipe()
+  # }}}
 # }}}
 
 # main {{{

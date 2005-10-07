@@ -2,6 +2,8 @@
 =====
 * change "/usr/share" bla bla to honour the DESTDIR
 * add support for groups
+* Have a pseudo console for pacman output. Use gobject.io_add_watch() on the
+  pipes (stdout and stderr).
 
 0.0.5
 =====
@@ -10,8 +12,6 @@
 * Implement auto updates when minimized to systray
 * Make a click in the trayicon hide main window AND whatever popups are active
   OR when a popup is active do not hide anything
-* Have a pseudo console for pacman output. Use gobject.io_add_watch() on the
-  pipes (stdout and stderr).
 * Sort the SIGALRM stuff why does it give KeyboardError
   --> USE self.timer = gobject.timeout_add (100, progress_timeout, self)
 * List pkgs not associated with a repo, when installing them from a file

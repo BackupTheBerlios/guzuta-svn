@@ -66,9 +66,23 @@ class gui:
 
   # def try_sem_animate_progress_bar(self): {{{
   def try_sem_animate_progress_bar(self):
-    self.busy_window = self.all_widgets.get_widget('busy_window')
+    
+    print 'uuu.'
+    #read_pipe = self.shell.get_read_pipe()
+    #err_pipe = self.shell.get_err_pipe()
+    #gobject.io_add_watch(read_pipe, gobject.IO_IN, self.pipe_read_ready)
+    #gobject.io_add_watch(err_pipe, gobject.IO_IN, self.pipe_read_ready)
+    
+    #self.busy_window = self.all_widgets.get_widget('busy_window')
+    self.busy_window = self.all_widgets.get_widget('busy_window2')
+    
     #self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
-    self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar')
+    
+    #self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar')
+    self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar2')
+    
+    console_expander = self.all_widgets.get_widget('console_expander')
+    console_expander.set_expanded(False)
 
     self.busy_progress_bar.set_fraction(0.0)
 
@@ -83,6 +97,7 @@ class gui:
         while gtk.events_pending():
           gtk.main_iteration(False)
         time.sleep(0.1)
+    print 'update done.'
 
     self.busy_window.hide()
     self.busy_window_hidden = True
@@ -258,6 +273,25 @@ class gui:
       matches.sort(lambda x,y: cmp(x.lower(), y.lower()), str.lower, True)
       ret.append(matches[0])
     return ret
+  # }}}
+
+  # def pipe_read_ready(source, cb_condition): {{{
+  def pipe_read_ready(source, cb_condition):
+    gtk.gdk.threads_enter()
+    print 'busy_window_on: ', self.busy_window_on
+    if self.busy_window_on:
+      print 'ready to output something.'
+      data = source.read(1)
+      print 'char read: ', data
+      console_textview = self.all_widgets.get_widget('console_textview')
+      buffer = console_textview.get_buffer()
+
+      buffer.insert_at_cursor(data)
+      gtk.gdk.threads_leave()
+      if len(data) > 0:
+        return True
+      else:
+        return False
   # }}}
 
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
@@ -491,6 +525,12 @@ class gui:
     #print self.remote_pkg_info
 
     gtk.gdk.threads_enter()
+    read_pipe = self.shell.get_read_pipe()
+    err_pipe = self.shell.get_err_pipe()
+    gobject.io_add_watch(read_pipe, gobject.IO_IN, self.pipe_read_ready)
+    gobject.io_add_watch(err_pipe, gobject.IO_IN, self.pipe_read_ready)
+    print 'registered'
+
     gtk.main()
     gtk.gdk.threads_leave()
   # }}}

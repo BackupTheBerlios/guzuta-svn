@@ -1,39 +1,43 @@
- #!/usr/bin/env python
-"""Show a shell command's output in a gtk.TextView without freezing the UI"""
-
-import os, threading, locale
-
-import pygtk
-pygtk.require('2.0')
+#!/usr/bin/env python
+import socket
+import gobject
 import gtk
+import signal
 
-encoding = locale.getpreferredencoding()
-utf8conv = lambda x : unicode(x, encoding).encode('utf8')
+def get_file():
+  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  sock.settimeout(15)
+  sock.connect(('pygtk.org', 80))
+  sock.send('GET /index.html HTTP/1.1\nHost: pygtk.org\n\n')
+  return sock
 
-def on_button_clicked(button, buffer, command):
-   thr = threading.Thread(target= read_output, args=(buffer, command))
-   thr.run()
-  
-def read_output(buffer, command):
-   stdin, stdouterr = os.popen4(command)
-   for line in stdouterr.readlines():
-        buffer.insert(buffer.get_end_iter(), utf8conv(line))
+def handle_data(source, condition):
+  #print 'handle_data!'
+  data = source.recv(12)
+  #print len(data)
+  if len(data) > 0:
+    print data,
+    return True #run forever
+  else:
+    print 'closed'
+    print 'so get new data...'
+    sock = get_file()
+    gobject.io_add_watch(sock, gobject.IO_IN, handle_data)
+    return False # stop looping
 
-sw = gtk.ScrolledWindow()
-sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-textview = gtk.TextView()
-textbuffer = textview.get_buffer()
-sw.add(textview)
-win = gtk.Window()
-win.resize(300,500)
-win.connect('delete-event', gtk.main_quit)
-button = gtk.Button("Press me!")
-command = 'dir -R %s' % os.getcwd()
-button.connect("clicked", on_button_clicked, textbuffer, command)
-vbox = gtk.VBox()
-vbox.pack_start(button, gtk.FALSE)
-vbox.pack_start(sw)
-win.add(vbox)
-win.show_all()
+sock = get_file()
+gobject.io_add_watch(sock, gobject.IO_IN, handle_data)
 
+w = gtk.Window()
+w.set_border_width(15)
+msg = '''\
+    Play with resizing the window...
+
+RESULT:
+It will only block on sock.connect()
+which is normal because to use the socket you have to connect
+here we wait for maximum 15 seconds and then we timeout'''
+w.add(gtk.Label(msg))
+w.show_all()
+signal.signal(signal.SIGINT, signal.SIG_DFL) # ^C exits the application
 gtk.main()
