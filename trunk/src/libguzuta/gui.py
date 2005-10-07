@@ -66,7 +66,9 @@ class gui:
 
   # def try_sem_animate_progress_bar(self): {{{
   def try_sem_animate_progress_bar(self):
-    
+    console_expander = self.all_widgets.get_widget('console_expander')
+    console_expander.set_expanded(False)
+
     print 'uuu.'
     #read_pipe = self.shell.get_read_pipe()
     #err_pipe = self.shell.get_err_pipe()
@@ -81,9 +83,6 @@ class gui:
     #self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar')
     self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar2')
     
-    console_expander = self.all_widgets.get_widget('console_expander')
-    console_expander.set_expanded(False)
-
     self.busy_progress_bar.set_fraction(0.0)
 
     self.main_window.set_sensitive(False)
@@ -102,6 +101,8 @@ class gui:
     self.busy_window.hide()
     self.busy_window_hidden = True
     self.busy_window_on = False
+
+    console_expander.set_expanded(False)
     
     self.main_window.set_sensitive(True)
   # }}}
@@ -275,23 +276,27 @@ class gui:
     return ret
   # }}}
 
-  # def pipe_read_ready(source, cb_condition): {{{
-  def pipe_read_ready(source, cb_condition):
-    gtk.gdk.threads_enter()
-    print 'busy_window_on: ', self.busy_window_on
-    if self.busy_window_on:
-      print 'ready to output something.'
-      data = source.read(1)
-      print 'char read: ', data
-      console_textview = self.all_widgets.get_widget('console_textview')
-      buffer = console_textview.get_buffer()
+  # def pipe_read_ready(self, source, cb_condition): {{{
+  def pipe_read_ready(self, source, cb_condition):
+    print 'argh!'
+    #gtk.gdk.threads_enter()
+    if cb_condition == gobject.IO_IN:
+      print 'busy_window_on: ', self.busy_window_on
+      if self.busy_window_on:
+        print 'ready to output something.'
+        data = source.read(1)
+        print 'char read: ', data
+        console_textview = self.all_widgets.get_widget('console_textview')
+        buffer = console_textview.get_buffer()
 
-      buffer.insert_at_cursor(data)
-      gtk.gdk.threads_leave()
-      if len(data) > 0:
-        return True
-      else:
-        return False
+        buffer.insert_at_cursor(data)
+        if len(data) > 0:
+          gtk.gdk.threads_leave()
+          return True
+        else:
+          gtk.gdk.threads_leave()
+          return False
+    #gtk.gdk.threads_leave()
   # }}}
 
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
@@ -300,6 +305,7 @@ class gui:
     #fname = '/usr/share/guzuta/guzuta2.glade'
     gtk.gdk.threads_init()
     
+    gtk.gdk.threads_enter()
     self.th = None
 
     self.cwd = os.environ['PWD']
@@ -508,7 +514,7 @@ class gui:
     self.trayicon.show_all()
     
     if not self.__is_root__():
-      gtk.gdk.threads_enter()
+      #gtk.gdk.threads_enter()
       self.__disable_all_root_widgets__()
       not_root_dialog = self.all_widgets.get_widget('not_root_dialog')
       self.current_dialog = not_root_dialog
@@ -519,17 +525,20 @@ class gui:
       not_root_dialog.hide()
       self.current_dialog_on = False
       self.main_window.set_sensitive(True)
-      gtk.gdk.threads_leave()
+      #gtk.gdk.threads_leave()
       #sys.exit(1)
 
     #print self.remote_pkg_info
 
-    gtk.gdk.threads_enter()
+    #gtk.gdk.threads_enter()
     read_pipe = self.shell.get_read_pipe()
     err_pipe = self.shell.get_err_pipe()
-    gobject.io_add_watch(read_pipe, gobject.IO_IN, self.pipe_read_ready)
-    gobject.io_add_watch(err_pipe, gobject.IO_IN, self.pipe_read_ready)
+    read_watch_id = gobject.io_add_watch(read_pipe, gobject.IO_IN,\
+        self.pipe_read_ready)
+    err_watch_id = gobject.io_add_watch(err_pipe, gobject.IO_IN,\
+        self.pipe_read_ready)
     print 'registered'
+    print 'ids: ', (read_watch_id, err_watch_id)
 
     gtk.main()
     gtk.gdk.threads_leave()
