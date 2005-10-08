@@ -1,5 +1,9 @@
 0.0.4
 =====
+* Use libpypac
+
+0.0.5
+=====
 * change "/usr/share" bla bla to honour the DESTDIR
 * add support for groups
 * Have a pseudo console for pacman output. Use gobject.io_add_watch() on the
@@ -8,7 +12,7 @@
   fill a buffer of stdout and stderr to return and at the same time update the
   textbuffer???? or maybe the problem is the os.wait(). DECIDE THIS, CHECK
 
-0.0.5
+0.0.6
 =====
 
 * Show in a popup the dependencies of a pkg
