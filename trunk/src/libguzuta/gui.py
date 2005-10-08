@@ -2009,7 +2009,7 @@ class gui:
         (out, exit_status) = self.shell.get_prev_return()
 
         #print 'exit_status: ', exit_status
-        print 'out3: ', out
+        #print 'out3: ', out
 
         if exit_status:
           generic_error_dialog =\
