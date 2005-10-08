@@ -1,3 +1,0 @@
-update_db, separator, install_pkg, install_from_repo_button,
-install_pkg_from_file_button, download_pkg_button, remove_pkg, separator,
-preferences
