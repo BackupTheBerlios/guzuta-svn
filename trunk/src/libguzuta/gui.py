@@ -66,22 +66,25 @@ class gui:
 
   # def try_sem_animate_progress_bar(self): {{{
   def try_sem_animate_progress_bar(self):
-    console_expander = self.all_widgets.get_widget('console_expander')
-    console_expander.set_expanded(False)
+    #console_expander = self.all_widgets.get_widget('console_expander')
+    #console_expander.set_expanded(False)
 
-    print 'uuu.'
+    #print 'uuu.'
     #read_pipe = self.shell.get_read_pipe()
     #err_pipe = self.shell.get_err_pipe()
-    #gobject.io_add_watch(read_pipe, gobject.IO_IN, self.pipe_read_ready)
-    #gobject.io_add_watch(err_pipe, gobject.IO_IN, self.pipe_read_ready)
+    #print 'pipes: ', (read_pipe, err_pipe)
+    #if read_pipe != None and err_pipe != None:
+    #  gobject.io_add_watch(read_pipe, gobject.IO_IN, self.pipe_read_ready)
+    #  gobject.io_add_watch(err_pipe, gobject.IO_IN, self.pipe_read_ready)
+    #print 'pipes after: ', (read_pipe, err_pipe)
     
-    #self.busy_window = self.all_widgets.get_widget('busy_window')
-    self.busy_window = self.all_widgets.get_widget('busy_window2')
+    self.busy_window = self.all_widgets.get_widget('busy_window')
+    #self.busy_window = self.all_widgets.get_widget('busy_window2')
     
     #self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
     
-    #self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar')
-    self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar2')
+    self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar')
+    #self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar2')
     
     self.busy_progress_bar.set_fraction(0.0)
 
@@ -96,13 +99,13 @@ class gui:
         while gtk.events_pending():
           gtk.main_iteration(False)
         time.sleep(0.1)
-    print 'update done.'
+    #print 'update done.'
 
     self.busy_window.hide()
     self.busy_window_hidden = True
     self.busy_window_on = False
 
-    console_expander.set_expanded(False)
+    #console_expander.set_expanded(False)
     
     self.main_window.set_sensitive(True)
   # }}}
@@ -316,15 +319,15 @@ class gui:
     fname = self.cwd + '/share/guzuta/guzuta3.glade'
     if os.path.exists(fname):
       self.glade_file = fname
-      print 'fname: ', fname
+      #print 'fname: ', fname
     elif os.path.exists('/usr/share/guzuta/guzuta3.glade'):
       fname = '/usr/share/guzuta/guzuta3.glade'
       self.glade_file = fname
-      print 'fname: ', fname
+      #print 'fname: ', fname
     elif os.path.exists('guzuta3.glade'):
       fname = 'guzuta3.glade'
       self.glade_file = fname
-      print 'fname: ', fname
+      #print 'fname: ', fname
     else:
         print __name__
         print os.getcwd()
@@ -531,14 +534,14 @@ class gui:
     #print self.remote_pkg_info
 
     #gtk.gdk.threads_enter()
-    read_pipe = self.shell.get_read_pipe()
-    err_pipe = self.shell.get_err_pipe()
-    read_watch_id = gobject.io_add_watch(read_pipe, gobject.IO_IN,\
-        self.pipe_read_ready)
-    err_watch_id = gobject.io_add_watch(err_pipe, gobject.IO_IN,\
-        self.pipe_read_ready)
-    print 'registered'
-    print 'ids: ', (read_watch_id, err_watch_id)
+    #read_pipe = self.shell.get_read_pipe()
+    #err_pipe = self.shell.get_err_pipe()
+    #read_watch_id = gobject.io_add_watch(read_pipe, gobject.IO_IN,\
+    #    self.pipe_read_ready)
+    #err_watch_id = gobject.io_add_watch(err_pipe, gobject.IO_IN,\
+    #    self.pipe_read_ready)
+    #print 'registered'
+    #print 'ids: ', (read_watch_id, err_watch_id)
 
     gtk.main()
     gtk.gdk.threads_leave()
@@ -1484,7 +1487,9 @@ class gui:
 
     pkg_files_textview = self.all_widgets.get_widget('pkg_files_textview')
     
-    buffer = pkg_files_textview.get_buffer()
+    #buffer = pkg_files_textview.get_buffer()
+    buffer = gtk.TextBuffer()
+    pkg_files_textview.set_buffer(buffer)
 
     self.run_in_thread(self.shell.get_pkg_files, {'what': name})
     self.try_sem()

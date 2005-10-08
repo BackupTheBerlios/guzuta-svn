@@ -3,7 +3,10 @@
 * change "/usr/share" bla bla to honour the DESTDIR
 * add support for groups
 * Have a pseudo console for pacman output. Use gobject.io_add_watch() on the
-  pipes (stdout and stderr).
+  pipes (stdout and stderr) <- does not work, maybe because of the reads in
+  shell.py. pass the textbuffer to shell.updatedb and use gobject.io_add_watch
+  fill a buffer of stdout and stderr to return and at the same time update the
+  textbuffer???? or maybe the problem is the os.wait(). DECIDE THIS, CHECK
 
 0.0.5
 =====
@@ -19,7 +22,7 @@
 * Add pseudo-repos: Last Installed, Last Uninstalled
 * Implement rollback (use log? use own file written from structures?)
 * List pkgs by maintainer - add a new column to treeview
-* List pkgs by size       - add a bew column to treeview
+* List pkgs by size       - add a new column to treeview
 * Sort the 'pkg is newer' when installing/upgrading
 
 Undefined:
