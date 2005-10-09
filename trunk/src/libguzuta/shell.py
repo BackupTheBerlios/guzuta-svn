@@ -2,8 +2,15 @@
 # -*- coding: UTF-8 -*
 # vim: set foldmethod=marker:
 
+# imports {{{
 import os, os.path, sys, posix, signal, re
 from subprocess import *
+
+import libpypac.libpypac_0 as libpypac_0 
+import libpypac.libpypac_1 as libpypac_1
+import libpypac.libpypac_2 as libpypac_2
+import libpypac.libpypac_3 as libpypac_3
+# }}}
 
 #class pacman: {{{
 class pacman:
@@ -125,6 +132,11 @@ class shell:
     self.prev_return = None
     self.REASON_EXPLICIT = 0
     
+    # libpypac support {{{
+    self.server_dict, self.repo_list, self.noupgrade_list,\
+        self.ignore_list, self.hold_list = libpypac_0.read_conf()
+    # }}}
+
     #self.opt_names = 'h:j:k:'
     #self.long_opt_names = ''
 
@@ -1090,6 +1102,7 @@ class shell:
   
   # def __compile_pkg_info__(self, pacman_out): {{{
   def __compile_pkg_info__(self, pacman_output):
+    print 'pacman_output: ', pacman_output
     pattern = '\n'
 
     all = []
@@ -1101,6 +1114,7 @@ class shell:
       else:
         all.append(r.strip())
       
+    print 'all: ', all
     return all
   # }}}
   
@@ -1378,6 +1392,23 @@ the terms of the GNU General Public License'''
   # def get_err_pipe(self): {{{
   def get_err_pipe(self):
     return self.pacman.get_err_pipe()
+  # }}}
+
+  # def __compile_group_info__(self, pacman_output): {{{
+  def __compile_group_info__(self, pacman_output):
+    pass  
+  # }}}
+
+  # def get_group_info(self): {{{
+  def get_group_info(self):
+    self.prev_return = None
+    self.run_pacman_with('-Qg')
+
+    out = self.__capture_output__()
+    (pid, self.exit_status) = os.wait()
+
+    self.prev_return = (self.exit_status, out)
+    return
   # }}}
 # }}}
 
