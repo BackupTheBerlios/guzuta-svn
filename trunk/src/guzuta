@@ -3,14 +3,16 @@
 # vim: set foldmethod=marker:
 
 # imports {{{
-#from Guzuta.gui import *
-#from Guzuta import *
 import libguzuta
+import profile
+import pstats
 # }}}
 
 # main {{{
 if __name__ == '__main__':
+  #profile.run('libguzuta.gui()', 'profile_results')
+  #p = pstats.Stats('profile_results')
+  #p.sort_stats('calls', 'cum').print_stats()
   g = libguzuta.gui()
-  #dir()
 # }}}
 

@@ -1,5 +1,9 @@
 0.0.4
 =====
+* FIX when -Su'ing :: kernel26-2.6.13.2-1: ignoring package upgrade (2.6.13.3-1)
+      :: Above packages will be skipped.  To manually upgrade use 'pacman -S <pkg>'
+      :: stellarium conflicts with mesa. Remove mesa? [Y/n]
+* FIX corrupted downloads
 * Use libpypac
 
 0.0.5

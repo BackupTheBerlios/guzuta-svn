@@ -3,8 +3,9 @@
 # vim: set foldmethod=marker:
 
 # imports {{{
-import os, os.path, sys, posix, signal, re
+import os, os.path, sys, posix, signal, re, select
 from subprocess import *
+import time
 
 import libpypac.libpypac_0 as libpypac_0 
 import libpypac.libpypac_1 as libpypac_1
@@ -110,10 +111,12 @@ class shell:
   end, like guzuta's gui ;)"""
 
   # def __init__(self, command_line, interactive = False): {{{
-  def __init__(self, command_line, interactive = False):
+  def __init__(self, command_line, pacman_events_queue, interactive = False):
     #self.pacman = pacman(self)
+    self.poll_object = select.poll()
     self.pacman = pacman()
     self.yesno = False
+    self.pacman_events_queue = pacman_events_queue
     
     if interactive == True:
       self.pacman.set_pipeit(True)
@@ -265,7 +268,39 @@ class shell:
   def updatedb(self, what = ''):
     self.prev_return = None
     ret = self.run_pacman_with('-Sy')
+    ret = ''
+    ret_err = ''
+    self.poll_object.register(self.pacman.get_read_pipe(), select.POLLIN |
+        select.POLLPRI)
+    self.poll_object.register(self.pacman.get_err_pipe(), select.POLLIN |
+        select.POLLPRI)
     if self.pacman.get_pipeit() == True:
+      #print 'cowabunga'
+      #while os.waitpid(self.pid, os.WNOHANG) == (0,0):
+      #  list = self.poll_object.poll(200)
+      #  if list == []:
+      #    continue
+      #  else:
+      #    for (fd, event) in list:
+      #      char = os.read(fd, 1)
+      #      print 'char: ', char
+      #      ret = ret + char
+      #      #if fd == self.pacman.get_read_pipe():
+      #      #  print 'stdout'
+      #      #  char = self.pacman.get_read_pipe().read(1)
+      #      #  print 'char: ', char
+      #      #  ret = ret + char
+      #      #elif fd == self.pacman.get_err_pipe():
+      #      #  print 'stderr'
+      #      #  char = self.pacman.get_err_pipe().read(1)
+      #      #  print 'char: ', char
+      #      #  ret_err = ret_err + char
+      #      
+      ##print 'ret <%s>' % ret
+      ##print 'ret_err <%s>' % ret_err
+      ##while :
+      ##  ret = self.poll_object.poll()
+      ##  print 'ai: ', ret
       ret = self.pacman.get_read_pipe().read()
       ret_err = self.pacman.get_err_pipe().read()
       
@@ -280,6 +315,7 @@ class shell:
       (self.pid, self.exit_status) = os.wait()
       #return None
       self.prev_return = None
+    self.poll_object.unregister(self.pacman.get_read_pipe())
   # }}}
 
   # def install_fresh_updates(self): {{{
@@ -327,6 +363,18 @@ class shell:
     pattern = '\n'
     if out2 != '':
       out = out2
+    
+    i = -1
+    try:
+      i = out.index('conflicts')
+    except ValueError:
+      #print 'not found?'
+      pass
+    if i > 0:
+      self.prev_return = None, out
+      return
+
+    
     results = re.split(pattern, out)
 
     for result in results:
@@ -338,6 +386,7 @@ class shell:
 
         for result2 in results2[1:]:
           if result2:
+            print 'result2 <%s>' % result2
             first_dash = result2.index('-')
             last_dash = result2.rindex('-')
             before_last_dash = result2[:last_dash].rindex('-')
@@ -349,7 +398,7 @@ class shell:
 
     ret_err = self.pacman.get_err_pipe().read()
     #return updates
-    self.prev_return = updates
+    self.prev_return = updates, out
   # }}}
   
   # def get_fresh_updates(self): {{{
@@ -562,10 +611,35 @@ class shell:
       (self.pid, self.exit_status) = os.wait()
       return None
   # }}}
+
+  ## def search(self, what = ''): {{{
+  #def search(self, what = ''):
+  #  if what == '':
+  #    self.run_pacman_with('-Ss \"\"')
+  #  else:
+  #    self.run_pacman_with('-Ss ' + what)
+
+  #  if self.pacman.get_pipeit() == True:
+  #    # get all pkgs which should have the format
+  #    # reponame/name version
+
+  #    list = self.pacman.get_read_pipe().read()
+
+  #    all = self.__compile_pkg_dict__(list)
+
+  #    (self.pid, self.exit_status) = os.wait()
+
+  #    return all
+  #  else:
+  #    (self.pid, self.exit_status) = os.wait()
+  #    return None
+  ## }}}
     
   # def local_search(self, what= ''): {{{
   def local_search(self, what= ''):
     self.prev_return = None
+    #time_before = time.time()
+    #print 'started adding: '
     if what == '':
       self.run_pacman_with('-Qs \"\"')
     else:
@@ -582,6 +656,8 @@ class shell:
       (self.pid, self.exit_status) = os.wait()
       #print self.check(all)
       #return all
+      #time_now = time.time()
+      #print 'ended adding, took: ', time_now - time_before
       self.prev_return = all
       return
     else:
@@ -589,6 +665,30 @@ class shell:
       #return None
       self.prev_return = None
       return
+  # }}}
+  
+  # def local_search_pypac(self) {{{
+  def local_search_pypac(self):
+    self.prev_return = None
+
+    all = {}
+
+    pkg_list, t = libpypac_1.local_packages()
+    #time_before = time.time()
+    #print 'started adding: '
+    for pkg in pkg_list:
+      (pkg_info, deps, requires, filelist) = libpypac_1.loc_pack_info(pkg)
+      retcode, repo, pkg, cache, size = libpypac_2.exist_check(pkg_info[0],\
+          self.repo_list)
+      name = pkg_info[0]
+      version = pkg_info[1]
+      description = pkg_info[2]
+      all[name] = (repo, version, description)
+    #time_now = time.time()
+    #print 'ended adding, took: ', time_now - time_before
+    self.prev_return = all
+    return
+
   # }}}
   
   # def repofiles2(self): {{{

@@ -10,5 +10,6 @@ setup(name='guzuta',
                   ('/usr/share/guzuta/', ['data/guzuta_icon_transparent.png']),
                   ('/opt/gnome/share/applications/', ['data/guzuta.desktop']),
                   ('/opt/kde/share/applications/kde/', ['data/guzuta.desktop']),
+		  ('/usr/share/applications/', ['data/guzuta.desktop']),
                   ('/usr/bin', ['src/guzuta'])],
       )

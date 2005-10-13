@@ -61,7 +61,7 @@ class gui:
   # def try_sem(self): {{{
   def try_sem(self):
     while self.th != None and self.th.isAlive() == True:
-      time.sleep(1)
+      time.sleep(0.1)
   # }}}
 
   # def try_sem_animate_progress_bar(self): {{{
@@ -78,13 +78,13 @@ class gui:
     #  gobject.io_add_watch(err_pipe, gobject.IO_IN, self.pipe_read_ready)
     #print 'pipes after: ', (read_pipe, err_pipe)
     
-    self.busy_window = self.all_widgets.get_widget('busy_window')
-    #self.busy_window = self.all_widgets.get_widget('busy_window2')
+    #self.busy_window = self.all_widgets.get_widget('busy_window')
+    self.busy_window = self.all_widgets.get_widget('busy_window2')
     
     #self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
     
-    self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar')
-    #self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar2')
+    #self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar')
+    self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar2')
     
     self.busy_progress_bar.set_fraction(0.0)
 
@@ -98,7 +98,7 @@ class gui:
       while self.th.isAlive() == True:
         while gtk.events_pending():
           gtk.main_iteration(False)
-        time.sleep(0.1)
+        time.sleep(0.01)
     #print 'update done.'
 
     self.busy_window.hide()
@@ -333,6 +333,8 @@ class gui:
         print os.getcwd()
         print 'no glade file found!'
         sys.exit(2)
+
+    # signals_dict {{{
     signals_dict = {\
     #'on_treeview_row_activated': self.on_row_activated,
     'on_treeview_cursor_changed': self.on_cursor_changed,
@@ -386,7 +388,9 @@ class gui:
     'on_cache_menu_activate':
       self.on_cache_menu_activate,
     'on_view_files_popup_menu_activate':
-      self.on_view_files_popup_menu_activate
+      self.on_view_files_popup_menu_activate,
+    'on_busy_cancel_button_clicked':
+      self.on_busy_cancel_button_clicked
     #'on_browse_preferences_button_clicked':\
     #    self.on_browse_preferences_button_clicked,
     #'on_information_text_enter_notify_event': self.on_hyperlink_motion,
@@ -402,9 +406,10 @@ class gui:
     #'on_systray_eventbox_leave_notify_event':\
     #    self.on_systray_eventbox_leave_notify_event
     }
-    # end signals
+    # }}}
 
     #self.pacman = pacman(self)
+    self.pacman_events_queue = []
     self.treeview = None
     self.uid = posix.getuid()
     self.pkgs = {}
@@ -452,7 +457,8 @@ class gui:
       alarm_time = self.pkg_update_alarm * 60 * 60
     #signal.alarm(alarm_time)
 
-    self.shell = shell(command_line = None, interactive = True)
+    self.shell = shell(command_line = None, pacman_events_queue =\
+        self.pacman_events_queue, interactive = True)
     self.populate_pkg_lists()
     # pid of pacman process
     self.pid = 0
@@ -703,7 +709,6 @@ class gui:
         return None
       
       ret, ret_err = self.shell.get_prev_return()
-
       if self.shell.get_exit_status() != 0:
         systray_tooltip_text = 'Error updating database'
         self.systray_tooltips.set_tip(self.systray_eventbox, systray_tooltip_text)
@@ -822,6 +827,7 @@ class gui:
         
         if self.shell.get_exit_status() == 0:
           self.__add_pkg_info_to_local_pkgs__(pkgs)
+          self.refresh_pkgs_treeview()
           
           self.current_dialog = install_pkg_popup
           self.current_dialog_on = True
@@ -878,6 +884,7 @@ class gui:
               self.try_sem_animate_progress_bar()
 
               self.__add_pkg_info_to_local_pkgs__(pkgs + deps)
+              self.refresh_pkgs_treeview()
 
               install_pkg_popup.run()
               install_pkg_popup.hide()
@@ -1111,6 +1118,9 @@ class gui:
           return None
 
         ret, ret_err = self.shell.get_prev_return()
+        
+        print 'ret: ', ret
+        print 'ret_err: ',ret_err
 
         if self.shell.get_exit_status() != 0:
           # something has gone horribly wrong
@@ -1187,10 +1197,48 @@ class gui:
         self.run_in_thread(self.shell.get_fresh_updates_part_2,
             {'pacman_upgrade': False, 'out': out})
         self.try_sem_animate_progress_bar()
-
         
-      updates = self.shell.get_prev_return()
+      updates, out = self.shell.get_prev_return()
 
+      if updates == None: # conflicts
+        #lines = out.splitlines()
+        try:
+          index = out.index('conflicts')
+          tmp = out[:index].strip()
+          index2 = tmp.rfind(' ')
+          conflicting_pkg = tmp[index2:].strip()
+          tmp = out[index:]
+          conflict_pkg = tmp[tmp.index('with')+1+len('with') : tmp.index('.')].strip()
+
+          generic_cancel_ok = self.all_widgets.get_widget('generic_cancel_ok')
+          generic_cancel_ok_label =\
+              self.all_widgets.get_widget('generic_cancel_ok_label')
+          generic_cancel_ok_label.set_markup('<b>Warning</b>\n\n' +
+              out[3:out.rindex('.')] +\
+            '\n\nDo you wish to proceed?')
+          
+          self.current_dialog_on = True
+          response3 = generic_cancel_ok.run()
+          generic_cancel_ok.hide()
+          self.current_dialog_on = False
+
+          if response3 == gtk.RESPONSE_OK:
+            self.run_in_thread(self.shell.install_noconfirm, {'what':\
+                conflicting_pkg})
+            self.try_sem_animate_progress_bar()
+        
+            self.shell.yesno = False
+            self.run_in_thread(self.shell.get_fresh_updates_part_2,
+                {'pacman_upgrade': False, 'out': out})
+            self.try_sem_animate_progress_bar()
+
+            updates, out = self.shell.get_prev_return()
+          else:
+            return
+        except ValueError:
+          pass
+        return
+      
       if updates == []:
         no_updates_dialog = self.all_widgets.get_widget('no_updates_dialog')
         self.current_dialog = no_updates_dialog
@@ -1639,6 +1687,12 @@ class gui:
     self.current_dialog_on = False
   # }}}
 
+  # def on_busy_cancel_button_clicked(self, button): {{{
+  def on_busy_cancel_button_clicked(self, button):
+    print 'killing...'
+    os.kill(self.shell.get_pid(), signal.SIGKILL) 
+  # }}}
+
   # def cleanup_cache(self, clean_by, clean_threshold): {{{
   def cleanup_cache(self, clean_by, clean_threshold):
     cache_dir = '/var/cache/pacman/pkg'
@@ -1859,6 +1913,7 @@ class gui:
   # def get_dependencies(self, pkgs_installed, output): {{{
   def get_dependencies(self, pkgs_installed, output):
     output_list = output.splitlines()
+    deps_list = []
     for line in output_list:
       if line.startswith('Targets'):
         #deps_list = [self.split_pkg_name(x) for x in (line.split(' ')[1:])]
@@ -2194,7 +2249,13 @@ class gui:
   # def populate_local_pkg_list(self): {{{
   def populate_local_pkg_list(self):
     #self.local_pkgs = self.shell.local_search()
+    
     self.run_in_thread(self.shell.local_search, {})
+
+    # libpypac support {{{
+    #self.run_in_thread(self.shell.local_search_pypac, {})
+    # }}}
+    
     #self.try_sem_animate_progress_bar()
     self.try_sem()
 
