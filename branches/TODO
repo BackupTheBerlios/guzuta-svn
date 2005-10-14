@@ -1,0 +1,41 @@
+0.0.4
+=====
+* FIX when -Su'ing :: kernel26-2.6.13.2-1: ignoring package upgrade (2.6.13.3-1)
+      :: Above packages will be skipped.  To manually upgrade use 'pacman -S <pkg>'
+      :: stellarium conflicts with mesa. Remove mesa? [Y/n]
+* FIX corrupted downloads
+* Use libpypac
+
+0.0.5
+=====
+* Check for pkg conflicting with another
+* Make a 'Cancel' button in the busy_window
+* change "/usr/share" bla bla to honour the DESTDIR
+* add support for groups
+* Have a pseudo console for pacman output. Use gobject.io_add_watch() on the
+  pipes (stdout and stderr) <- does not work, maybe because of the reads in
+  shell.py. pass the textbuffer to shell.updatedb and use gobject.io_add_watch
+  fill a buffer of stdout and stderr to return and at the same time update the
+  textbuffer???? or maybe the problem is the os.wait(). DECIDE THIS, CHECK
+
+0.0.6
+=====
+
+* Show in a popup the dependencies of a pkg
+* Implement auto updates when minimized to systray
+* Make a click in the trayicon hide main window AND whatever popups are active
+  OR when a popup is active do not hide anything
+* Sort the SIGALRM stuff why does it give KeyboardError
+  --> USE self.timer = gobject.timeout_add (100, progress_timeout, self)
+* List pkgs not associated with a repo, when installing them from a file
+  directly
+* Add pseudo-repos: Last Installed, Last Uninstalled
+* Implement rollback (use log? use own file written from structures?)
+* List pkgs by maintainer - add a new column to treeview
+* List pkgs by size       - add a new column to treeview
+* Sort the 'pkg is newer' when installing/upgrading
+
+Undefined:
+=========
+
+* i18n
