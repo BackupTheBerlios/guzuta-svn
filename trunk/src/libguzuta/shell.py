@@ -4,6 +4,7 @@
 
 # imports {{{
 import os, os.path, sys, posix, signal, re, select
+import threading
 from subprocess import *
 import time
 
@@ -110,14 +111,32 @@ class shell:
   some user commands available. if not it works suitably for use with a front
   end, like guzuta's gui ;)"""
 
-  # def __init__(self, command_line, interactive = False): {{{
+  # def check_cond(self): {{{
+  def check_lock(self):
+    if self.lock:
+      if not self.lock.acquire(blocking = False):
+        # locked from main thread
+        # time to quit
+        # killing pacman
+        os.kill(self.pacman.get_pid(), signal.SIGKILL)
+        # quiting
+        print 'bye bye!'
+        sys.exit(1)
+      else:
+        self.lock.release()
+  # }}}
+  
+  # def __init__(self,command_line,pacman_events_queue,interactive = False):{{{
   def __init__(self, command_line, pacman_events_queue, interactive = False):
     #self.pacman = pacman(self)
     self.poll_object = select.poll()
     self.pacman = pacman()
     self.yesno = False
     self.pacman_events_queue = pacman_events_queue
+    self.lock = None
     
+    self.timer = threading.Timer(1, self.check_lock)
+
     if interactive == True:
       self.pacman.set_pipeit(True)
     
@@ -194,6 +213,11 @@ class shell:
     }
     # }}}
 
+  # def get_pid(self): {{{
+  def get_pid(self):
+    return self.pacman.get_pid()
+  # }}}
+  
   # def get_prev_return(self): {{{
   def get_prev_return(self):
     return self.prev_return
@@ -264,9 +288,10 @@ class shell:
     return ret
   # }}}
 
-  # def updatedb(self, what = ''): {{{
-  def updatedb(self, what = ''):
+  # def updatedb(self, what = '', lock = None): {{{
+  def updatedb(self, what = '', lock = None):
     self.prev_return = None
+    self.lock = lock
     ret = self.run_pacman_with('-Sy')
     ret = ''
     ret_err = ''
@@ -318,9 +343,10 @@ class shell:
     self.poll_object.unregister(self.pacman.get_read_pipe())
   # }}}
 
-  # def install_fresh_updates(self): {{{
-  def install_fresh_updates(self):
+  # def install_fresh_updates(self, lock = None): {{{
+  def install_fresh_updates(self, lock = None):
     self.prev_return = None
+    self.lock = lock
     ret = self.run_pacman_with('-Su --noconfirm')
 
     (self.pid, self.exit_status) = os.wait()
@@ -328,9 +354,10 @@ class shell:
     self.prev_return = ret
   # }}}
 
-  # def get_fresh_updates_part_1(self): {{{
-  def get_fresh_updates_part_1(self):
+  # def get_fresh_updates_part_1(self, lock = None): {{{
+  def get_fresh_updates_part_1(self, lock = None):
     self.prev_return = None
+    self.lock = lock
     ret = self.run_pacman_with('-Su')
    
     err = ''
@@ -345,13 +372,15 @@ class shell:
     self.prev_return = (self.yesno, out, err)
   # }}}
 
-  # def get_fresh_updates_part_2(self, pacman_upgrade, out): {{{
-  def get_fresh_updates_part_2(self, pacman_upgrade, out):
+  # def get_fresh_updates_part_2(self, pacman_upgrade, out, lock = None): {{{
+  def get_fresh_updates_part_2(self, pacman_upgrade, out, lock = None):
     self.prev_return = None
+    self.lock = lock
     # list of (pkg_name, version)
     updates = []
 
     if self.yesno:
+      print 'sending pacman \'n\''
       self.send_to_pacman('n')
 
     out2 = ''
@@ -635,9 +664,10 @@ class shell:
   #    return None
   ## }}}
     
-  # def local_search(self, what= ''): {{{
-  def local_search(self, what= ''):
+  # def local_search(self, what= '', lock = None): {{{
+  def local_search(self, what= '', lock = None):
     self.prev_return = None
+    self.lock = lock
     #time_before = time.time()
     #print 'started adding: '
     if what == '':
@@ -691,9 +721,10 @@ class shell:
 
   # }}}
   
-  # def repofiles2(self): {{{
-  def repofiles2(self):
+  # def repofiles2(self, lock = None): {{{
+  def repofiles2(self, lock = None):
     self.prev_return = None
+    self.lock = lock
     self.run_pacman_with('-Ss \"\"')
 
     if self.pacman.get_pipeit() == True:
@@ -870,8 +901,8 @@ class shell:
     #  return (True, out)
   # }}}
     
-  # def install_noconfirm(self, what = ''): {{{
-  def install_noconfirm(self, what = ''):
+  # def install_noconfirm(self, what = '', lock = None): {{{
+  def install_noconfirm(self, what = '', lock = None):
     if not self.__is_root__():
       print "You are not ROOT. Bye bye."
       return
@@ -879,17 +910,19 @@ class shell:
       print 'Please specify a package to install'
       return
 
+    self.lock = lock
     self.run_pacman_with('-S ' + what + ' --noconfirm')
 
     os.wait()
   # }}}
   
-  # def install_force_noconfirm(self, list): {{{
-  def install_force_noconfirm(self, list):
+  # def install_force_noconfirm(self, list, lock = None): {{{
+  def install_force_noconfirm(self, list, lock = None):
     if not self.__is_root__():
       print "You are not ROOT. Bye bye."
       return
 
+    self.lock = lock
     what = ''
 
     for pkg_name in list:
@@ -914,9 +947,10 @@ class shell:
     os.wait()
   # }}}
 
-  # def download_part_1(self, what = ''): {{{
-  def download_part_1(self, what = ''):
+  # def download_part_1(self, what = '', lock = None): {{{
+  def download_part_1(self, what = '', lock = None):
     self.prev_return = None
+    self.lock = lock
     if not self.__is_root__():
       print "You are not ROOT. Bye bye."
       return
@@ -962,9 +996,10 @@ class shell:
     return
   # }}}
 
-  # def install_part_1(self, what = '', repo = ''): {{{
-  def install_part_1(self, what = '', repo = ''):
+  # def install_part_1(self, what = '', repo = '', lock = None): {{{
+  def install_part_1(self, what = '', repo = '', lock = None):
     self.prev_return = None
+    self.lock = lock
     if not self.__is_root__():
       print "You are not ROOT. Bye bye."
       return
@@ -1001,9 +1036,10 @@ class shell:
       return
   # }}}
 
-  # def install_part_2(self, txt_to_pacman, wait = False): {{{
-  def install_part_2(self, txt_to_pacman, wait = False):
+  # def install_part_2(self, txt_to_pacman, wait = False, lock = None): {{{
+  def install_part_2(self, txt_to_pacman, wait = False, lock = None):
     self.prev_return = None
+    self.lock = lock
     self.send_to_pacman(txt_to_pacman)
     # HACK
     (self.yesno, out) = self.__read_and_check_for_yesno__()
@@ -1014,9 +1050,10 @@ class shell:
     return
   # }}}
   
-  # def install_part_3(self, txt_to_pacman): {{{
-  def install_part_3(self, txt_to_pacman): 
+  # def install_part_3(self, txt_to_pacman, lock = None): {{{
+  def install_part_3(self, txt_to_pacman, lock = None): 
     self.prev_return = None
+    self.lock = lock
     self.send_to_pacman(txt_to_pacman)
     # HACK
     (self.yesno, out) = self.__read_and_check_for_yesno__()
@@ -1028,8 +1065,8 @@ class shell:
     return
   # }}}
 
-  # def install_part_2_no_wait(self, txt_to_pacman): {{{
-  def install_part_2_no_wait(self, txt_to_pacman):
+  # def install_part_2_no_wait(self, txt_to_pacman, lock = None): {{{
+  def install_part_2_no_wait(self, txt_to_pacman, lock = None):
     self.prev_return = None
     self.send_to_pacman(txt_to_pacman)
     # HACK
@@ -1138,9 +1175,10 @@ class shell:
     # }}}
   # }}}
 
-  # def install_pkg_from_files(self, path_list): {{{
-  def install_pkg_from_files(self, path_list):
+  # def install_pkg_from_files(self, path_list, lock = None): {{{
+  def install_pkg_from_files(self, path_list, lock = None):
     self.prev_return = None
+    self.lock = lock
     if path_list == [] or None:
       #return (None, None)
       self.prev_return = (None, None)
@@ -1218,12 +1256,13 @@ class shell:
     return all
   # }}}
   
-  # def local_info(self, what = ''): {{{
-  def local_info(self, what = ''):
+  # def local_info(self, what = '', lock = None): {{{
+  def local_info(self, what = '', lock = None):
     if what == '':
       print 'Please specify a package to query for info'
       return
     self.prev_return = None
+    self.lock = lock
     
     self.run_pacman_with('-Qi ' + what)
     
@@ -1249,13 +1288,14 @@ class shell:
       return
   # }}}
   
-  # def info(self, what = ''): {{{
-  def info(self, what = ''):
+  # def info(self, what = '', lock = None): {{{
+  def info(self, what = '', lock = None):
     if what == '':
       print 'Please specify a package to query for info'
       return
     
     self.prev_return = None
+    self.lock = lock
     self.run_pacman_with('-Si ' + what)
     
     if self.pacman.get_pipeit() == True:
@@ -1297,8 +1337,8 @@ class shell:
     return True
   # }}}
   
-  # def remove(self, what = ''): {{{
-  def remove(self, what = ''):
+  # def remove(self, what = '', lock = None): {{{
+  def remove(self, what = '', lock = None):
     uid = posix.getuid()
     self.prev_return = None
     if uid != 0:
@@ -1324,10 +1364,11 @@ class shell:
     return
   # }}}
   
-  # def get_pkg_files(self, what = ''): {{{
-  def get_pkg_files(self, what = ''):
+  # def get_pkg_files(self, what = '', lock = None): {{{
+  def get_pkg_files(self, what = '', lock = None):
     uid = posix.getuid()
     self.prev_return = None
+    self.lock = lock
     #if uid != 0:
     #  print "You are not ROOT. Bye bye."
     #  return

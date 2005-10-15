@@ -98,6 +98,12 @@ class gui:
       while self.th.isAlive() == True:
         while gtk.events_pending():
           gtk.main_iteration(False)
+        #if self.stop_pulsing:
+        #  self.busy_window.hide()
+        #  self.busy_window_hidden = True
+        #  self.busy_window_on = False
+        #  self.main_window.set_sensitive(True)
+        #  print 'th: ', self.th
         time.sleep(0.01)
     #print 'update done.'
 
@@ -112,6 +118,8 @@ class gui:
 
   # def run_in_thread(self, method, args_dict, wait=False): {{{
   def run_in_thread(self, method, args_dict, wait=False):
+    self.lock = threading.Lock()
+    args_dict['lock'] = self.lock
     self.th = threading.Thread(target=method, kwargs=args_dict)
     self.th.start()
     if wait:
@@ -310,6 +318,7 @@ class gui:
     
     gtk.gdk.threads_enter()
     self.th = None
+    self.stop_pulsing = False
 
     self.cwd = os.environ['PWD']
 
@@ -458,7 +467,7 @@ class gui:
     #signal.alarm(alarm_time)
 
     self.shell = shell(command_line = None, pacman_events_queue =\
-        self.pacman_events_queue, interactive = True)
+        self.pacman_events_queue, self.lock, interactive = True)
     self.populate_pkg_lists()
     # pid of pacman process
     self.pid = 0
@@ -1690,7 +1699,15 @@ class gui:
   # def on_busy_cancel_button_clicked(self, button): {{{
   def on_busy_cancel_button_clicked(self, button):
     print 'killing...'
-    os.kill(self.shell.get_pid(), signal.SIGKILL) 
+    #os.kill(self.shell.get_pid(), signal.SIGKILL) 
+    #self.stop_pulsing = True
+    self.lock.acquire()
+    print 'self.th: ', self.th
+    #while self.th.isAlive() == True:
+    #  print 'bump'
+    #  while gtk.events_pending():
+    #    gtk.main_iteration(False)
+    #  self.th.join(0.1)
   # }}}
 
   # def cleanup_cache(self, clean_by, clean_threshold): {{{
