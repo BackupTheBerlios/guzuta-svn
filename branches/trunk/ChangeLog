@@ -1,0 +1,44 @@
+Guzuta 0.0.4 (2005)
+ * Do not quit when not running as root.
+ * Makefile fixed.
+ * Bugfix in view files from package.
+
+Guzuta 0.0.3 (04 Oct 2005)
+ * Display package size in KB, MB, etc.
+ * Go to package url by clicking in the package information.
+ * Dependency checking when installing from file.
+ * Added new option for specifying the browser to use when clicking in pkg URL.
+ * Speedups interfacing with pacman. Much better usability.
+ * Added an install from repository button and popup menu.
+ * Quicker search capabilities.
+ * Download only pkg button and popup.
+ * Cache listing.
+ * Fixed bug when pacman upgrading itself.
+ * When selecting packages using the 'Selected' column, do not display
+   information and popup.
+ * Use own trayicon.
+ * Fixed bug when adding a new repo to /etc/pacman.conf and not sync'ing. Guzuta
+   now does this on startup if needed.
+ * Fixed bug when looking for new updates and pacman reporting an error.
+ * Erase cache selectively by X days old or by X versions old.
+ * Show in a popup all the files of a package.
+ * It now has a .desktop.
+
+Guzuta 0.0.2 (28 Aug 2005)
+
+ * Better performance.
+ * Rough trayicon support.
+ * Better displaying of repositories.
+ * Install package from file (pacman -U file support).
+ * View pacman's log.
+ * Preferences dialog.
+ * Setting to insensitive all applicable widgets when running as non root.
+ * Other stuff I forgot about.
+
+Guzuta 0.0.1 (16 Aug 2005)
+
+ * Initial release.
+ * Install, remove, display information about packages.
+ * Update pacman's database.
+ * Display packages by Pseudo Repos (Installed, Not Installed and All) and 
+   regular repositories (Current, Extra, Community).
