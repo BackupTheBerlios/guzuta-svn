@@ -2,17 +2,8 @@
 # -*- coding: UTF-8 -*
 # vim: set foldmethod=marker:
 
-# imports {{{
-import os, os.path, sys, posix, signal, re, select
-import threading
+import os, os.path, sys, posix, signal, re, threading
 from subprocess import *
-import time
-
-import libpypac.libpypac_0 as libpypac_0 
-import libpypac.libpypac_1 as libpypac_1
-import libpypac.libpypac_2 as libpypac_2
-import libpypac.libpypac_3 as libpypac_3
-# }}}
 
 #class pacman: {{{
 class pacman:
@@ -111,32 +102,15 @@ class shell:
   some user commands available. if not it works suitably for use with a front
   end, like guzuta's gui ;)"""
 
-  # def check_cond(self): {{{
-  def check_lock(self):
-    if self.lock:
-      if not self.lock.acquire(blocking = False):
-        # locked from main thread
-        # time to quit
-        # killing pacman
-        os.kill(self.pacman.get_pid(), signal.SIGKILL)
-        # quiting
-        print 'bye bye!'
-        sys.exit(1)
-      else:
-        self.lock.release()
-  # }}}
-  
-  # def __init__(self,command_line,pacman_events_queue,interactive = False):{{{
-  def __init__(self, command_line, pacman_events_queue, interactive = False):
+  # def __init__(self, command_line, lock, interactive = False): {{{
+  def __init__(self, command_line, lock, interactive = False):
     #self.pacman = pacman(self)
-    self.poll_object = select.poll()
     self.pacman = pacman()
     self.yesno = False
-    self.pacman_events_queue = pacman_events_queue
-    self.lock = None
-    
-    self.timer = threading.Timer(1, self.check_lock)
 
+    self.lock = lock
+    self.timer = threading.Timer(1.0, self.handle_timer)
+    
     if interactive == True:
       self.pacman.set_pipeit(True)
     
@@ -153,17 +127,38 @@ class shell:
 
     self.prev_return = None
     self.REASON_EXPLICIT = 0
-    
-    # libpypac support {{{
-    self.server_dict, self.repo_list, self.noupgrade_list,\
-        self.ignore_list, self.hold_list = libpypac_0.read_conf()
-    # }}}
 
+    #self.timer.start()
+    
     #self.opt_names = 'h:j:k:'
     #self.long_opt_names = ''
 
     #self.opts , self.long_opts = getopt.getopt(command_line, self.opt_names,
     #    self.long_opt_names)
+  # }}}
+
+  # def start_timer(self): {{{
+  def start_timer(self):
+    self.timer = threading.Timer(1.0, self.handle_timer)
+    self.timer.start()
+  # }}}
+
+  # def handle_timer(self): {{{
+  def handle_timer(self):
+    #print 'THREAD: in handle_timer...'
+    if self.lock.acquire(False):
+      # lock successful, loop
+      self.lock.release()
+      self.timer = threading.Timer(1.0, self.handle_timer)
+      #print 'THREAD: timer looping'
+      self.timer.start()
+    else:
+      # lock unsuccessful, bail out
+      #print 'THREAD: killing pacman...'
+      #os.kill(self.pacman.get_pid(), signal.SIGKILL)
+      os.kill(self.pacman.get_pid(), signal.SIGTERM)
+      #print 'THREAD: pacman killed, exiting!'
+      sys.exit(1)
   # }}}
 
     # commands and their description {{{
@@ -213,11 +208,6 @@ class shell:
     }
     # }}}
 
-  # def get_pid(self): {{{
-  def get_pid(self):
-    return self.pacman.get_pid()
-  # }}}
-  
   # def get_prev_return(self): {{{
   def get_prev_return(self):
     return self.prev_return
@@ -288,44 +278,11 @@ class shell:
     return ret
   # }}}
 
-  # def updatedb(self, what = '', lock = None): {{{
-  def updatedb(self, what = '', lock = None):
+  # def updatedb(self, what = ''): {{{
+  def updatedb(self, what = ''):
     self.prev_return = None
-    self.lock = lock
     ret = self.run_pacman_with('-Sy')
-    ret = ''
-    ret_err = ''
-    self.poll_object.register(self.pacman.get_read_pipe(), select.POLLIN |
-        select.POLLPRI)
-    self.poll_object.register(self.pacman.get_err_pipe(), select.POLLIN |
-        select.POLLPRI)
     if self.pacman.get_pipeit() == True:
-      #print 'cowabunga'
-      #while os.waitpid(self.pid, os.WNOHANG) == (0,0):
-      #  list = self.poll_object.poll(200)
-      #  if list == []:
-      #    continue
-      #  else:
-      #    for (fd, event) in list:
-      #      char = os.read(fd, 1)
-      #      print 'char: ', char
-      #      ret = ret + char
-      #      #if fd == self.pacman.get_read_pipe():
-      #      #  print 'stdout'
-      #      #  char = self.pacman.get_read_pipe().read(1)
-      #      #  print 'char: ', char
-      #      #  ret = ret + char
-      #      #elif fd == self.pacman.get_err_pipe():
-      #      #  print 'stderr'
-      #      #  char = self.pacman.get_err_pipe().read(1)
-      #      #  print 'char: ', char
-      #      #  ret_err = ret_err + char
-      #      
-      ##print 'ret <%s>' % ret
-      ##print 'ret_err <%s>' % ret_err
-      ##while :
-      ##  ret = self.poll_object.poll()
-      ##  print 'ai: ', ret
       ret = self.pacman.get_read_pipe().read()
       ret_err = self.pacman.get_err_pipe().read()
       
@@ -340,13 +297,11 @@ class shell:
       (self.pid, self.exit_status) = os.wait()
       #return None
       self.prev_return = None
-    self.poll_object.unregister(self.pacman.get_read_pipe())
   # }}}
 
-  # def install_fresh_updates(self, lock = None): {{{
-  def install_fresh_updates(self, lock = None):
+  # def install_fresh_updates(self): {{{
+  def install_fresh_updates(self):
     self.prev_return = None
-    self.lock = lock
     ret = self.run_pacman_with('-Su --noconfirm')
 
     (self.pid, self.exit_status) = os.wait()
@@ -354,10 +309,9 @@ class shell:
     self.prev_return = ret
   # }}}
 
-  # def get_fresh_updates_part_1(self, lock = None): {{{
-  def get_fresh_updates_part_1(self, lock = None):
+  # def get_fresh_updates_part_1(self): {{{
+  def get_fresh_updates_part_1(self):
     self.prev_return = None
-    self.lock = lock
     ret = self.run_pacman_with('-Su')
    
     err = ''
@@ -372,15 +326,13 @@ class shell:
     self.prev_return = (self.yesno, out, err)
   # }}}
 
-  # def get_fresh_updates_part_2(self, pacman_upgrade, out, lock = None): {{{
-  def get_fresh_updates_part_2(self, pacman_upgrade, out, lock = None):
+  # def get_fresh_updates_part_2(self, pacman_upgrade, out): {{{
+  def get_fresh_updates_part_2(self, pacman_upgrade, out):
     self.prev_return = None
-    self.lock = lock
     # list of (pkg_name, version)
     updates = []
 
     if self.yesno:
-      print 'sending pacman \'n\''
       self.send_to_pacman('n')
 
     out2 = ''
@@ -392,18 +344,6 @@ class shell:
     pattern = '\n'
     if out2 != '':
       out = out2
-    
-    i = -1
-    try:
-      i = out.index('conflicts')
-    except ValueError:
-      #print 'not found?'
-      pass
-    if i > 0:
-      self.prev_return = None, out
-      return
-
-    
     results = re.split(pattern, out)
 
     for result in results:
@@ -415,7 +355,6 @@ class shell:
 
         for result2 in results2[1:]:
           if result2:
-            print 'result2 <%s>' % result2
             first_dash = result2.index('-')
             last_dash = result2.rindex('-')
             before_last_dash = result2[:last_dash].rindex('-')
@@ -427,7 +366,7 @@ class shell:
 
     ret_err = self.pacman.get_err_pipe().read()
     #return updates
-    self.prev_return = updates, out
+    self.prev_return = updates
   # }}}
   
   # def get_fresh_updates(self): {{{
@@ -640,36 +579,10 @@ class shell:
       (self.pid, self.exit_status) = os.wait()
       return None
   # }}}
-
-  ## def search(self, what = ''): {{{
-  #def search(self, what = ''):
-  #  if what == '':
-  #    self.run_pacman_with('-Ss \"\"')
-  #  else:
-  #    self.run_pacman_with('-Ss ' + what)
-
-  #  if self.pacman.get_pipeit() == True:
-  #    # get all pkgs which should have the format
-  #    # reponame/name version
-
-  #    list = self.pacman.get_read_pipe().read()
-
-  #    all = self.__compile_pkg_dict__(list)
-
-  #    (self.pid, self.exit_status) = os.wait()
-
-  #    return all
-  #  else:
-  #    (self.pid, self.exit_status) = os.wait()
-  #    return None
-  ## }}}
     
-  # def local_search(self, what= '', lock = None): {{{
-  def local_search(self, what= '', lock = None):
+  # def local_search(self, what= ''): {{{
+  def local_search(self, what= ''):
     self.prev_return = None
-    self.lock = lock
-    #time_before = time.time()
-    #print 'started adding: '
     if what == '':
       self.run_pacman_with('-Qs \"\"')
     else:
@@ -686,8 +599,6 @@ class shell:
       (self.pid, self.exit_status) = os.wait()
       #print self.check(all)
       #return all
-      #time_now = time.time()
-      #print 'ended adding, took: ', time_now - time_before
       self.prev_return = all
       return
     else:
@@ -697,34 +608,9 @@ class shell:
       return
   # }}}
   
-  # def local_search_pypac(self) {{{
-  def local_search_pypac(self):
+  # def repofiles2(self): {{{
+  def repofiles2(self):
     self.prev_return = None
-
-    all = {}
-
-    pkg_list, t = libpypac_1.local_packages()
-    #time_before = time.time()
-    #print 'started adding: '
-    for pkg in pkg_list:
-      (pkg_info, deps, requires, filelist) = libpypac_1.loc_pack_info(pkg)
-      retcode, repo, pkg, cache, size = libpypac_2.exist_check(pkg_info[0],\
-          self.repo_list)
-      name = pkg_info[0]
-      version = pkg_info[1]
-      description = pkg_info[2]
-      all[name] = (repo, version, description)
-    #time_now = time.time()
-    #print 'ended adding, took: ', time_now - time_before
-    self.prev_return = all
-    return
-
-  # }}}
-  
-  # def repofiles2(self, lock = None): {{{
-  def repofiles2(self, lock = None):
-    self.prev_return = None
-    self.lock = lock
     self.run_pacman_with('-Ss \"\"')
 
     if self.pacman.get_pipeit() == True:
@@ -901,8 +787,8 @@ class shell:
     #  return (True, out)
   # }}}
     
-  # def install_noconfirm(self, what = '', lock = None): {{{
-  def install_noconfirm(self, what = '', lock = None):
+  # def install_noconfirm(self, what = ''): {{{
+  def install_noconfirm(self, what = ''):
     if not self.__is_root__():
       print "You are not ROOT. Bye bye."
       return
@@ -910,19 +796,17 @@ class shell:
       print 'Please specify a package to install'
       return
 
-    self.lock = lock
     self.run_pacman_with('-S ' + what + ' --noconfirm')
 
     os.wait()
   # }}}
   
-  # def install_force_noconfirm(self, list, lock = None): {{{
-  def install_force_noconfirm(self, list, lock = None):
+  # def install_force_noconfirm(self, list): {{{
+  def install_force_noconfirm(self, list):
     if not self.__is_root__():
       print "You are not ROOT. Bye bye."
       return
 
-    self.lock = lock
     what = ''
 
     for pkg_name in list:
@@ -947,10 +831,9 @@ class shell:
     os.wait()
   # }}}
 
-  # def download_part_1(self, what = '', lock = None): {{{
-  def download_part_1(self, what = '', lock = None):
+  # def download_part_1(self, what = ''): {{{
+  def download_part_1(self, what = ''):
     self.prev_return = None
-    self.lock = lock
     if not self.__is_root__():
       print "You are not ROOT. Bye bye."
       return
@@ -996,10 +879,9 @@ class shell:
     return
   # }}}
 
-  # def install_part_1(self, what = '', repo = '', lock = None): {{{
-  def install_part_1(self, what = '', repo = '', lock = None):
+  # def install_part_1(self, what = '', repo = ''): {{{
+  def install_part_1(self, what = '', repo = ''):
     self.prev_return = None
-    self.lock = lock
     if not self.__is_root__():
       print "You are not ROOT. Bye bye."
       return
@@ -1036,10 +918,9 @@ class shell:
       return
   # }}}
 
-  # def install_part_2(self, txt_to_pacman, wait = False, lock = None): {{{
-  def install_part_2(self, txt_to_pacman, wait = False, lock = None):
+  # def install_part_2(self, txt_to_pacman, wait = False): {{{
+  def install_part_2(self, txt_to_pacman, wait = False):
     self.prev_return = None
-    self.lock = lock
     self.send_to_pacman(txt_to_pacman)
     # HACK
     (self.yesno, out) = self.__read_and_check_for_yesno__()
@@ -1050,10 +931,9 @@ class shell:
     return
   # }}}
   
-  # def install_part_3(self, txt_to_pacman, lock = None): {{{
-  def install_part_3(self, txt_to_pacman, lock = None): 
+  # def install_part_3(self, txt_to_pacman): {{{
+  def install_part_3(self, txt_to_pacman): 
     self.prev_return = None
-    self.lock = lock
     self.send_to_pacman(txt_to_pacman)
     # HACK
     (self.yesno, out) = self.__read_and_check_for_yesno__()
@@ -1065,8 +945,8 @@ class shell:
     return
   # }}}
 
-  # def install_part_2_no_wait(self, txt_to_pacman, lock = None): {{{
-  def install_part_2_no_wait(self, txt_to_pacman, lock = None):
+  # def install_part_2_no_wait(self, txt_to_pacman): {{{
+  def install_part_2_no_wait(self, txt_to_pacman):
     self.prev_return = None
     self.send_to_pacman(txt_to_pacman)
     # HACK
@@ -1175,10 +1055,9 @@ class shell:
     # }}}
   # }}}
 
-  # def install_pkg_from_files(self, path_list, lock = None): {{{
-  def install_pkg_from_files(self, path_list, lock = None):
+  # def install_pkg_from_files(self, path_list): {{{
+  def install_pkg_from_files(self, path_list):
     self.prev_return = None
-    self.lock = lock
     if path_list == [] or None:
       #return (None, None)
       self.prev_return = (None, None)
@@ -1240,7 +1119,6 @@ class shell:
   
   # def __compile_pkg_info__(self, pacman_out): {{{
   def __compile_pkg_info__(self, pacman_output):
-    print 'pacman_output: ', pacman_output
     pattern = '\n'
 
     all = []
@@ -1252,17 +1130,15 @@ class shell:
       else:
         all.append(r.strip())
       
-    print 'all: ', all
     return all
   # }}}
   
-  # def local_info(self, what = '', lock = None): {{{
-  def local_info(self, what = '', lock = None):
+  # def local_info(self, what = ''): {{{
+  def local_info(self, what = ''):
     if what == '':
       print 'Please specify a package to query for info'
       return
     self.prev_return = None
-    self.lock = lock
     
     self.run_pacman_with('-Qi ' + what)
     
@@ -1288,14 +1164,13 @@ class shell:
       return
   # }}}
   
-  # def info(self, what = '', lock = None): {{{
-  def info(self, what = '', lock = None):
+  # def info(self, what = ''): {{{
+  def info(self, what = ''):
     if what == '':
       print 'Please specify a package to query for info'
       return
     
     self.prev_return = None
-    self.lock = lock
     self.run_pacman_with('-Si ' + what)
     
     if self.pacman.get_pipeit() == True:
@@ -1337,8 +1212,8 @@ class shell:
     return True
   # }}}
   
-  # def remove(self, what = '', lock = None): {{{
-  def remove(self, what = '', lock = None):
+  # def remove(self, what = ''): {{{
+  def remove(self, what = ''):
     uid = posix.getuid()
     self.prev_return = None
     if uid != 0:
@@ -1364,11 +1239,10 @@ class shell:
     return
   # }}}
   
-  # def get_pkg_files(self, what = '', lock = None): {{{
-  def get_pkg_files(self, what = '', lock = None):
+  # def get_pkg_files(self, what = ''): {{{
+  def get_pkg_files(self, what = ''):
     uid = posix.getuid()
     self.prev_return = None
-    self.lock = lock
     #if uid != 0:
     #  print "You are not ROOT. Bye bye."
     #  return
@@ -1533,23 +1407,6 @@ the terms of the GNU General Public License'''
   # def get_err_pipe(self): {{{
   def get_err_pipe(self):
     return self.pacman.get_err_pipe()
-  # }}}
-
-  # def __compile_group_info__(self, pacman_output): {{{
-  def __compile_group_info__(self, pacman_output):
-    pass  
-  # }}}
-
-  # def get_group_info(self): {{{
-  def get_group_info(self):
-    self.prev_return = None
-    self.run_pacman_with('-Qg')
-
-    out = self.__capture_output__()
-    (pid, self.exit_status) = os.wait()
-
-    self.prev_return = (self.exit_status, out)
-    return
   # }}}
 # }}}
 
