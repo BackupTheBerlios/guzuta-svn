@@ -1,4 +1,4 @@
-Guzuta 0.0.4 (2005)
+Guzuta 0.0.4 (10 Oct 2005)
  * Do not quit when not running as root.
  * Makefile fixed.
  * Bugfix in view files from package.
