@@ -313,7 +313,7 @@ class gui:
     self.lock = threading.Lock()
     self.cwd = os.environ['PWD']
 
-    self.its_okay = False
+    self.cancelled = False
 
     #print 'working in: ', self.cwd
     
@@ -1116,14 +1116,14 @@ class gui:
 
         if self.shell.get_prev_return() == None:
           print 'None!'
-          return None
+          return True
 
         ret, ret_err = self.shell.get_prev_return()
 
         
         if self.shell.get_exit_status() != 0:
-          if self.its_okay:
-            return
+          if self.cancelled:
+            return True
           else:
             # something has gone horribly wrong
             pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
@@ -1135,7 +1135,7 @@ class gui:
             pacman_error_dialog.run()
             pacman_error_dialog.hide()
             self.current_dialog_on = False
-            return 
+            return True
 
         self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
         self.current_dialog = self.update_db_popup
@@ -1154,7 +1154,7 @@ class gui:
 
       if self.shell.get_prev_return() == None:
         print 'None!'
-        return None
+        return True
       
       (yesno, out, err) = self.shell.get_prev_return()
       
@@ -1168,45 +1168,95 @@ class gui:
         pacman_error_dialog.run()
         pacman_error_dialog.hide()
         self.current_dialog_on = False
-        return
+        return True
 
+      conflicting_pkg = ''
       try:
-        out.index('Upgrade pacman first?')
-        # this means there's a new version of pacman to upgrade
-        # to upgrade it
-        pacman_upgrade_dialog =\
-          self.all_widgets.get_widget('pacman_upgrade_dialog')
-        self.current_dialog = pacman_upgrade_dialog
-        
+        i = out.index('conflicts with')
+        conflicting_pkg = out[3:i-1]
+        dot_index = out.rindex('.')
+        affected_pkg = out[i + len('conflicts with') + 1:dot_index]
+        #print 'conflicting <%s> affected <%s>' %(conflicting_pkg, affected_pkg)
+        conflicts_dialog = self.all_widgets.get_widget('conflicts_dialog')
+        self.current_dialog = conflicts_dialog
+        conflicts_label =\
+          self.all_widgets.get_widget('conflicts_label')
+        text = "Package <b>%s</b> conflicts with <b>%s</b>.\nDo you want to continue upgrading?" % (conflicting_pkg, affected_pkg)
+        conflicts_label.set_markup(text)
+
         self.current_dialog_on = True
-        response = pacman_upgrade_dialog.run()
-        pacman_upgrade_dialog.hide()
+        response = conflicts_dialog.run()
+        conflicts_dialog.hide()
         self.current_dialog_on = False
-        
         if response == gtk.RESPONSE_OK:
           self.shell.start_timer()
           self.run_in_thread(self.shell.get_fresh_updates_part_2,
-              {'pacman_upgrade': True, 'out': out})
-          self.install_packages_from_list(['pacman'])
-
+              {'pacman_upgrade': False, 'out': out, 'resolve_conflicts': True})
           self.try_sem_animate_progress_bar()
-
-          self.on_update_db_clicked(button, True)
-          
-        else:
+        elif response == gtk.RESPONSE_REJECT:
           self.shell.start_timer()
           self.run_in_thread(self.shell.get_fresh_updates_part_2,
-              {'pacman_upgrade': True, 'out': out})
+              {'pacman_upgrade': False, 'out': out,
+              'pkg_not_to_upgrade': conflicting_pkg})
           self.try_sem_animate_progress_bar()
+        else:
+          return True
       except ValueError:
-        self.shell.start_timer()
-        self.run_in_thread(self.shell.get_fresh_updates_part_2,
-            {'pacman_upgrade': False, 'out': out})
-        self.try_sem_animate_progress_bar()
+        try:
+          out.index('Upgrade pacman first?')
+          # this means there's a new version of pacman to upgrade
+          # to upgrade it
+          pacman_upgrade_dialog =\
+            self.all_widgets.get_widget('pacman_upgrade_dialog')
+          self.current_dialog = pacman_upgrade_dialog
+          
+          self.current_dialog_on = True
+          response = pacman_upgrade_dialog.run()
+          pacman_upgrade_dialog.hide()
+          self.current_dialog_on = False
+          
+          if response == gtk.RESPONSE_OK:
+            self.shell.start_timer()
+            self.run_in_thread(self.shell.get_fresh_updates_part_2,
+                {'pacman_upgrade': True, 'out': out})
+            self.install_packages_from_list(['pacman'])
+
+            self.try_sem_animate_progress_bar()
+
+            self.on_update_db_clicked(button, True)
+            
+          else:
+            self.shell.start_timer()
+            self.run_in_thread(self.shell.get_fresh_updates_part_2,
+                {'pacman_upgrade': True, 'out': out})
+            self.try_sem_animate_progress_bar()
+        except ValueError:
+          self.shell.start_timer()
+          self.run_in_thread(self.shell.get_fresh_updates_part_2,
+              {'pacman_upgrade': False, 'out': out})
+          self.try_sem_animate_progress_bar()
 
         
       updates = self.shell.get_prev_return()
+      print 'updates: ', updates
 
+      if type(updates) == tuple:
+        exit_status, err = updates
+        generic_error_dialog =\
+          self.all_widgets.get_widget('conflicts_error_dialog')
+        self.current_dialog = generic_error_dialog
+        generic_error_label =\
+          self.all_widgets.get_widget('conflicts_error_label')
+        
+        generic_error_label.set_text(err + ('\t%s conflicts with %s' %
+            (conflicting_pkg, affected_pkg)))
+
+        self.current_dialog_on = True
+        response = generic_error_dialog.run()
+        generic_error_dialog.hide()
+        self.current_dialog_on = False
+
+        return True
       if updates == []:
         no_updates_dialog = self.all_widgets.get_widget('no_updates_dialog')
         self.current_dialog = no_updates_dialog
@@ -1658,11 +1708,11 @@ class gui:
 
   # def on_cancel_busy_button_clicked(self, button): {{{
   def on_cancel_busy_button_clicked(self, button):
-    self.its_okay = True
-    #print 'MAIN: acquiring lock...'
-    self.lock.acquire()
-    
     if self.th:
+      self.cancelled = True
+      #print 'MAIN: acquiring lock...'
+      self.lock.acquire()
+    
       #print 'MAIN: waiting for thread to finish'
       while self.th.isAlive():
         while gtk.events_pending():

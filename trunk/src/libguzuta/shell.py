@@ -326,16 +326,28 @@ class shell:
     self.prev_return = (self.yesno, out, err)
   # }}}
 
-  # def get_fresh_updates_part_2(self, pacman_upgrade, out): {{{
-  def get_fresh_updates_part_2(self, pacman_upgrade, out):
+  # def get_fresh_updates_part_2(self, pacman_upgrade, out, {{{
+  # resolve_conflicts = 'do_nothing', pkg_not_to_upgrade = ''):
+  def get_fresh_updates_part_2(self, pacman_upgrade, out,
+      resolve_conflicts = 'do_nothing', pkg_not_to_upgrade = ''):
     self.prev_return = None
     # list of (pkg_name, version)
     updates = []
 
-    if self.yesno:
-      self.send_to_pacman('n')
-
     out2 = ''
+    if self.yesno:
+      if resolve_conflicts == 'install':
+        self.send_to_pacman('Y')
+        (self.yesno, out2) = self.__read_and_check_for_yesno__()
+        self.send_to_pacman('n')
+      elif resolve_conflicts == 'do_nothing':
+        self.send_to_pacman('n')
+        err = self.__capture_stderr__()
+        self.prev_return = self.get_exit_status(), err
+        return
+      else:
+        self.send_to_pacman('n')
+
     if pacman_upgrade:
       (self.yesno, out2) = self.__read_and_check_for_yesno__()
       self.send_to_pacman('n')
@@ -347,8 +359,13 @@ class shell:
     results = re.split(pattern, out)
 
     for result in results:
+      if result.startswith('::'):
+        continue
+      if result.startswith('Remove'):
+        continue
       if result.startswith('Total Package Size'):
         break
+      print 'result: ', result
       if result != '':
         pattern2 = '\s'
         results2 = re.split(pattern2, result)
@@ -362,7 +379,11 @@ class shell:
             name = result2[:before_last_dash]
             version = result2[before_last_dash+1:last_dash]
 
-            updates.append(name)
+            if pkg_not_to_upgrade != '':
+              if name != pkg_not_to_upgrade:
+                updates.append(name)
+            else:
+              updates.append(name)
 
     ret_err = self.pacman.get_err_pipe().read()
     #return updates
