@@ -4,6 +4,13 @@
 
 import os, os.path, sys, posix, signal, re, threading
 from subprocess import *
+import alpm
+from optparse import OptionParser
+
+# def f(param, string): {{{
+def f(param, string):
+  print "callback: param <%d> string <%s>" % (param,string)
+# }}}
 
 #class pacman: {{{
 class pacman:
@@ -102,11 +109,285 @@ class shell:
   some user commands available. if not it works suitably for use with a front
   end, like guzuta's gui ;)"""
 
+  # def __find_pmc__(self, pmc_syncs, treename): {{{
+  def __find_pmc__(self, pmc_syncs, treename):
+    for pmc in pmc_syncs:
+      if pmc["treename"] == treename:
+        return (True, pmc)
+    return (False, None)
+  # }}}
+
+  # def __parseconfig__(self, alpm, file, pmc_syncs, config): {{{
+  def __parseconfig__(self, alpm, file, pmc_syncs, config):
+    linenum = 0
+    conf_file = open(file)
+    lines = conf_file.readlines()
+    sync = {}
+
+    for line in lines:
+      linenum = linenum + 1
+      line = line[:-1]
+      line = line.strip()
+      
+      if len(line) == 0 or line[0] == '#':
+        continue
+
+      if (line[0] == '[' and line[len(line)-1] == ']'):
+        # new config section
+        section = line[1:len(line)-1]
+        if len(section) == 0:
+          print "config: line %d: bad section name" % linenum
+          return 1
+
+        if section == "local":
+          print "config: line %d: '%s' is reserved and cannot be used as a\
+          package tree" % (linenum, section)
+          return 1
+
+        if section != "options":
+          found = False
+          
+          #for pmc in pmc_syncs:
+          #  print "treename: <%s> section: <%s>" % (pmc["treename"], section)
+          #  if pmc["treename"] == section:
+          #    found = True
+          #    sync = pmc
+          #    break
+          #print "VOU PROCURAR POR: ", section.upper()
+          (found, sync_temp) = self.__find_pmc__(pmc_syncs, section)
+          #print "found: ", found
+          #print "sync_temp: ", sync_temp
+          
+          if not found:
+            # start a new sync record
+            #print "starting a new sync record"
+            sync["treename"] = section
+            sync["servers"] = []
+            #print "pmc_syncs antes: ", pmc_syncs
+            pmc_syncs.append(sync)
+            sync = {}
+            #print "pmc_syncs depois: ", pmc_syncs
+          else:
+            #print "copying the sync record"
+            sync = sync_temp
+
+      else:
+        # directive
+        l = line.split('=')
+        key = l[0]
+        other = l[1]
+
+        if not key:
+          print "config: line %d: syntax error" % linenum
+          return 1
+        key = key[:-1]
+        key = key.strip()
+        key = key.upper()
+        other = other[1:]
+        if not len(section) and key != "INCLUDE":
+          print "config: line %d: all directives must belong to a section" %\
+          linenum
+          return 1
+        if not other:
+          if key == "NOPASSIVEFTP":
+            config["NOPASSIVEFTP"] = True
+          elif key == "USESYSLOG":
+            alpm.set_use_syslog(True)
+          elif key == "ILOVECANDY":
+            config["CHOMP"] = True
+          else:
+            print "config: line %d: syntax error" % linenum
+        else: # there's more
+          other = other.strip()
+
+          if key == "INCLUDE":
+            conf = other
+            self.__parseconfig__(alpm, conf, pmc_syncs, config)
+          elif section == "options":
+            if key  == "NOUPGRADE":
+              pkgs = other.split(' ')
+              for noup_pkg in pkgs:
+                alpm.set_no_upgrade(noup_pkg)
+            elif key == "NOEXTRACT":
+              pkgs = other.split(' ')
+              for noextract_pkg in pkgs:
+                alpm.set_no_extract(noextract_pkg)
+            elif key == "IGNOREPKG":
+              pkgs = other.split(' ')
+              for ignore_pkg in pkgs:
+                alpm.set_ignore_pkg(ignore_pkg)
+            elif key == "HOLDPKG":
+              pkgs = other.split(' ')
+              for hold_pkg in pkgs:
+                alpm.set_hold_pkg(hold_pkg)
+            elif key == "DBPATH":
+              if other[0] == '/':
+                other = other[1:]
+              config["DBPATH"] = other
+            elif key == "CACHEDIR":
+              if other[0] == '/':
+                other = other[1:]
+              config["CACHEDIR"] = other
+            elif key == "LOGFILE":
+              alpm.set_log_file(other)
+            elif key == "XFERCOMMAND":
+              config["XFERCOMMAND"] = other
+            elif key == "PROXYSERVER":
+              l = other.split("://")
+              this = l[0]
+              other2 = l[1]
+
+              if other2:
+                other2 = other2[3:]
+
+                if not other2:
+                  print "config: line %d: bad server location" % linenum
+              config["proxyhost"] = other2
+            elif key == "PROXYPORT":
+              config["proxyport"] = int(other)
+            else:
+              print "config: line %d: syntax error" % linenum
+          else:
+            if key == "SERVER":
+              server = {}
+              server["server"] = ""
+              server["path"] = ""
+              server["protocol"] = ""
+
+              l = other.split("://")
+              protocol = l[0]
+              location = l[1]
+
+              if not protocol:
+                print "config: line %d: bad server protocol" % linenum
+                return 1
+
+              if not location:
+                print "config: line %d: bad server location" % linenum
+                return 1
+
+              server["protocol"] = protocol
+              if protocol == "ftp" or protocol == "http":
+                # split the url into domain and path
+                slash_pos = location.index("/")
+                left = location[:slash_pos]
+                right = location[slash_pos:]
+
+                if not slash_pos:
+                  # no path included, default to /
+                  server["path"] = "/"
+                else:
+                  # add a trailing slash if we need to
+                  if right[len(right)-1] == "/":
+                    server["path"] = right
+                  else:
+                    server["path"] = ("%s/" % right)
+                  server["server"] = left
+              elif protocol == "file":
+                # add a trailing slash if we need to
+                slash_pos = location.index("/")
+                left = location[:slash_pos]
+                right = location[slash_pos:]
+
+                if right[len(right)-1] == '/':
+                  server["path"] = right
+                else:
+                  server["path"] = ("%s/" % right)
+              else:
+                print "config: line %d: procotol %s is not supported" %\
+                  (linenum, ptr)
+              # add to the list
+              try:
+                sync["servers"].append(server)
+              except KeyError:
+                sync["servers"] = []
+                sync["servers"].append(server)
+            else:
+              print "config: line %d: syntax error" % linenum
+
+  # }}}
+
+  # def __init_alpm__(self): {{{
+  def __init_alpm__(self):
+    pmc_syncs = []
+    config = {}
+
+    PACROOT = "/"
+
+    try:
+      if config["ROOT"][len(config["ROOT"])] != "/":
+        config["ROOT"] = ("%s/" % config["ROOT"])
+    except KeyError:
+      config["ROOT"] = "/"
+    a = alpm.Alpm(config["ROOT"])
+
+    PACCONF = "/etc/pacman.conf"
+    PACDB = "var/lib/pacman"
+    PACCACHE = "var/cache/pacman"
+    
+    try:
+      config["CONFIGFILE"]
+    except KeyError:
+      config["CONFIGFILE"] = PACCONF
+    
+    config["DEBUG"] = alpm.PM_LOG_WARNING
+
+    self.__parseconfig__(a, config["CONFIGFILE"], pmc_syncs, config)
+
+    try:
+      config["DBPATH"]
+    except KeyError:
+      config["DBPATH"] = PACDB
+
+    try:
+      config["CACHE"]
+    except KeyError:
+      config["CACHE"] = PACCACHE
+
+    a.set_log_mask(config["DEBUG"])
+    a.set_log_callback(f)
+    a.set_db_path(config["DBPATH"])
+    a.set_cache_dir(config["CACHE"])
+
+    try:
+      config["DBPATH"]
+    except KeyError:
+      config["DBPATH"] = PACDB
+
+    return (a, pmc_syncs, config)
+  # }}}
+
+  # def get_db_names(self): {{{
+  def get_db_names(self):
+    return self.db_names
+  # }}}
+
+  # def __open_dbs__(self): {{{
+  def __open_dbs__(self):
+    self.dbs_by_name = {}
+    self.db_names = []
+
+    for sync in self.pmc_syncs:
+      try:
+        sync["db"] = self.alpm.register_db(sync["treename"])
+        self.dbs_by_name[sync["treename"]] = sync["db"]
+        self.db_names.append(sync["treename"])
+      except RuntimeError:
+        print "could not register ", sync["treename"]
+        sys.exit(1)
+    self.dbs_by_name["local"] = self.alpm.register_db("local")
+    #self.db_names.append('local')
+  # }}}
+
   # def __init__(self, command_line, lock, interactive = False): {{{
   def __init__(self, command_line, lock, interactive = False):
     #self.pacman = pacman(self)
     self.pacman = pacman()
     self.yesno = False
+
+    (self.alpm, self.pmc_syncs, self.config) = self.__init_alpm__()
+
+    self.__open_dbs__()
 
     self.lock = lock
     self.timer = threading.Timer(1.0, self.handle_timer)
@@ -135,6 +416,11 @@ class shell:
 
     #self.opts , self.long_opts = getopt.getopt(command_line, self.opt_names,
     #    self.long_opt_names)
+  # }}}
+
+  # def release(self): {{{
+  def release(self):
+    self.alpm.release()
   # }}}
 
   # def start_timer(self): {{{
@@ -628,7 +914,28 @@ class shell:
       self.prev_return = None
       return
   # }}}
-  
+
+  # def alpm_get_dbs(self): {{{
+  def alpm_get_dbs(self):
+    return self.dbs
+  # }}}
+
+  # def alpm_get_dbs_by_name(self): {{{
+  def alpm_get_dbs_by_name(self):
+    return self.dbs_by_name
+  # }}}
+
+  # def alpm_get_package_cache(self, treename): {{{
+  def alpm_get_package_cache(self, treename):
+    return self.dbs_by_name[treename].get_pkg_cache()
+  # }}}
+
+  # def alpm_get_package_iterator(self, treename): {{{
+  def alpm_get_package_iterator(self, treename):
+    #return self.alpm.get_pkg_cache()
+    return self.dbs_by_name[treename].get_package_iterator()
+  # }}}
+
   # def repofiles2(self): {{{
   def repofiles2(self):
     self.prev_return = None
@@ -808,6 +1115,25 @@ class shell:
     #  return (True, out)
   # }}}
     
+  # def alpm_pkg_in_repo(self, pkgname, repo): {{{
+  def alpm_pkg_in_repo(self, pkgname, repo):
+    pkg_cache = self.dbs_by_name[repo].get_pkg_cache()
+
+    for pkg in pkg_cache:
+      if pkg.get_name() == pkgname:
+        return (True, pkg.get_version())
+    return (False, None)
+  # }}}
+
+  # def alpm_get_pkg_repo(self, pkgname): {{{
+  def alpm_get_pkg_repo(self, pkgname):
+    for repo in self.db_names:
+      (found, version) = self.alpm_pkg_in_repo(pkgname, repo)
+      if found:
+        return (repo, version)
+    return (None, None)
+  # }}}
+
   # def install_noconfirm(self, what = ''): {{{
   def install_noconfirm(self, what = ''):
     if not self.__is_root__():

@@ -182,10 +182,19 @@ class gui:
         # pkg was installed separately)
         available_version = '--'
         
-      self.liststore.append([False, k, v[1], available_version])
+      #self.liststore.append([False, k, v[1], available_version])
     #for i in range(2):
     #  self.liststore.append([False, 'a', 'b', 'c'])
   
+    #for dbname in self.db_names:
+    for pkg in self.shell.alpm_get_package_iterator("local"):
+      name = pkg.get_name()
+      (pkg_repo, available_version) = self.shell.alpm_get_pkg_repo(name)
+      if pkg_repo:
+        self.liststore.append([False, pkg.get_name(), pkg.get_version(),
+            available_version])
+      #print "$$$: ", ("local", pkg.get_name(), pkg.get_version(),
+      #    pkg_repo, available_version)
     self.treeview.set_model(self.liststore)
   # }}}
   
@@ -214,10 +223,15 @@ class gui:
     #self.treestore_repos.append(iter0, ['Last Uninstalled'])
 
     iter1 = self.treestore_repos.append(None, ['Repos'])
-    for repo, v in self.pkgs_by_repo.iteritems():
+    
+    #for repo, v in self.pkgs_by_repo.iteritems():
+    #  repo = repo.capitalize()
+    #  self.treestore_repos.append(iter1, [repo])
+
+    for repo in self.db_names:
       repo = repo.capitalize()
       self.treestore_repos.append(iter1, [repo])
-    
+
     self.treeview_repos.set_model(self.treestore_repos)
     self.treeview_repos.expand_all()
   # }}}
@@ -458,6 +472,7 @@ class gui:
 
     self.shell = shell(command_line = None, lock = self.lock, interactive = True)
     self.populate_pkg_lists()
+    self.populate_pkg_lists2()
     # pid of pacman process
     self.pid = 0
 
@@ -1063,6 +1078,7 @@ class gui:
   def on_quit_activate(self, menuitem):
     gobject.source_remove(self.timer)
     self.timer = 0
+    self.shell.release()
     gtk.main_quit()
     return False
   # }}}
@@ -1087,6 +1103,7 @@ class gui:
 
   # def on_delete_event(self, widget, event, data=None): {{{
   def on_delete_event(self, widget, event, data=None):
+    self.shell.release()
     return False
   # }}}
 
@@ -1945,11 +1962,14 @@ class gui:
   # def get_dependencies(self, pkgs_installed, output): {{{
   def get_dependencies(self, pkgs_installed, output):
     output_list = output.splitlines()
+    deps_list = []
+    print output_list
     for line in output_list:
       if line.startswith('Targets'):
         #deps_list = [self.split_pkg_name(x) for x in (line.split(' ')[1:])]
         deps_list = [self.get_pkg_name(x) for x in (line.split(' ')[1:])]
         break
+    print deps_list
     deps_list2 = []
     for dep_name in deps_list:
       if dep_name not in pkgs_installed:
@@ -2326,6 +2346,12 @@ class gui:
         return None
     
     (self.pkgs_by_repo, self.pkgs) = self.shell.get_prev_return()
+  # }}}
+
+  # def populate_pkg_lists2(self): {{{
+  def populate_pkg_lists2(self):
+    self.db_names = self.shell.get_db_names()
+    self.alpm_local_pkgs = self.shell.alpm_get_package_cache("local")
   # }}}
 
   # def populate_pkg_lists(self): {{{
