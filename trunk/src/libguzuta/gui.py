@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: UTF-8 -*
-# vim: set foldmethod=marker:
+# vim:set fdm=marker:
 
 # imports {{{
 import pygtk
@@ -182,19 +182,19 @@ class gui:
         # pkg was installed separately)
         available_version = '--'
         
-      #self.liststore.append([False, k, v[1], available_version])
+      self.liststore.append([False, k, v[1], available_version])
     #for i in range(2):
     #  self.liststore.append([False, 'a', 'b', 'c'])
   
     #for dbname in self.db_names:
-    for pkg in self.shell.alpm_get_package_iterator("local"):
-      name = pkg.get_name()
-      (pkg_repo, available_version) = self.shell.alpm_get_pkg_repo(name)
-      if pkg_repo:
-        self.liststore.append([False, pkg.get_name(), pkg.get_version(),
-            available_version])
-      #print "$$$: ", ("local", pkg.get_name(), pkg.get_version(),
-      #    pkg_repo, available_version)
+    #for pkg in self.shell.alpm_get_package_iterator("local"):
+    #  name = pkg.get_name()
+    #  (pkg_repo, available_version) = self.shell.alpm_get_pkg_repo(name)
+    #  #if pkg_repo:
+    #  self.liststore.append([False, pkg.get_name(), pkg.get_version(),
+    #      available_version])
+    #  #print "$$$: ", ("local", pkg.get_name(), pkg.get_version(),
+    #  #    pkg_repo, available_version)
     self.treeview.set_model(self.liststore)
   # }}}
   
@@ -1014,7 +1014,6 @@ class gui:
       name = treemodel.get_value(iter, 1)
 
       #print 'name:<%s>' % name
-      
       buffer = gtk.TextBuffer()
       
       try:
@@ -1026,7 +1025,8 @@ class gui:
 
         self.try_sem_animate_progress_bar()
 
-        info = self.shell.get_prev_return()
+        #info = self.shell.get_prev_return()
+        info = self.shell.alpm_local_info(name)
         self.local_pkg_info[name] = info
       
       if info == None:
@@ -1042,7 +1042,8 @@ class gui:
             print 'None! CC2'
             return None
           
-          remote_info = self.shell.get_prev_return()
+          #remote_info = self.shell.get_prev_return()
+          remote_info = self.shell.alpm_info(name)
           self.remote_pkg_info[name] = remote_info
 
         self.__add_pkg_info_markuped_to_text_buffer__(buffer, remote_info,\
@@ -1060,6 +1061,7 @@ class gui:
       #  print tag.get_property('name')
 
     else: # treeview of repos
+      print 'treeview of repos'
       repo = treemodel.get_value(iter, 0)
       if repo == 'Pseudo Repos' or repo == 'Repos':
         return 
@@ -2302,7 +2304,8 @@ class gui:
           print 'None!'
           return None
         
-        self.remote_pkg_info[name] = self.shell.get_prev_return()
+        #self.remote_pkg_info[name] = self.shell.get_prev_return()
+        self.remote_pkg_info[name] = self.shell.alpm_info(name)
   # }}}
 
   # def populate_local_pkg_list(self): {{{
@@ -2316,7 +2319,11 @@ class gui:
       print 'None!'
       return None
     
-    self.local_pkgs = self.shell.get_prev_return()
+    #self.local_pkgs = self.shell.get_prev_return()
+    self.local_pkgs = self.shell.alpm_local_search()
+    #print '$$$: LOCAL_PKGS: ', len(self.local_pkgs)
+    #for name in self.local_pkgs.iteritems():
+    #  print '$$$: ', name
   # }}}
 
   # def populate_pkgs_by_repo(self): {{{
@@ -2345,7 +2352,8 @@ class gui:
         print 'None!'
         return None
     
-    (self.pkgs_by_repo, self.pkgs) = self.shell.get_prev_return()
+    #(self.pkgs_by_repo, self.pkgs) = self.shell.get_prev_return()
+    (self.pkgs_by_repo, self.pkgs) = self.shell.alpm_repofiles2()
   # }}}
 
   # def populate_pkg_lists2(self): {{{
@@ -2480,7 +2488,7 @@ class gui:
               if mb_size > 1024:
                 gb_size = mb_size / 1024
                 normal_stuff = str(gb_size) + ' GB'
-            text_buffer.insert(iterator, normal_stuff +\
+            text_buffer.insert(iterator, ' ' + normal_stuff +\
                 '\n')
           elif line.startswith('URL'):
             if hyperlink_tag == None:
@@ -2541,6 +2549,7 @@ class gui:
         name = v[0] # name
         try:
           # repo, version, description
+          print '###: ', self.local_pkgs[name]
           installed_version = self.local_pkgs[name][1]
         except KeyError:
           # not installed
@@ -2555,6 +2564,7 @@ class gui:
     elif repo == 'installed':
       # installed {{{
       for name, v in self.local_pkgs.iteritems():
+        print '###: ', name, v
         #available version
         try:
           available_version = self.pkgs[name][1]
@@ -2584,10 +2594,26 @@ class gui:
       # }}}
     elif repo == 'not installed':
       # not installed {{{
+      #print 'SELF.PKGS:'
+      #for name in self.pkgs.iteritems():
+      #  print '###: ', name
+      #print 'SELF.LOCAL_PKGS:'
+      #for name in self.local_pkgs.iteritems():
+      #  print '###: ', name
+
+      # TODO: cache this
+      # TODO: manually installed pkgs can be collected by
+      #       checking if the packages in not_installed are from
+      #       repo 'local'. cache this
       not_installed = xor_two_dicts(self.local_pkgs, self.pkgs)
+      
+      #print 'NOT_INSTALLED:'
+      #for name in not_installed.iteritems():
+      #  print '###: ', name
       # pkg: repo, version
       for name, v in not_installed.iteritems():
-        self.liststore.append([False, name, '--', v[1]])
+        if v[0] != 'local':
+          self.liststore.append([False, name, '--', v[1]])
       # }}}
     elif repo == 'last installed':
       # TODO: last installed {{{
@@ -2695,7 +2721,8 @@ class gui:
             print 'None!'
             return None
           
-          info = self.shell.get_prev_return()
+          #info = self.shell.get_prev_return()
+          info = self.shell.alpm_info(installed_pkg)
         self.local_pkg_info[installed_pkg] = info
 
       if info == None:
@@ -2710,7 +2737,8 @@ class gui:
             print 'None!'
             return None
           
-          info = self.shell.get_prev_return()
+          #info = self.shell.get_prev_return()
+          info = self.shell.alpm_local_info(installed_pkg)
           self.local_pkg_info[installed_pkg] = info
 
       n = len(info)

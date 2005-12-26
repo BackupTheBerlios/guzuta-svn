@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: UTF-8 -*
-# vim: set foldmethod=marker:
+# vim:set fdm=marker:
 
 import os, os.path, sys, posix, signal, re, threading
 from subprocess import *
@@ -887,6 +887,23 @@ class shell:
       return None
   # }}}
     
+  # def alpm_local_search(self, what = ''): {{{
+  def alpm_local_search(self, what = ''):
+    self.local_pkgs = {}
+
+    #for dbname, db in self.dbs_by_name.iteritems():
+    dbname = 'local'
+    db = self.dbs_by_name[dbname]
+    for pkg in db.get_package_iterator():
+      name = pkg.get_name()
+      version = pkg.get_version()
+      description = pkg.get_description()
+
+      self.local_pkgs[name] = (dbname, version, description)
+
+    return self.local_pkgs
+  # }}}
+
   # def local_search(self, what= ''): {{{
   def local_search(self, what= ''):
     self.prev_return = None
@@ -935,11 +952,34 @@ class shell:
     #return self.alpm.get_pkg_cache()
     return self.dbs_by_name[treename].get_package_iterator()
   # }}}
+  
+  # def alpm_repofiles2(self): {{{
+  def alpm_repofiles2(self):
+    # all[repo].append((name, version, description))
+    # pkgs[name] = (repo, version, description)
+    self.all = {}
+    self.pkgs = {}
+
+    for dbname, db in self.dbs_by_name.iteritems():
+      if dbname != "local":
+        self.all[dbname] = []
+
+        for pkg in db.get_package_iterator():
+          name = pkg.get_name()
+          version = pkg.get_version()
+          description = pkg.get_description()
+
+          self.all[dbname].append((name, version, description))
+          self.pkgs[name] = (dbname, version, description)
+    return (self.all, self.pkgs)
+  # }}}
 
   # def repofiles2(self): {{{
   def repofiles2(self):
     self.prev_return = None
     self.run_pacman_with('-Ss \"\"')
+
+    self.alpm_repofiles2()
 
     if self.pacman.get_pipeit() == True:
 
@@ -1131,7 +1171,7 @@ class shell:
       (found, version) = self.alpm_pkg_in_repo(pkgname, repo)
       if found:
         return (repo, version)
-    return (None, None)
+    return (None, '--')
   # }}}
 
   # def install_noconfirm(self, what = ''): {{{
@@ -1480,6 +1520,332 @@ class shell:
     return all
   # }}}
   
+  # def alpm_pkg_to_list(self, pkg): {{{
+  def alpm_pkg_to_list(self, pkg):
+    name = pkg.get_name()
+    version = pkg.get_version()
+    groups = pkg.get_groups()
+    packager = pkg.get_packager()
+    url = pkg.get_url()
+    license = pkg.get_license()
+    architecture = pkg.get_architecture()
+    size = pkg.get_size()
+    build_date = pkg.get_build_date()
+    install_date = pkg.get_install_date()
+    scriptlet = pkg.get_scriptlet()
+    reason = pkg.get_reason()
+    provides = pkg.get_provides()
+    depends = pkg.get_depends()
+    requires = pkg.get_requires()
+    conflicts = pkg.get_conflicts()
+    description = pkg.get_description()
+    maxcols = 80
+    cols = 0
+
+    string = ''
+    line = ''
+    list = []
+    list.append('Name\t: ' + name)
+    list.append('Version\t: ' + version)
+    string = string + 'Groups\t: '
+
+    line = string
+    if len(groups):
+      for group in groups:
+        if len(line) >= maxcols:
+          line = group + ' '
+          string = string + '\n\t\t\t\t' + group + ' '
+        else:
+          line = line + group + ' '
+          string = string + group + ' '
+    else:
+      string = string + 'None'
+
+    list.append(string)
+    list.append('Packager\t: ' + packager)
+    list.append('URL\t: ' + url)
+    if license == None:
+      license = 'None'
+    list.append('License\t: ' + license)
+    list.append('Architecture\t: ' + architecture)
+    list.append('Size\t: ' + str(size))
+    list.append('Build Date\t: ' + build_date)
+    list.append('Install Date\t: ' + install_date)
+    if scriptlet == 0:
+      scriptlet = 'No'
+    else:
+      scriptlet = 'Yes'
+    list.append('Install Script\t: ' + scriptlet)
+    string = ''
+    string = string + 'Reason\t: '
+    if reason == 0:
+      string = string + 'installed as a dependency for another package'
+    else:
+      string = string + 'explicitly installed'
+    list.append(string)
+    string = ''
+    string = string + 'Provides\t: '
+
+    line = string
+    if len(provides):
+      for provide in provides:
+        if len(line) >= maxcols:
+          line = provide + ' '
+          string = string + '\n\t\t\t\t' + provide + ' '
+        else:
+          line = line + provide + ' '
+          string = string + provide + ' '
+    else:
+      string = string + 'None'
+
+    list.append(string)
+    string = ''
+    string = string + 'Depends On\t: '
+
+    line = string
+    if len(depends):
+      for depend in depends:
+        if len(line) >= maxcols:
+          line = depend + ' '
+          string = string + '\n\t\t\t\t' + depend + ' '
+        else:
+          line = line + depend + ' '
+          string = string + depend + ' '
+    else:
+      string = string + 'None'
+    
+    list.append(string)
+    string = ''
+    string = string + 'Required By\t: '
+
+    line = string
+    if len(requires):
+      for require in requires:
+        if len(line) >= maxcols:
+          line = require + ' '
+          string = string + '\n\t\t\t\t' + require + ' '
+        else:
+          line = line + require + ' '
+          string = string + require + ' '
+    else:
+      string = string + 'None'
+    
+    list.append(string)
+    string = ''
+    string = string + 'Conflicts With\t: '
+
+    line = string
+    if len(conflicts):
+      for conflict in conflicts:
+        if len(line) >= maxcols:
+          line = conflict + ' '
+          string = string + '\n\t\t\t\t' + conflict + ' '
+        else:
+          line = line + conflict + ' '
+          string = string + conflict + ' '
+    else:
+      string = string + 'None'
+
+    list.append(string)
+    list.append('Description\t: ' + description)
+    return list
+  # }}}
+
+  # def alpm_remote_pkg_to_list(self, pkg): {{{
+  def alpm_remote_pkg_to_list(self, pkg):
+    name = pkg.get_name()
+    version = pkg.get_version()
+    groups = pkg.get_groups()
+    provides = pkg.get_provides()
+    depends = pkg.get_depends()
+    conflicts = pkg.get_conflicts()
+    replaces = pkg.get_replaces()
+    size = pkg.get_size()
+    description = pkg.get_description()
+    md5sum = pkg.get_md5sum()
+
+    maxcols = 80
+    cols = 0
+
+    string = ''
+    line = ''
+    list = []
+    list.append('Name\t: ' + name)
+    list.append('Version\t: ' + version)
+    string = string + 'Groups\t: '
+
+    line = string
+    if len(groups):
+      for group in groups:
+        if len(line) >= maxcols:
+          line = group + ' '
+          string = string + '\n\t\t\t\t' + group + ' '
+        else:
+          line = line + group + ' '
+          string = string + group + ' '
+    else:
+      string = string + 'None'
+
+    list.append(string)
+    string = ''
+    string = string + 'Provides\t: '
+
+    line = string
+    if len(provides):
+      for provide in provides:
+        if len(line) >= maxcols:
+          line = provide + ' '
+          string = string + '\n\t\t\t\t' + provide + ' '
+        else:
+          line = line + provide + ' '
+          string = string + provide + ' '
+    else:
+      string = string + 'None'
+
+    list.append(string)
+    string = ''
+    string = string + 'Depends On\t: '
+
+    line = string
+    if len(depends):
+      for depend in depends:
+        if len(line) >= maxcols:
+          line = depend + ' '
+          string = string + '\n\t\t\t\t' + depend + ' '
+        else:
+          line = line + depend + ' '
+          string = string + depend + ' '
+    else:
+      string = string + 'None'
+    
+    list.append(string)
+    string = ''
+    string = string + 'Conflicts With\t: '
+
+    line = string
+    if len(conflicts):
+      for conflict in conflicts:
+        if len(line) >= maxcols:
+          line = conflict + ' '
+          string = string + '\n\t\t\t\t' + conflict + ' '
+        else:
+          line = line + conflict + ' '
+          string = string + conflict + ' '
+    else:
+      string = string + 'None'
+
+    string = ''
+    string = string + 'Replaces\t: '
+
+    line = string
+    if len(replaces):
+      for replace in replaces:
+        if len(line) >= maxcols:
+          line = replace + ' '
+          string = string + '\n\t\t\t\t' + replace + ' '
+        else:
+          line = line + replace + ' '
+          string = string + replace + ' '
+    else:
+      string = string + 'None'
+
+    list.append(string)
+    list.append('Size (compressed)\t: ' + str(size))
+    list.append('Description\t: ' + description)
+    return list
+  # }}}
+
+  # def alpm_pkg_to_string(self, pkg): {{{
+  def alpm_pkg_to_string(self, pkg):
+    name = pkg.get_name()
+    version = pkg.get_version()
+    groups = pkg.get_groups()
+    packager = pkg.get_packager()
+    url = pkg.get_url()
+    license = pkg.get_license()
+    architecture = pkg.get_architecture()
+    size = pkg.get_size()
+    build_date = pkg.get_build_date()
+    install_date = pkg.get_install_date()
+    scriptlet = pkg.get_scriptlet()
+    reason = pkg.get_reason()
+    provides = pkg.get_provides()
+    depends = pkg.get_depends()
+    requires = pkg.get_requires()
+    conflicts = pkg.get_conflicts()
+    description = pkg.get_description()
+
+    string = ""
+    string = string + 'Name\t: ' + name + '\n'
+    string = string + 'Version\t: ' + version + '\n'
+    string = string + 'Groups\t: '
+    if len(groups):
+      for group in groups:
+        string = string + group + ' '
+    else:
+      string = string + 'None'
+    string = string + '\nPackager\t: ' + packager + '\n'
+    string = string + 'URL\t: ' + url + '\n'
+    if license == None:
+      license = 'None'
+    string = string + 'License\t: ' + license + '\n'
+    string = string + 'Architecture\t: ' + architecture + '\n'
+    string = string + 'Size\t: ' + str(size) + '\n'
+    string = string + 'Build Date\t: ' + build_date + '\n'
+    string = string + 'Install Date\t: ' + install_date + '\n'
+    if scriptlet == 0:
+      scriptlet = 'No'
+    else:
+      scriptlet = 'Yes'
+    string = string + 'Install Script\t: ' + scriptlet + '\n'
+    string = string + 'Reason\t: '
+    if reason == 0:
+      string = string + 'installed as a dependency for another package'
+    else:
+      string = string + 'explicitly installed'
+    string = string + 'Provides\t: '
+    if len(provides):
+      for provide in provides:
+        string = string + provide + ' '
+    else:
+      string = string + 'None'
+    string = string + '\n'
+    string = string + 'Depends On\t: '
+    if len(depends):
+      for depend in depends:
+        string = string + depend + ' '
+    else:
+      string = string + 'None'
+    string = string + '\n'
+    string = string + 'Required By\t: '
+    if len(requires):
+      for require in pkg.get_requires():
+        string = string + require + ' '
+    else:
+      string = string + 'None'
+    string = string + '\n'
+    string = string + 'Conflicts With\t: '
+    if len(conflicts):
+      for conflict in pkg.get_conflicts():
+        string = string + conflict + ' '
+    else:
+      string = string + 'None'
+    string = string + '\n'
+    string = string + 'Description\t: ' + pkg.get_description()
+    return string
+  # }}}
+
+  # def alpm_local_info(self, what = ''): {{{
+  def alpm_local_info(self, what = ''):
+    db = self.dbs_by_name['local']
+    try:
+      pkg = db.read_pkg(what)
+    except alpm.NoSuchPackageException:
+      return None
+    #return self.alpm_pkg_to_string(pkg)
+    return self.alpm_pkg_to_list(pkg)
+  # }}}
+
   # def local_info(self, what = ''): {{{
   def local_info(self, what = ''):
     if what == '':
@@ -1511,6 +1877,18 @@ class shell:
       return
   # }}}
   
+  # def alpm_info(self, what = ''): {{{
+  def alpm_info(self, what = ''):
+    (repo, version, desc) = self.pkgs[what]
+    db = self.dbs_by_name[repo]
+    try:
+      pkg = db.read_pkg(what)
+    except alpm.NoSuchPackageException:
+      return None
+    #return self.alpm_pkg_to_string(pkg)
+    return self.alpm_remote_pkg_to_list(pkg)
+  # }}}
+
   # def info(self, what = ''): {{{
   def info(self, what = ''):
     if what == '':
