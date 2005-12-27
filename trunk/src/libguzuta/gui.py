@@ -473,6 +473,7 @@ class gui:
     self.shell = shell(command_line = None, lock = self.lock, interactive = True)
     self.populate_pkg_lists()
     self.populate_pkg_lists2()
+    self.dbs_by_name = self.shell.alpm_get_dbs_by_name()
     # pid of pacman process
     self.pid = 0
 
@@ -1131,6 +1132,7 @@ class gui:
         self.shell.start_timer()
         self.run_in_thread(self.shell.updatedb, {})
 
+        self.shell.alpm_refresh_dbs()
         self.try_sem_animate_progress_bar()
 
         if self.shell.get_prev_return() == None:

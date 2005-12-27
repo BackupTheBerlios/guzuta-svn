@@ -3,6 +3,7 @@
 # vim:set fdm=marker:
 
 import os, os.path, sys, posix, signal, re, threading
+import urllib, ftplib, httplib, shutil
 from subprocess import *
 import alpm
 from optparse import OptionParser
@@ -155,9 +156,7 @@ class shell:
           #    break
           #print "VOU PROCURAR POR: ", section.upper()
           (found, sync_temp) = self.__find_pmc__(pmc_syncs, section)
-          #print "found: ", found
-          #print "sync_temp: ", sync_temp
-          
+
           if not found:
             # start a new sync record
             #print "starting a new sync record"
@@ -168,7 +167,6 @@ class shell:
             sync = {}
             #print "pmc_syncs depois: ", pmc_syncs
           else:
-            #print "copying the sync record"
             sync = sync_temp
 
       else:
@@ -249,6 +247,11 @@ class shell:
               print "config: line %d: syntax error" % linenum
           else:
             if key == "SERVER":
+              
+              (found, sync_temp) = self.__find_pmc__(pmc_syncs, section)
+              if found:
+                sync = sync_temp
+
               server = {}
               server["server"] = ""
               server["path"] = ""
@@ -355,11 +358,6 @@ class shell:
       config["DBPATH"] = PACDB
 
     return (a, pmc_syncs, config)
-  # }}}
-
-  # def get_db_names(self): {{{
-  def get_db_names(self):
-    return self.db_names
   # }}}
 
   # def __open_dbs__(self): {{{
@@ -930,6 +928,16 @@ class shell:
       #return None
       self.prev_return = None
       return
+  # }}}
+
+  # def alpm_get_pmc_syncs(self): {{{
+  def alpm_get_pmc_syncs(self):
+    return self.pmc_syncs
+  # }}}
+
+  # def get_db_names(self): {{{
+  def get_db_names(self):
+    return self.db_names
   # }}}
 
   # def alpm_get_dbs(self): {{{
@@ -2133,6 +2141,34 @@ the terms of the GNU General Public License'''
   def get_err_pipe(self):
     return self.pacman.get_err_pipe()
   # }}}
+
+  # def alpm_refresh_dbs(self): {{{
+  def alpm_refresh_dbs(self):
+    a = []
+    for pmc in self.pmc_syncs:
+      treename = pmc['treename']
+      #lastupdate = pmc['db'].get_last_update()
+      #print 'lastupdate: ', lastupdate
+      db = pmc['db']
+      gzfile = treename + '.db.tar.gz'
+      destination = '/tmp/' + gzfile
+      servers = pmc['servers']
+      for server in servers:
+        url = server['protocol'] + '://' + server['server'] + server['path'] +\
+        gzfile
+        #print 'url <%s>' % url
+        #print 'tmp: ', ('/tmp/'+gzfile)
+        print 'refreshing database: ', treename
+        (filename, headers) = urllib.urlretrieve(url, destination)
+        print (filename, headers)
+        if filename:
+          # sync alpm
+          print 'sync\'ing ', treename
+          print db.update(destination)
+          break
+      #print pmc
+  # }}}
+
 # }}}
 
 # main {{{
