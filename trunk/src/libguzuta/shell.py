@@ -8,9 +8,75 @@ from subprocess import *
 import alpm
 from optparse import OptionParser
 
-# def f(param, string): {{{
-def f(param, string):
-  print "callback: param <%d> string <%s>" % (param,string)
+# def trans_cb_ev(event, package1, package2): {{{
+def trans_cb_ev(event, package1, package2):
+  if event == alpm.PM_TRANS_EVT_CHECKDEPS_START:
+    print 'checking dependencies...'
+  elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_START:
+    print 'checking for file conflicts...'
+  elif event == alpm.PM_TRANS_EVT_RESOLVEDEPS_START:
+    print 'resolving dependencies...'
+  elif event == alpm.PM_TRANS_EVT_INTERCONFLICTS_START:
+    print 'looking for inter-conflicts...'
+  elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_START:
+    print 'checking for file conflicts...'
+  elif event == alpm.PM_TRANS_EVT_CHECKDEPS_DONE:
+    print 'done.'
+  elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_DONE:
+    print 'done.'
+  elif event == alpm.PM_TRANS_EVT_RESOLVEDEPS_DONE:
+    print 'done.'
+  elif event == alpm.PM_TRANS_EVT_INTERCONFLICTS_DONE:
+    print 'done.'
+  elif event == alpm.PM_TRANS_EVT_ADD_START:
+    print 'installing %s...' % package1.get_name()
+  elif event == alpm.PM_TRANS_EVT_ADD_DONE:
+    print 'done.'
+  elif event == alpm.PM_TRANS_EVT_REMOVE_START:
+    print 'removing %s...' % package1.get_name()
+  elif event == alpm.PM_TRANS_EVT_REMOVE_DONE:
+    print 'done.'
+  elif event == alpm.PM_TRANS_EVT_UPGRADE_START:
+    print 'upgrading %s...' % package1.get_name()
+  elif event == alpm.PM_TRANS_EVT_UPGRADE_DONE:
+    print 'done.'
+  #print "Event:", (event, package, package2)
+# }}}
+
+# def trans_cb_conv(question, lpkg, spkg, treename): {{{
+def trans_cb_conv(question, lpkg, spkg, treename):
+  print "Question:", (question, lpkg, spkg, treename)
+
+  if (question == alpm.PM_TRANS_CONV_INSTALL_IGNOREPKG):
+    print "PM_TRANS_CONV_INSTALL_IGNOREPKG"
+  if (question == alpm.PM_TRANS_CONV_REPLACE_PKG):
+    print "PM_TRANS_CONV_REPLACE_PKG"
+  if (question == alpm.PM_TRANS_CONV_LOCAL_NEWER):
+    print "PM_TRANS_CONV_LOCAL_NEWER"
+  if (question == alpm.PM_TRANS_CONV_LOCAL_UPTODATE):
+    print "PM_TRANS_CONV_LOCAL_UPTODATE"
+  return 4
+# }}}
+
+# def f(level, message): {{{
+def f(level, message):
+  level_str = ''
+  if level == alpm.PM_LOG_DEBUG:
+    level_str = 'DEBUG'
+  elif level == alpm.PM_LOG_ERROR:
+    level_str = 'ERROR'
+  elif level == alpm.PM_LOG_WARNING:
+    level_str = 'WARNING'
+  elif level == alpm.PM_LOG_FLOW1:
+    level_str = 'FLOW1'
+  elif level == alpm.PM_LOG_FLOW2:
+    level_str = 'FLOW2'
+  elif level == alpm.PM_LOG_FUNCTION:
+    level_str = 'FUNCTION'
+  else:
+    level_str = 'UNKNOWN'
+
+  print '%s: %s' % (level_str, message)
 # }}}
 
 #class pacman: {{{
@@ -333,7 +399,9 @@ class shell:
     except KeyError:
       config["CONFIGFILE"] = PACCONF
     
-    config["DEBUG"] = alpm.PM_LOG_WARNING
+    config["DEBUG"] = alpm.PM_LOG_WARNING | alpm.PM_LOG_DEBUG |\
+      alpm.PM_LOG_FLOW2 |alpm.PM_LOG_ERROR | alpm.PM_LOG_FLOW1 |\
+      alpm.PM_LOG_FUNCTION
 
     self.__parseconfig__(a, config["CONFIGFILE"], pmc_syncs, config)
 
@@ -2144,29 +2212,61 @@ the terms of the GNU General Public License'''
 
   # def alpm_refresh_dbs(self): {{{
   def alpm_refresh_dbs(self):
-    a = []
     for pmc in self.pmc_syncs:
       treename = pmc['treename']
-      #lastupdate = pmc['db'].get_last_update()
-      #print 'lastupdate: ', lastupdate
       db = pmc['db']
       gzfile = treename + '.db.tar.gz'
       destination = '/tmp/' + gzfile
       servers = pmc['servers']
       for server in servers:
         url = server['protocol'] + '://' + server['server'] + server['path'] +\
-        gzfile
-        #print 'url <%s>' % url
-        #print 'tmp: ', ('/tmp/'+gzfile)
-        print 'refreshing database: ', treename
+          gzfile
+        #print 'refreshing database: ', treename
         (filename, headers) = urllib.urlretrieve(url, destination)
-        print (filename, headers)
+        #print (filename, headers)
         if filename:
           # sync alpm
-          print 'sync\'ing ', treename
-          print db.update(destination)
+          #print 'sync\'ing ', treename
+          try:
+            print db.update(destination)
+          except alpm.DatabaseException, instance:
+            print inst
+            return None
+          try:
+            os.remove(destination)
+          except OSError:
+            print '%s is a directory?' % destination
+            return None
           break
-      #print pmc
+  # }}}
+
+  # def alpm_update_db(self): {{{
+  def alpm_update_db(self):
+    root = self.alpm.get_root()
+    dbpath = self.alpm.get_db_path()
+    self.alpm_refresh_dbs()
+
+    try:
+    # create a new transaction
+      self.alpm.transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0, trans_cb_ev)
+        #, trans_cb_conv)
+    except alpm.TransactionException, inst:
+      print inst
+      return
+
+    try:
+      self.alpm.transaction_sysupgrade()
+      #for pkg in self.alpm.transaction_get_package_iterator():
+      #  print 'pkg: ', pkg
+      list = self.alpm.transaction_get_syncpackages()
+      for pkg in list:
+        print 'pkg to upgrade: ', pkg
+        print pkg.get_package()
+    except alpm.TransactionException, inst:
+      print inst
+
+    self.alpm.transaction_release()
+    print 'yay'
   # }}}
 
 # }}}

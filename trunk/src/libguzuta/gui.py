@@ -1132,7 +1132,7 @@ class gui:
         self.shell.start_timer()
         self.run_in_thread(self.shell.updatedb, {})
 
-        self.shell.alpm_refresh_dbs()
+        self.shell.alpm_update_db()
         self.try_sem_animate_progress_bar()
 
         if self.shell.get_prev_return() == None:
