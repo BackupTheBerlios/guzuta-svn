@@ -451,6 +451,7 @@ class shell:
     self.pacman = pacman()
     self.yesno = False
 
+    self.trans = None
     (self.alpm, self.pmc_syncs, self.config) = self.__init_alpm__()
 
     self.__open_dbs__()
@@ -2240,49 +2241,43 @@ the terms of the GNU General Public License'''
           break
   # }}}
 
-  # def alpm_check_if_pkg_in_pkg_list(self, pkg_name, pkg_list): {{{
-  def alpm_check_if_pkg_in_pkg_list(self, pkg_name, pkg_list):
-    for pkg in pkg_list:
-      if pkg.get_name() == pkg_name:
+  # def alpm_check_if_pkg_in_pkg_list(self, pkg_name, syncpkg_list): {{{
+  def alpm_check_if_pkg_in_pkg_list(self, pkg_name, syncpkg_list):
+    for syncpkg in syncpkg_list:
+      if syncpkg.get_package().get_name() == pkg_name:
         return True
     return False
   # }}}
 
-  # def alpm_update_db(self): {{{
-  def alpm_update_db(self):
-    root = self.alpm.get_root()
-    dbpath = self.alpm.get_db_path()
-    self.alpm_refresh_dbs()
-
-    try:
-    # create a new transaction
-      self.alpm.transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0, trans_cb_ev)
-        #, trans_cb_conv)
-    except alpm.TransactionException, inst:
-      print inst
-      return
-
-    try:
-      print ':: Starting local database upgrade...'
-      self.alpm.transaction_sysupgrade()
-      #for pkg in self.alpm.transaction_get_package_iterator():
-      #  print 'pkg: ', pkg
-      upgrades = self.alpm.transaction_get_syncpackages()
-      #for pkg in list:
-      #  print 'pkg to upgrade: ', pkg
-      #  print pkg.get_package()
-      if self.alpm_check_if_pkg_in_pkg_list('pacman', upgrades):
-        # pacman is in the upgrade list
-        # upgrade it first
-        # TODO: ask the user
-        pass
-    except alpm.TransactionException, inst:
-      print inst
-
-    self.alpm.transaction_release()
-    print 'yay'
+  # def alpm_transaction_init(self): {{{
+  def alpm_transaction_init(self):
+    self.trans = self.alpm.transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0, trans_cb_ev)
   # }}}
 
+  # def alpm_update_db(self): {{{
+  def alpm_update_db(self):
+    # PRE: alpm_transaction_init
+    # POS: alpm_trans_release
+    root = self.alpm.get_root()
+    dbpath = self.alpm.get_db_path()
+    upgrades = []
+    missed_deps = []
+    packages = []
+
+    try:
+      self.trans.sysupgrade()
+      upgrades = self.trans.get_syncpackages()
+      missed_deps = self.trans.prepare()
+    except alpm.TransactionException, inst:
+      print inst
+
+    return (upgrades, missed_deps)
+  # }}}
+
+  # def alpm_trans_release(self): {{{
+  def alpm_trans_release(self):
+    self.trans.release()
+  # }}}
 # }}}
 
 # main {{{

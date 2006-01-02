@@ -1062,7 +1062,7 @@ class gui:
       #  print tag.get_property('name')
 
     else: # treeview of repos
-      print 'treeview of repos'
+      #print 'treeview of repos'
       repo = treemodel.get_value(iter, 0)
       if repo == 'Pseudo Repos' or repo == 'Repos':
         return 
@@ -1125,38 +1125,20 @@ class gui:
 
   # def on_update_db_clicked(self, button, skip_update_db = False): {{{
   def on_update_db_clicked(self, button, skip_update_db = False):
-    #if button == self.update_db and self.__is_root__():
     if button == self.update_db:
-      #ret, ret_err = self.shell.updatedb()
+      self.init_transaction = False
       if not skip_update_db:
         self.shell.start_timer()
-        self.run_in_thread(self.shell.updatedb, {})
+        #self.run_in_thread(self.shell.updatedb, {})
 
-        self.shell.alpm_update_db()
+        self.init_transaction = True
+        self.shell.alpm_refresh_dbs()
+        self.shell.alpm_transaction_init()
+
+        (upgrades, missed_deps) = self.shell.alpm_update_db()
+        #print "GUI: upgrades: ", upgrades
+        #print "GUI: missed_deps: ", missed_deps
         self.try_sem_animate_progress_bar()
-
-        if self.shell.get_prev_return() == None:
-          print 'None!'
-          return True
-
-        ret, ret_err = self.shell.get_prev_return()
-
-        
-        if self.shell.get_exit_status() != 0:
-          if self.cancelled:
-            return True
-          else:
-            # something has gone horribly wrong
-            pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
-            pacman_error_dialog =\
-                self.all_widgets.get_widget('pacman_error_dialog')
-            self.current_dialog = pacman_error_dialog
-            pacman_error_label.set_text(ret_err)
-            self.current_dialog_on = True
-            pacman_error_dialog.run()
-            pacman_error_dialog.hide()
-            self.current_dialog_on = False
-            return True
 
         self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
         self.current_dialog = self.update_db_popup
@@ -1166,134 +1148,46 @@ class gui:
         self.update_db_popup.hide()
         self.current_dialog_on = False
 
-      #updates = self.shell.get_fresh_updates()
-      #self.run_in_thread(self.shell.get_fresh_updates, {})
-      self.shell.start_timer()
-      self.run_in_thread(self.shell.get_fresh_updates_part_1, {})
-
-      self.try_sem_animate_progress_bar()
-
-      if self.shell.get_prev_return() == None:
-        print 'None!'
-        return True
-      
-      (yesno, out, err) = self.shell.get_prev_return()
-      
-      if err:
-        pacman_error_dialog =\
-            self.all_widgets.get_widget('pacman_error_dialog')
-        self.current_dialog = pacman_error_dialog
-        pacman_error_label = self.all_widgets.get_widget('pacman_error_label')
-        pacman_error_label.set_text(err)
+      # check if pacman is in the upgrades
+      if self.shell.alpm_check_if_pkg_in_pkg_list('pacman', upgrades):
+        pacman_upgrade_dialog =\
+          self.all_widgets.get_widget('pacman_upgrade_dialog')
+        self.current_dialog = pacman_upgrade_dialog
+        
         self.current_dialog_on = True
-        pacman_error_dialog.run()
-        pacman_error_dialog.hide()
+        response = pacman_upgrade_dialog.run()
+        pacman_upgrade_dialog.hide()
         self.current_dialog_on = False
-        return True
-
-      conflicting_pkg = ''
-      try:
-        i = out.index('conflicts with')
-        conflicting_pkg = out[3:i-1]
-        dot_index = out.rindex('.')
-        affected_pkg = out[i + len('conflicts with') + 1:dot_index]
-        #print 'conflicting <%s> affected <%s>' %(conflicting_pkg, affected_pkg)
-        conflicts_dialog = self.all_widgets.get_widget('conflicts_dialog')
-        self.current_dialog = conflicts_dialog
-        conflicts_label =\
-          self.all_widgets.get_widget('conflicts_label')
-        text = "Package <b>%s</b> conflicts with <b>%s</b>.\nDo you want to continue upgrading?" % (conflicting_pkg, affected_pkg)
-        conflicts_label.set_markup(text)
-
-        self.current_dialog_on = True
-        response = conflicts_dialog.run()
-        conflicts_dialog.hide()
-        self.current_dialog_on = False
+        
         if response == gtk.RESPONSE_OK:
           self.shell.start_timer()
-          self.run_in_thread(self.shell.get_fresh_updates_part_2,
-              {'pacman_upgrade': False, 'out': out, 'resolve_conflicts': True})
+          #self.run_in_thread(self.shell.get_fresh_updates_part_2,
+          #    {'pacman_upgrade': True, 'out': out})
+          self.install_packages_from_list(['pacman'])
+
           self.try_sem_animate_progress_bar()
-        elif response == gtk.RESPONSE_REJECT:
-          self.shell.start_timer()
-          self.run_in_thread(self.shell.get_fresh_updates_part_2,
-              {'pacman_upgrade': False, 'out': out,
-              'pkg_not_to_upgrade': conflicting_pkg})
-          self.try_sem_animate_progress_bar()
+
+          self.on_update_db_clicked(button, True)
+          
         else:
-          return True
-      except ValueError:
-        try:
-          out.index('Upgrade pacman first?')
-          # this means there's a new version of pacman to upgrade
-          # to upgrade it
-          pacman_upgrade_dialog =\
-            self.all_widgets.get_widget('pacman_upgrade_dialog')
-          self.current_dialog = pacman_upgrade_dialog
-          
-          self.current_dialog_on = True
-          response = pacman_upgrade_dialog.run()
-          pacman_upgrade_dialog.hide()
-          self.current_dialog_on = False
-          
-          if response == gtk.RESPONSE_OK:
-            self.shell.start_timer()
-            self.run_in_thread(self.shell.get_fresh_updates_part_2,
-                {'pacman_upgrade': True, 'out': out})
-            self.install_packages_from_list(['pacman'])
-
-            self.try_sem_animate_progress_bar()
-
-            self.on_update_db_clicked(button, True)
-            
-          else:
-            self.shell.start_timer()
-            self.run_in_thread(self.shell.get_fresh_updates_part_2,
-                {'pacman_upgrade': True, 'out': out})
-            self.try_sem_animate_progress_bar()
-        except ValueError:
+          # go on
           self.shell.start_timer()
-          self.run_in_thread(self.shell.get_fresh_updates_part_2,
-              {'pacman_upgrade': False, 'out': out})
-          self.try_sem_animate_progress_bar()
+          #self.run_in_thread(self.shell.get_fresh_updates_part_2,
+          #    {'pacman_upgrade': True, 'out': out})
+          #self.try_sem_animate_progress_bar()
 
-        
-      updates = self.shell.get_prev_return()
-      print 'updates: ', updates
+      self.shell.start_timer()
 
-      if type(updates) == tuple:
-        exit_status, err = updates
-        generic_error_dialog =\
-          self.all_widgets.get_widget('conflicts_error_dialog')
-        self.current_dialog = generic_error_dialog
-        generic_error_label =\
-          self.all_widgets.get_widget('conflicts_error_label')
-        
-        generic_error_label.set_text(err + ('\t%s conflicts with %s' %
-            (conflicting_pkg, affected_pkg)))
-
-        self.current_dialog_on = True
-        response = generic_error_dialog.run()
-        generic_error_dialog.hide()
-        self.current_dialog_on = False
-
-        return True
-      if updates == []:
-        no_updates_dialog = self.all_widgets.get_widget('no_updates_dialog')
-        self.current_dialog = no_updates_dialog
-        self.current_dialog_on = True
-        no_updates_dialog.run()
-        no_updates_dialog.hide()
-        self.current_dialog_on = False
-        return 
+      self.try_sem_animate_progress_bar()
 
       fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
       self.current_dialog = fresh_updates_dialog
       fresh_updates_label = self.all_widgets.get_widget('fresh_updates_label')
 
       updates_text = 'Targets:'
-      for update in updates:
-        updates_text = updates_text + '\n' + update
+      for update in upgrades:
+        pkg_name = update.get_package().get_name()
+        updates_text = updates_text + '\n\t' + pkg_name
 
       fresh_updates_label.set_text(updates_text)
 
@@ -1306,11 +1200,15 @@ class gui:
       
       if response == gtk.RESPONSE_OK:
         #self.shell.install_fresh_updates()
+        self.shell.alpm_install_packages(upgrades)
         self.shell.start_timer()
         self.run_in_thread(self.shell.install_fresh_updates, {})
         self.try_sem_animate_progress_bar()
         fresh_updates_installed = True  
       else:
+        if self.init_transaction:
+          self.shell.alpm_trans_release()
+          self.init_transaction = False
         return
 
       # TODO: is this necessary?
@@ -1321,6 +1219,9 @@ class gui:
         self.try_sem()
         if self.shell.get_prev_return() == None:
           print 'None!'
+          if self.init_transaction:
+            self.shell.alpm_trans_release()
+            self.init_transaction = False
           return None
         
         info = self.shell.get_prev_return()
@@ -1339,6 +1240,9 @@ class gui:
         pkgs_updated_dialog.run()
         pkgs_updated_dialog.hide()
         self.current_dialog_on = False
+      if self.init_transaction:
+        self.shell.alpm_trans_release()
+        self.init_transaction = False
     else:
       # display a warning window?? switch to root?? gksu???
       print 'not root!'
