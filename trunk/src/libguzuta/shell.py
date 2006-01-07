@@ -2241,6 +2241,11 @@ the terms of the GNU General Public License'''
           break
   # }}}
 
+  # def __alpm_download_package__(self, package_name): {{{
+  def __alpm_download_package__(self, package_name):
+    dest = '/tmp/'
+  # }}}
+
   # def alpm_check_if_pkg_in_pkg_list(self, pkg_name, syncpkg_list): {{{
   def alpm_check_if_pkg_in_pkg_list(self, pkg_name, syncpkg_list):
     for syncpkg in syncpkg_list:
@@ -2254,8 +2259,8 @@ the terms of the GNU General Public License'''
     self.trans = self.alpm.transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0, trans_cb_ev)
   # }}}
 
-  # def alpm_update_db(self): {{{
-  def alpm_update_db(self):
+  # def alpm_update_databases(self): {{{
+  def alpm_update_databases(self):
     # PRE: alpm_transaction_init
     # POS: alpm_trans_release
     root = self.alpm.get_root()
@@ -2274,9 +2279,19 @@ the terms of the GNU General Public License'''
     return (upgrades, missed_deps)
   # }}}
 
-  # def alpm_trans_release(self): {{{
-  def alpm_trans_release(self):
+  # def alpm_transaction_release(self): {{{
+  def alpm_transaction_release(self):
     self.trans.release()
+  # }}}
+
+  # def alpm_transaction_add_target(self, pkg_name): {{{
+  def alpm_transaction_add_target(self, pkg_name):
+    self.trans.add_target(pkg_name)
+  # }}}
+
+  # def alpm_transaction_prepare(self): {{{
+  def alpm_transaction_prepare(self):
+    return self.trans.prepare()
   # }}}
 # }}}
 

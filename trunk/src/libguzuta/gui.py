@@ -46,6 +46,11 @@ def xor_two_dicts(a, b):
   return ret
 # }}}
     
+# def toggled(cellrenderer, path, model): {{{
+def toggled(cellrenderer, path, model):
+  model[path][0] = not model[path][0]
+# }}}
+
 # class gui: {{{
 class gui:
   pango_no_underline = 0
@@ -127,7 +132,7 @@ class gui:
     self.togglerenderer = gtk.CellRendererToggle()
     self.togglerenderer.set_active(True)
 
-    self.togglerenderer.connect('toggled', self.toggled)
+    self.togglerenderer.connect('toggled', toggled, self.liststore)
 
     self.emptycolumn = gtk.TreeViewColumn('Selected')
     self.emptycolumn.set_sort_column_id(0)
@@ -1127,7 +1132,11 @@ class gui:
   def on_update_db_clicked(self, button, skip_update_db = False):
     if button == self.update_db:
       self.init_transaction = False
+
+      # update the databases {{{
       if not skip_update_db:
+        upgrades = []
+        missed_deps = []
         self.shell.start_timer()
         #self.run_in_thread(self.shell.updatedb, {})
 
@@ -1135,7 +1144,7 @@ class gui:
         self.shell.alpm_refresh_dbs()
         self.shell.alpm_transaction_init()
 
-        (upgrades, missed_deps) = self.shell.alpm_update_db()
+        (upgrades, missed_deps) = self.shell.alpm_update_databases()
         #print "GUI: upgrades: ", upgrades
         #print "GUI: missed_deps: ", missed_deps
         self.try_sem_animate_progress_bar()
@@ -1147,8 +1156,9 @@ class gui:
 
         self.update_db_popup.hide()
         self.current_dialog_on = False
+      # }}}
 
-      # check if pacman is in the upgrades
+      # check if pacman is in the upgrades and install it {{{
       if self.shell.alpm_check_if_pkg_in_pkg_list('pacman', upgrades):
         pacman_upgrade_dialog =\
           self.all_widgets.get_widget('pacman_upgrade_dialog')
@@ -1161,87 +1171,118 @@ class gui:
         
         if response == gtk.RESPONSE_OK:
           self.shell.start_timer()
-          #self.run_in_thread(self.shell.get_fresh_updates_part_2,
-          #    {'pacman_upgrade': True, 'out': out})
-          self.install_packages_from_list(['pacman'])
-
+          self.__alpm_trans_install_packages__(['pacman'])
           self.try_sem_animate_progress_bar()
 
           self.on_update_db_clicked(button, True)
-          
-        else:
-          # go on
-          self.shell.start_timer()
-          #self.run_in_thread(self.shell.get_fresh_updates_part_2,
-          #    {'pacman_upgrade': True, 'out': out})
-          #self.try_sem_animate_progress_bar()
+      # }}}
 
       self.shell.start_timer()
 
       self.try_sem_animate_progress_bar()
 
-      fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
+      # setup the dialog querying the user for packages to install {{{
+      #fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
+      fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog2')
       self.current_dialog = fresh_updates_dialog
       fresh_updates_label = self.all_widgets.get_widget('fresh_updates_label')
 
-      updates_text = 'Targets:'
-      for update in upgrades:
-        pkg_name = update.get_package().get_name()
-        updates_text = updates_text + '\n\t' + pkg_name
+      fresh_updates_treeview =\
+        self.all_widgets.get_widget('fresh_updates_treeview')
+      l = gtk.ListStore('gboolean', str)
 
-      fresh_updates_label.set_text(updates_text)
+      textrenderer = gtk.CellRendererText()
+      togglerenderer = gtk.CellRendererToggle()
+      togglerenderer.set_active(True)
 
-      self.current_dialog_on = True
-      response = fresh_updates_dialog.run()
-      fresh_updates_dialog.hide()
-      self.current_dialog_on = False
+      togglerenderer.connect('toggled', toggled, l)
+
+      selectedcolumn = gtk.TreeViewColumn('Update')
+      selectedcolumn.set_sort_column_id(0)
+      selectedcolumn.pack_start(togglerenderer)
+      selectedcolumn.set_attributes(togglerenderer, active=0)
       
-      fresh_updates_installed = False
-      
-      if response == gtk.RESPONSE_OK:
-        #self.shell.install_fresh_updates()
-        self.shell.alpm_install_packages(upgrades)
-        self.shell.start_timer()
-        self.run_in_thread(self.shell.install_fresh_updates, {})
-        self.try_sem_animate_progress_bar()
-        fresh_updates_installed = True  
-      else:
-        if self.init_transaction:
-          self.shell.alpm_trans_release()
-          self.init_transaction = False
-        return
+      namecolumn = gtk.TreeViewColumn('Name')
+      namecolumn.set_sort_column_id(1)
+      namecolumn.pack_start(textrenderer)
+      namecolumn.set_attributes(textrenderer, text=1)
 
-      # TODO: is this necessary?
-      for pkg_name in updates:
-        #info = self.shell.info(pkg_name)
-        self.run_in_thread(self.shell.info, {'what':pkg_name})
+      fresh_updates_treeview.append_column(selectedcolumn)
+      fresh_updates_treeview.append_column(namecolumn)
+      # }}}
 
-        self.try_sem()
-        if self.shell.get_prev_return() == None:
-          print 'None!'
-          if self.init_transaction:
-            self.shell.alpm_trans_release()
-            self.init_transaction = False
-          return None
+      if upgrades != []:
+        #updates_text = 'Targets:'
+        for update in upgrades:
+          pkg_name = update.get_package().get_name()
+          l.append([False, pkg_name])
         
-        info = self.shell.get_prev_return()
-        #self.local_pkg_info[pkg_name] = info
-        self.remote_pkg_info[pkg_name] = info
-      
-      if fresh_updates_installed:
-        self.__add_pkg_info_to_local_pkgs__(updates)
-        
-        pkgs_updated_dialog = self.all_widgets.get_widget('pkgs_updated_dialog')
-        self.current_dialog = pkgs_updated_dialog
-        pkgs_updated_label = self.all_widgets.get_widget('pkgs_updated_label')
-        pkgs_updated_label.set_text(updates_text)
+        fresh_updates_treeview.set_model(l)
 
         self.current_dialog_on = True
-        pkgs_updated_dialog.run()
-        pkgs_updated_dialog.hide()
+        response = fresh_updates_dialog.run()
+        fresh_updates_dialog.hide()
         self.current_dialog_on = False
+        
+        fresh_updates_installed = False
+        
+        if response == gtk.RESPONSE_OK:
+          #self.shell.install_fresh_updates()
+          if self.init_transaction:
+            self.shell.alpm_transaction_release()
+            self.init_transaction = False
+
+          upgrades = self.get_all_selected_packages(l)
+          #upgrades = [row[0] for row in l]
+
+          print 'upgrades + missed_deps: ', (upgrades + missed_deps)
+          self.__alpm_trans_install_packages__(upgrades + missed_deps)
+
+          fresh_updates_installed = True  
+        else:
+          if self.init_transaction:
+            self.shell.alpm_transaction_release()
+            self.init_transaction = False
+          return
+
+        updates = upgrades
+        # TODO: is this necessary?
+        for pkg_name in updates:
+          #info = self.shell.info(pkg_name)
+          self.run_in_thread(self.shell.info, {'what':pkg_name})
+
+          self.try_sem()
+          if self.shell.get_prev_return() == None:
+            print 'None!'
+            if self.init_transaction:
+              self.shell.alpm_transaction_release()
+              self.init_transaction = False
+            return None
+          
+          info = self.shell.get_prev_return()
+          #self.local_pkg_info[pkg_name] = info
+          self.remote_pkg_info[pkg_name] = info
+        
+        if fresh_updates_installed:
+          self.__add_pkg_info_to_local_pkgs__(updates)
+          
+          pkgs_updated_dialog = self.all_widgets.get_widget('pkgs_updated_dialog')
+          self.current_dialog = pkgs_updated_dialog
+          pkgs_updated_label = self.all_widgets.get_widget('pkgs_updated_label')
+          pkgs_updated_label.set_text(updates_text)
+
+          self.current_dialog_on = True
+          pkgs_updated_dialog.run()
+          pkgs_updated_dialog.hide()
+          self.current_dialog_on = False
+      else:
+        no_upgrades_dialog =\
+          self.all_widgets.get_widget('no_upgrades_dialog')
+        no_upgrades_dialog.run()
+        no_upgrades_dialog.hide()
+
       if self.init_transaction:
-        self.shell.alpm_trans_release()
+        self.shell.alpm_transaction_release()
         self.init_transaction = False
     else:
       # display a warning window?? switch to root?? gksu???
@@ -2693,6 +2734,65 @@ class gui:
     
     (exit_status, dependencies, out) = self.shell.get_prev_return()
     return (exit_status, dependencies, out)
+  # }}}
+
+  # def __alpm_trans_install_packages__(self, names): {{{
+  def __alpm_trans_install_packages__(self, names):
+    self.init_transaction = True
+    self.shell.alpm_transaction_init()
+    
+    #self.alpm_install_packages(names)
+    #self.shell.start_timer()
+    #self.run_in_thread(self.shell.install_fresh_updates, {})
+    #self.try_sem_animate_progress_bar()
+
+    liststore = gtk.ListStore('gboolean', str)
+
+    for pkg_name in names:
+      #self.__alpm_download_package__(pkg_name)
+      try:
+        self.shell.alpm_transaction_add_target(pkg_name)
+        liststore.append([False, pkg_name])
+      except alpm.DuplicateTargetTransactionException, inst:
+        # ignore duplicates
+        liststore.append([False, pkg_name])
+      except alpm.PackageNotFoundTransactionException, inst:
+        # TODO: improve this, see pacman-lib sync.c:481
+        print inst
+
+    # prepare the transaction
+    missed_deps = self.shell.alpm_transaction_prepare()
+
+    ## list targets and get confirmations
+    #install_pkg_are_you_sure_dialog2 =\
+    #    self.all_widgets.get_widget('install_pkg_are_you_sure_dialog2')
+    #pkgs_treeview = self.all_widgets.get_widget('pkgs_treeview')
+
+    #textrenderer = gtk.CellRendererText()
+    #togglerenderer = gtk.CellRendererToggle()
+    #togglerenderer.set_active(True)
+
+    #togglerenderer.connect('toggled', toggled, liststore)
+
+    #selectedcolumn = gtk.TreeViewColumn('Selected')
+    #selectedcolumn.set_sort_column_id(0)
+    #selectedcolumn.pack_start(togglerenderer)
+    #selectedcolumn.set_attributes(togglerenderer, active=0)
+    #
+    #namecolumn = gtk.TreeViewColumn('Name')
+    #namecolumn.set_sort_column_id(1)
+    #namecolumn.pack_start(textrenderer)
+    #namecolumn.set_attributes(textrenderer, text=1)
+
+    #pkgs_treeview.append_column(selectedcolumn)
+    #pkgs_treeview.append_column(namecolumn)
+
+    #pkgs_treeview.set_model(liststore)
+
+    #install_pkg_are_you_sure_dialog2.run()
+    #install_pkg_are_you_sure_dialog2.hide()
+
+    self.shell.alpm_transaction_release()
   # }}}
 # }}}
 
