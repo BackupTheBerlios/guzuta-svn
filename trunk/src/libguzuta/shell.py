@@ -388,7 +388,11 @@ class shell:
         config["ROOT"] = ("%s/" % config["ROOT"])
     except KeyError:
       config["ROOT"] = "/"
-    a = alpm.Alpm(config["ROOT"])
+    try:
+      a = alpm.Alpm(config["ROOT"])
+    except RuntimeError, inst:
+      print inst
+      return None
 
     PACCONF = "/etc/pacman.conf"
     PACDB = "var/lib/pacman"
@@ -452,7 +456,11 @@ class shell:
     self.yesno = False
 
     self.trans = None
-    (self.alpm, self.pmc_syncs, self.config) = self.__init_alpm__()
+    tuple = self.__init_alpm__()
+    if tuple == None:
+      sys.exit(1)
+
+    (self.alpm, self.pmc_syncs, self.config) = tuple
 
     self.__open_dbs__()
 
