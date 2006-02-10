@@ -409,6 +409,8 @@ class shell:
 
     self.__parseconfig__(a, config["CONFIGFILE"], pmc_syncs, config)
 
+    #for pmc in pmc_syncs:
+    #  print "PMC: ", pmc
     try:
       config["DBPATH"]
     except KeyError:
@@ -432,8 +434,8 @@ class shell:
     return (a, pmc_syncs, config)
   # }}}
 
-  # def __open_dbs__(self): {{{
-  def __open_dbs__(self):
+  # def __alpm_open_dbs__(self): {{{
+  def __alpm_open_dbs__(self):
     self.dbs_by_name = {}
     self.db_names = []
 
@@ -462,7 +464,7 @@ class shell:
 
     (self.alpm, self.pmc_syncs, self.config) = tuple
 
-    self.__open_dbs__()
+    self.__alpm_open_dbs__()
 
     self.lock = lock
     self.timer = threading.Timer(1.0, self.handle_timer)
@@ -2219,6 +2221,16 @@ the terms of the GNU General Public License'''
     return self.pacman.get_err_pipe()
   # }}}
 
+  # def alpm_download_file(self, url, destination): {{{
+  def alpm_download_file(self, url, destination):
+    try:
+      (filename, headers) = urllib.urlretrieve(url, destination)
+    except IOError:
+      filename = None
+
+    return filename
+  # }}}
+
   # def alpm_refresh_dbs(self): {{{
   def alpm_refresh_dbs(self):
     for pmc in self.pmc_syncs:
@@ -2230,12 +2242,10 @@ the terms of the GNU General Public License'''
       for server in servers:
         url = server['protocol'] + '://' + server['server'] + server['path'] +\
           gzfile
-        #print 'refreshing database: ', treename
-        (filename, headers) = urllib.urlretrieve(url, destination)
-        #print (filename, headers)
+        #(filename, headers) = urllib.urlretrieve(url, destination)
+        filename = self.alpm_download_file(url, destination)
         if filename:
           # sync alpm
-          #print 'sync\'ing ', treename
           try:
             print db.update(destination)
           except alpm.DatabaseException, instance:
@@ -2249,9 +2259,37 @@ the terms of the GNU General Public License'''
           break
   # }}}
 
-  # def __alpm_download_package__(self, package_name): {{{
-  def __alpm_download_package__(self, package_name):
-    dest = '/tmp/'
+  # def alpm_download_package(self, package_name): {{{
+  # pmc: treename, server_list
+  #    server_list: path, protocol, server [...]
+  def alpm_download_package(self, package_name):
+    #self.all[dbname].append((name, version, description))
+    #self.pkgs[name] = (dbname, version, description)
+
+    dbname = self.pkgs[package_name][0]
+    version = self.pkgs[package_name][1]
+
+    pmc = None
+    for pmc_record in self.pmc_syncs:
+      if pmc_record['treename'] == dbname:
+        pmc = pmc_record
+        break
+
+    for server_record in pmc['servers']:
+      try:
+        self.config['CACHEDIR']
+      except KeyError:
+        self.config['CACHEDIR'] = 'var/cache/pacman'
+
+      destination = self.config['ROOT'] + self.config['CACHEDIR'] + '/pkg/'\
+          + package_name + '-' + version + '.pkg.tar.gz'
+
+      url = server_record['protocol'] + '://' + server_record['server']\
+          + server_record['path'] + package_name + '-' + version + '.pkg.tar.gz'
+
+      filename = self.alpm_download_file(url, destination)
+
+      return filename
   # }}}
 
   # def alpm_check_if_pkg_in_pkg_list(self, pkg_name, syncpkg_list): {{{
@@ -2267,15 +2305,24 @@ the terms of the GNU General Public License'''
     self.trans = self.alpm.transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0, trans_cb_ev)
   # }}}
 
+  # def alpm_transaction_init(self, type, flags, cb_event, cb_conversation): {{{
+  def alpm_transaction_init(self, type, flags, cb_event, cb_conversation=None):
+    if cb_conversation != None:
+      self.trans = self.alpm.transaction_init(type, flags, cb_event,\
+          cb_conversation)
+    else:
+      self.trans = self.alpm.transaction_init(type, flags, cb_event)
+  # }}}
+
   # def alpm_update_databases(self): {{{
   def alpm_update_databases(self):
-    # PRE: alpm_transaction_init
-    # POS: alpm_trans_release
     root = self.alpm.get_root()
     dbpath = self.alpm.get_db_path()
     upgrades = []
     missed_deps = []
     packages = []
+
+    self.alpm_transaction_init()
 
     try:
       self.trans.sysupgrade()
@@ -2284,6 +2331,8 @@ the terms of the GNU General Public License'''
     except alpm.TransactionException, inst:
       print inst
 
+    self.alpm_transaction_release()
+    
     return (upgrades, missed_deps)
   # }}}
 
@@ -2300,6 +2349,34 @@ the terms of the GNU General Public License'''
   # def alpm_transaction_prepare(self): {{{
   def alpm_transaction_prepare(self):
     return self.trans.prepare()
+  # }}}
+
+  # def alpm_install_pkg_from_files(self, path_list): {{{
+  def alpm_install_pkg_from_files(self, path_list):
+    self.prev_return = None
+    if path_list == [] or None:
+      #return (None, None)
+      self.prev_return = (None, None)
+      return
+    
+    self.alpm_transaction_init(alpm.PM_TRANS_TYPE_UPGRADE,\
+        alpm.PM_TRANS_FLAG_RECURSE, self.cb_event, self.cb_conv)
+
+    for path in path_list:
+      print path
+      self.alpm_transaction_add_target(path)
+
+    # TODO: more checks
+    try:
+      depmisses = self.alpm_transaction_prepare()
+    except alpm.AlpmUnsatisfiedDependencies:
+      pass
+
+    self.alpm_transaction_release()
+
+
+    self.prev_return = None
+    return
   # }}}
 # }}}
 

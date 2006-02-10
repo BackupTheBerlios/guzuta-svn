@@ -56,271 +56,6 @@ class gui:
   pango_no_underline = 0
   pango_underline_single = 1
 
-  # def progress_timeout(self, progress_bar): {{{
-  def progress_timeout(self):
-    if self.busy_window_hidden == False:
-      self.busy_progress_bar.pulse()
-    return True
-  # }}}
-
-  # def try_sem(self): {{{
-  def try_sem(self):
-    while self.th != None and self.th.isAlive() == True:
-      time.sleep(1)
-  # }}}
-
-  # def try_sem_animate_progress_bar(self): {{{
-  def try_sem_animate_progress_bar(self):
-    #console_expander = self.all_widgets.get_widget('console_expander')
-    #console_expander.set_expanded(False)
-
-    #print 'uuu.'
-    #read_pipe = self.shell.get_read_pipe()
-    #err_pipe = self.shell.get_err_pipe()
-    #print 'pipes: ', (read_pipe, err_pipe)
-    #if read_pipe != None and err_pipe != None:
-    #  gobject.io_add_watch(read_pipe, gobject.IO_IN, self.pipe_read_ready)
-    #  gobject.io_add_watch(err_pipe, gobject.IO_IN, self.pipe_read_ready)
-    #print 'pipes after: ', (read_pipe, err_pipe)
-    
-    #self.busy_window = self.all_widgets.get_widget('busy_window')
-    self.busy_window = self.all_widgets.get_widget('busy_window2')
-    
-    #self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
-    
-    #self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar')
-    self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar2')
-    
-    self.busy_progress_bar.set_fraction(0.0)
-
-    self.main_window.set_sensitive(False)
-
-    self.busy_window_hidden = False
-    self.busy_window.show_all()
-    self.busy_window_on = True
-
-    if self.th:
-      while self.th.isAlive() == True:
-        while gtk.events_pending():
-          gtk.main_iteration(False)
-        time.sleep(0.1)
-    #print 'update done.'
-
-    self.busy_window.hide()
-    self.busy_window_hidden = True
-    self.busy_window_on = False
-
-    #console_expander.set_expanded(False)
-    
-    self.main_window.set_sensitive(True)
-  # }}}
-
-  # def run_in_thread(self, method, args_dict, wait=False): {{{
-  def run_in_thread(self, method, args_dict, wait=False):
-    self.th = threading.Thread(target=method, kwargs=args_dict)
-    self.th.start()
-    if wait:
-      th.join()
-  # }}}
-
-  # def __setup_pkg_treeview__(self): {{{
-  def __setup_pkg_treeview__(self):
-    # checked, name, version, description 
-    self.liststore = gtk.ListStore('gboolean', str, str, str)
-
-    self.textrenderer = gtk.CellRendererText()
-    self.togglerenderer = gtk.CellRendererToggle()
-    self.togglerenderer.set_active(True)
-
-    self.togglerenderer.connect('toggled', toggled, self.liststore)
-
-    self.emptycolumn = gtk.TreeViewColumn('Selected')
-    self.emptycolumn.set_sort_column_id(0)
-    self.emptycolumn.pack_start(self.togglerenderer)
-    self.emptycolumn.set_attributes(self.togglerenderer, active=0)
-    
-    #self.repositorycolumn = gtk.TreeViewColumn('Repository')
-    #self.repositorycolumn.set_sort_column_id(1)
-    #self.repositorycolumn.pack_start(self.textrenderer)
-    #self.repositorycolumn.set_attributes(self.textrenderer, text=1)
-    
-    self.namecolumn = gtk.TreeViewColumn('Name')
-    self.namecolumn.set_sort_column_id(1)
-    self.namecolumn.pack_start(self.textrenderer)
-    self.namecolumn.set_attributes(self.textrenderer, text=1)
-    
-    self.installedversioncolumn = gtk.TreeViewColumn('Installed')
-    self.installedversioncolumn.set_sort_column_id(2)
-    self.installedversioncolumn.pack_start(self.textrenderer)
-    self.installedversioncolumn.set_attributes(self.textrenderer, text=2)
-    
-    self.availableversioncolumn = gtk.TreeViewColumn('Available')
-    self.availableversioncolumn.set_sort_column_id(3)
-    self.availableversioncolumn.pack_start(self.textrenderer)
-    self.availableversioncolumn.set_attributes(self.textrenderer, text=3)
-    
-    #self.packagercolumn = gtk.TreeViewColumn('Packager')
-    #self.packagercolumn.set_sort_column_id(5)
-    #self.packagercolumn.pack_start(self.textrenderer)
-    #self.packagercolumn.set_attributes(self.textrenderer, text=5)
-
-    self.treeview.append_column(self.emptycolumn)
-    #self.treeview.append_column(self.repositorycolumn)
-    self.treeview.append_column(self.namecolumn)
-    self.treeview.append_column(self.installedversioncolumn)
-    self.treeview.append_column(self.availableversioncolumn)
-
-    #self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
-    # positions are as follows:
-    # name, version, description
-    # TODO: sort this
-    #print self.local_pkgs
-    keys = self.local_pkgs.keys()
-    keys.sort()
-    for k in keys:
-      v = self.local_pkgs[k]
-    #for k,v in self.local_pkgs.iteritems():
-      #available version
-      try:
-        available_version = self.pkgs[k][1]
-      except KeyError:
-        # pkg was installed separately)
-        available_version = '--'
-        
-      self.liststore.append([False, k, v[1], available_version])
-    #for i in range(2):
-    #  self.liststore.append([False, 'a', 'b', 'c'])
-  
-    #for dbname in self.db_names:
-    #for pkg in self.shell.alpm_get_package_iterator("local"):
-    #  name = pkg.get_name()
-    #  (pkg_repo, available_version) = self.shell.alpm_get_pkg_repo(name)
-    #  #if pkg_repo:
-    #  self.liststore.append([False, pkg.get_name(), pkg.get_version(),
-    #      available_version])
-    #  #print "$$$: ", ("local", pkg.get_name(), pkg.get_version(),
-    #  #    pkg_repo, available_version)
-    self.treeview.set_model(self.liststore)
-  # }}}
-  
-  # def __setup_repo_treeview__(self): {{{
-  def __setup_repo_treeview__(self):
-    self.treestore_repos = gtk.TreeStore(str)
-
-    self.textrenderer_repos = gtk.CellRendererText()
-    self.textrenderer_repos.set_property('weight', 400)
-
-    self.repocolumn = gtk.TreeViewColumn('Repositories')
-    self.repocolumn.set_sort_column_id(1)
-    self.repocolumn.pack_start(self.textrenderer_repos)
-    self.repocolumn.set_attributes(self.textrenderer_repos, text=0)
-    
-    self.treeview_repos.append_column(self.repocolumn)
-    
-    self.treestore_repos.set_sort_column_id(0, gtk.SORT_ASCENDING)
-
-    iter0 = self.treestore_repos.append(None, ['Pseudo Repos'])
-    self.treestore_repos.append(iter0, ['All'])
-    self.treestore_repos.append(iter0, ['Installed'])
-    self.treestore_repos.append(iter0, ['Not Installed'])
-    #self.treestore_repos.append(iter0, ['Explicitly Installed'])
-    #self.treestore_repos.append(iter0, ['Last Installed'])
-    #self.treestore_repos.append(iter0, ['Last Uninstalled'])
-
-    iter1 = self.treestore_repos.append(None, ['Repos'])
-    
-    #for repo, v in self.pkgs_by_repo.iteritems():
-    #  repo = repo.capitalize()
-    #  self.treestore_repos.append(iter1, [repo])
-
-    for repo in self.db_names:
-      repo = repo.capitalize()
-      self.treestore_repos.append(iter1, [repo])
-
-    self.treeview_repos.set_model(self.treestore_repos)
-    self.treeview_repos.expand_all()
-  # }}}
-
-  # def set_pkg_update_alarm(self, alarm_time, time_type): {{{
-  def set_pkg_update_alarm(self, alarm_time, time_type):
-    # unschedule the alarm
-    #signal.alarm(0)
-
-    #self.pkg_update_alarm = 60 * 60 # 60 minutes
-    if time_type == 1:
-      # hours
-      self.pkg_update_alarm = alarm_time
-      self.pkg_update_alarm_period = 1
-      #print 'setting alarm to: ', alarm_time * 60 * 60
-      #signal.alarm(alarm_time * 60 * 60)
-    else:
-      # dangerous, don't let this be less than a good number, like say 40
-      # minutes. if so, warn
-      if alarm_time < 40:
-        generic_cancel_ok = self.all_widgets.get_widget('generic_cancel_ok')
-        self.current_dialog = generic_cancel_ok
-        generic_cancel_ok_label =\
-          self.all_widgets.get_widget('generic_cancel_ok_label')
-        text = """<b>Warning</b>\nThe time lapse between automatic update checks
-        is very short.\nAre you sure you want to keep this value?"""
-        generic_cancel_ok_label.set_markup(text)
-
-        self.current_dialog_on = True
-        response = generic_cancel_ok.run()
-        generic_cancel_ok.hide()
-        self.current_dialog_on = False
-        if response == gtk.RESPONSE_OK:
-          self.pkg_update_alarm = alarm_time
-          self.pkg_update_alarm_period = 0
-          #print 'setting alarm to: ', alarm_time * 60
-          #signal.alarm(alarm_time * 60)
-        else:
-          pass
-      else:
-        self.pkg_update_alarm = alarm_time
-        self.pkg_update_alarm_period = 0
-        #print 'setting alarm to: ', alarm_time * 60
-        #signal.alarm(alarm_time * 60)
-  # }}}
-
-  # def __expand_deps_list__(self, deps_list): {{{
-  def __expand_deps_list__(self, deps_list):
-    prefix = '/var/cache/pacman/pkg/'
-    
-    ret = []
-    for dep in deps_list:
-      full_path = os.path.join(prefix, dep)
-      matches = glob.glob(full_path + '*gz')
-      
-      # get latest version of dep
-      matches.sort(lambda x,y: cmp(x.lower(), y.lower()), str.lower, True)
-      ret.append(matches[0])
-    return ret
-  # }}}
-
-  # def pipe_read_ready(self, source, cb_condition): {{{
-  def pipe_read_ready(self, source, cb_condition):
-    print 'argh!'
-    #gtk.gdk.threads_enter()
-    if cb_condition == gobject.IO_IN:
-      print 'busy_window_on: ', self.busy_window_on
-      if self.busy_window_on:
-        print 'ready to output something.'
-        data = source.read(1)
-        print 'char read: ', data
-        console_textview = self.all_widgets.get_widget('console_textview')
-        buffer = console_textview.get_buffer()
-
-        buffer.insert_at_cursor(data)
-        if len(data) > 0:
-          gtk.gdk.threads_leave()
-          return True
-        else:
-          gtk.gdk.threads_leave()
-          return False
-    #gtk.gdk.threads_leave()
-  # }}}
-
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
   def __init__(self, read_pipe = None, write_pipe = None):
     # signals !!!
@@ -572,6 +307,273 @@ class gui:
     gtk.gdk.threads_leave()
   # }}}
   
+  # def progress_timeout(self, progress_bar): {{{
+  def progress_timeout(self):
+    if self.busy_window_hidden == False:
+      self.busy_progress_bar.pulse()
+    return True
+  # }}}
+
+  # def try_sem(self): {{{
+  def try_sem(self):
+    while self.th != None and self.th.isAlive() == True:
+      time.sleep(1)
+  # }}}
+
+  # def try_sem_animate_progress_bar(self): {{{
+  def try_sem_animate_progress_bar(self):
+    #console_expander = self.all_widgets.get_widget('console_expander')
+    #console_expander.set_expanded(False)
+
+    #print 'uuu.'
+    #read_pipe = self.shell.get_read_pipe()
+    #err_pipe = self.shell.get_err_pipe()
+    #print 'pipes: ', (read_pipe, err_pipe)
+    #if read_pipe != None and err_pipe != None:
+    #  gobject.io_add_watch(read_pipe, gobject.IO_IN, self.pipe_read_ready)
+    #  gobject.io_add_watch(err_pipe, gobject.IO_IN, self.pipe_read_ready)
+    #print 'pipes after: ', (read_pipe, err_pipe)
+    
+    #self.busy_window = self.all_widgets.get_widget('busy_window')
+    self.busy_window = self.all_widgets.get_widget('busy_window2')
+    
+    #self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+    
+    #self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar')
+    self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar2')
+    
+    self.busy_progress_bar.set_fraction(0.0)
+
+    self.main_window.set_sensitive(False)
+
+    self.busy_window_hidden = False
+    self.busy_window.show_all()
+    self.busy_window_on = True
+
+    if self.th:
+      while self.th.isAlive() == True:
+        while gtk.events_pending():
+          gtk.main_iteration(False)
+        time.sleep(0.1)
+    #print 'update done.'
+
+    self.busy_window.hide()
+    self.busy_window_hidden = True
+    self.busy_window_on = False
+
+    #console_expander.set_expanded(False)
+    
+    self.main_window.set_sensitive(True)
+  # }}}
+
+  # def run_in_thread(self, method, args_dict, wait=False): {{{
+  def run_in_thread(self, method, args_dict, wait=False):
+    self.th = threading.Thread(target=method, kwargs=args_dict)
+    self.th.start()
+    if wait:
+      th.join()
+  # }}}
+
+  # def __setup_pkg_treeview__(self): {{{
+  def __setup_pkg_treeview__(self):
+    # checked, name, version, description 
+    self.liststore = gtk.ListStore('gboolean', str, str, str)
+
+    self.textrenderer = gtk.CellRendererText()
+    self.togglerenderer = gtk.CellRendererToggle()
+    self.togglerenderer.set_active(True)
+
+    self.togglerenderer.connect('toggled', self.toggled)
+    #self.togglerenderer.connect('toggled', toggled, self.liststore)
+
+    self.emptycolumn = gtk.TreeViewColumn('Selected')
+    self.emptycolumn.set_sort_column_id(0)
+    self.emptycolumn.pack_start(self.togglerenderer)
+    self.emptycolumn.set_attributes(self.togglerenderer, active=0)
+    
+    #self.repositorycolumn = gtk.TreeViewColumn('Repository')
+    #self.repositorycolumn.set_sort_column_id(1)
+    #self.repositorycolumn.pack_start(self.textrenderer)
+    #self.repositorycolumn.set_attributes(self.textrenderer, text=1)
+    
+    self.namecolumn = gtk.TreeViewColumn('Name')
+    self.namecolumn.set_sort_column_id(1)
+    self.namecolumn.pack_start(self.textrenderer)
+    self.namecolumn.set_attributes(self.textrenderer, text=1)
+    
+    self.installedversioncolumn = gtk.TreeViewColumn('Installed')
+    self.installedversioncolumn.set_sort_column_id(2)
+    self.installedversioncolumn.pack_start(self.textrenderer)
+    self.installedversioncolumn.set_attributes(self.textrenderer, text=2)
+    
+    self.availableversioncolumn = gtk.TreeViewColumn('Available')
+    self.availableversioncolumn.set_sort_column_id(3)
+    self.availableversioncolumn.pack_start(self.textrenderer)
+    self.availableversioncolumn.set_attributes(self.textrenderer, text=3)
+    
+    #self.packagercolumn = gtk.TreeViewColumn('Packager')
+    #self.packagercolumn.set_sort_column_id(5)
+    #self.packagercolumn.pack_start(self.textrenderer)
+    #self.packagercolumn.set_attributes(self.textrenderer, text=5)
+
+    self.treeview.append_column(self.emptycolumn)
+    #self.treeview.append_column(self.repositorycolumn)
+    self.treeview.append_column(self.namecolumn)
+    self.treeview.append_column(self.installedversioncolumn)
+    self.treeview.append_column(self.availableversioncolumn)
+
+    #self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
+    # positions are as follows:
+    # name, version, description
+    # TODO: sort this
+    #print self.local_pkgs
+    keys = self.local_pkgs.keys()
+    keys.sort()
+    for k in keys:
+      v = self.local_pkgs[k]
+    #for k,v in self.local_pkgs.iteritems():
+      #available version
+      try:
+        available_version = self.pkgs[k][1]
+      except KeyError:
+        # pkg was installed separately)
+        available_version = '--'
+        
+      self.liststore.append([False, k, v[1], available_version])
+    #for i in range(2):
+    #  self.liststore.append([False, 'a', 'b', 'c'])
+  
+    #for dbname in self.db_names:
+    #for pkg in self.shell.alpm_get_package_iterator("local"):
+    #  name = pkg.get_name()
+    #  (pkg_repo, available_version) = self.shell.alpm_get_pkg_repo(name)
+    #  #if pkg_repo:
+    #  self.liststore.append([False, pkg.get_name(), pkg.get_version(),
+    #      available_version])
+    #  #print "$$$: ", ("local", pkg.get_name(), pkg.get_version(),
+    #  #    pkg_repo, available_version)
+    self.treeview.set_model(self.liststore)
+  # }}}
+  
+  # def __setup_repo_treeview__(self): {{{
+  def __setup_repo_treeview__(self):
+    self.treestore_repos = gtk.TreeStore(str)
+
+    self.textrenderer_repos = gtk.CellRendererText()
+    self.textrenderer_repos.set_property('weight', 400)
+
+    self.repocolumn = gtk.TreeViewColumn('Repositories')
+    self.repocolumn.set_sort_column_id(1)
+    self.repocolumn.pack_start(self.textrenderer_repos)
+    self.repocolumn.set_attributes(self.textrenderer_repos, text=0)
+    
+    self.treeview_repos.append_column(self.repocolumn)
+    
+    self.treestore_repos.set_sort_column_id(0, gtk.SORT_ASCENDING)
+
+    iter0 = self.treestore_repos.append(None, ['Pseudo Repos'])
+    self.treestore_repos.append(iter0, ['All'])
+    self.treestore_repos.append(iter0, ['Installed'])
+    self.treestore_repos.append(iter0, ['Not Installed'])
+    #self.treestore_repos.append(iter0, ['Explicitly Installed'])
+    #self.treestore_repos.append(iter0, ['Last Installed'])
+    #self.treestore_repos.append(iter0, ['Last Uninstalled'])
+
+    iter1 = self.treestore_repos.append(None, ['Repos'])
+    
+    #for repo, v in self.pkgs_by_repo.iteritems():
+    #  repo = repo.capitalize()
+    #  self.treestore_repos.append(iter1, [repo])
+
+    for repo in self.db_names:
+      repo = repo.capitalize()
+      self.treestore_repos.append(iter1, [repo])
+
+    self.treeview_repos.set_model(self.treestore_repos)
+    self.treeview_repos.expand_all()
+  # }}}
+
+  # def set_pkg_update_alarm(self, alarm_time, time_type): {{{
+  def set_pkg_update_alarm(self, alarm_time, time_type):
+    # unschedule the alarm
+    #signal.alarm(0)
+
+    #self.pkg_update_alarm = 60 * 60 # 60 minutes
+    if time_type == 1:
+      # hours
+      self.pkg_update_alarm = alarm_time
+      self.pkg_update_alarm_period = 1
+      #print 'setting alarm to: ', alarm_time * 60 * 60
+      #signal.alarm(alarm_time * 60 * 60)
+    else:
+      # dangerous, don't let this be less than a good number, like say 40
+      # minutes. if so, warn
+      if alarm_time < 40:
+        generic_cancel_ok = self.all_widgets.get_widget('generic_cancel_ok')
+        self.current_dialog = generic_cancel_ok
+        generic_cancel_ok_label =\
+          self.all_widgets.get_widget('generic_cancel_ok_label')
+        text = """<b>Warning</b>\nThe time lapse between automatic update checks
+        is very short.\nAre you sure you want to keep this value?"""
+        generic_cancel_ok_label.set_markup(text)
+
+        self.current_dialog_on = True
+        response = generic_cancel_ok.run()
+        generic_cancel_ok.hide()
+        self.current_dialog_on = False
+        if response == gtk.RESPONSE_OK:
+          self.pkg_update_alarm = alarm_time
+          self.pkg_update_alarm_period = 0
+          #print 'setting alarm to: ', alarm_time * 60
+          #signal.alarm(alarm_time * 60)
+        else:
+          pass
+      else:
+        self.pkg_update_alarm = alarm_time
+        self.pkg_update_alarm_period = 0
+        #print 'setting alarm to: ', alarm_time * 60
+        #signal.alarm(alarm_time * 60)
+  # }}}
+
+  # def __expand_deps_list__(self, deps_list): {{{
+  def __expand_deps_list__(self, deps_list):
+    prefix = '/var/cache/pacman/pkg/'
+    
+    ret = []
+    for dep in deps_list:
+      full_path = os.path.join(prefix, dep)
+      matches = glob.glob(full_path + '*gz')
+      
+      # get latest version of dep
+      matches.sort(lambda x,y: cmp(x.lower(), y.lower()), str.lower, True)
+      ret.append(matches[0])
+    return ret
+  # }}}
+
+  # def pipe_read_ready(self, source, cb_condition): {{{
+  def pipe_read_ready(self, source, cb_condition):
+    print 'argh!'
+    #gtk.gdk.threads_enter()
+    if cb_condition == gobject.IO_IN:
+      print 'busy_window_on: ', self.busy_window_on
+      if self.busy_window_on:
+        print 'ready to output something.'
+        data = source.read(1)
+        print 'char read: ', data
+        console_textview = self.all_widgets.get_widget('console_textview')
+        buffer = console_textview.get_buffer()
+
+        buffer.insert_at_cursor(data)
+        if len(data) > 0:
+          gtk.gdk.threads_leave()
+          return True
+        else:
+          gtk.gdk.threads_leave()
+          return False
+    #gtk.gdk.threads_leave()
+  # }}}
+
+  # signal handlers {{{
   # def on_download_pkg_button_clicked(self, button): {{{
   def on_download_pkg_button_clicked(self, button):
     pkgs_to_download = self.get_all_selected_packages(self.liststore)
@@ -835,8 +837,8 @@ class gui:
 
         #ret,ret_err = self.shell.install_pkg_from_file(pathname)
         self.shell.start_timer()
-        self.run_in_thread(self.shell.install_pkg_from_files,
-            {'path_list': path_list})
+        #self.run_in_thread(self.shell.install_pkg_from_files,
+        #    {'path_list': path_list})
 
         self.try_sem_animate_progress_bar()
 
@@ -1067,7 +1069,6 @@ class gui:
       #  print tag.get_property('name')
 
     else: # treeview of repos
-      #print 'treeview of repos'
       repo = treemodel.get_value(iter, 0)
       if repo == 'Pseudo Repos' or repo == 'Repos':
         return 
@@ -1142,7 +1143,6 @@ class gui:
 
         self.init_transaction = True
         self.shell.alpm_refresh_dbs()
-        self.shell.alpm_transaction_init()
 
         (upgrades, missed_deps) = self.shell.alpm_update_databases()
         #print "GUI: upgrades: ", upgrades
@@ -1687,6 +1687,7 @@ class gui:
       #print 'MAIN: thread finished, releasing lock'
       self.lock.release()
   # }}}
+  # }}}
   
   # def cleanup_cache(self, clean_by, clean_threshold): {{{
   def cleanup_cache(self, clean_by, clean_threshold):
@@ -1888,11 +1889,26 @@ class gui:
     downloaded_pkgs_label =\
         self.all_widgets.get_widget('downloaded_pkgs_label')
 
+    #(retcode, output) = self.download_packages(list)
+    self.busy_window = self.all_widgets.get_widget('busy_window2')
 
-    (retcode, output) = self.download_packages(list)
+    self.busy_progress_bar = self.all_widgets.get_widget('busy_progress_bar2')
 
-    if retcode == False:
-      return
+    self.busy_progress_bar.set_fraction(1/len(list))
+
+    self.main_window.set_sensitive(False)
+
+    self.busy_window.show_all()
+    self.busy_window_on = True
+    
+    for pkg_name in list:
+      self.busy_progress_bar.pulse()
+      self.busy_progress_bar.set_text(pkg_name)
+      filename = self.shell.alpm_download_package(pkg_name)
+      #print filename
+
+    if not filename:
+      return None
     txt = ''
     for pkg_name in list:
       if txt == '':
