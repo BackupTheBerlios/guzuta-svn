@@ -823,7 +823,6 @@ class gui:
 
       install_are_you_sure_label.set_text(label_text)
 
-      self.main_window.set_sensitive(False)
       self.current_dialog_on = True
       response = install_pkg_are_you_sure_dialog.run()
       install_pkg_are_you_sure_dialog.hide()
@@ -832,91 +831,14 @@ class gui:
       if response == gtk.RESPONSE_OK:
         selection = self.treeview.get_selection()
         treemodel, iter = selection.get_selected()
-        #if not iter:
-        #  return
 
-        #ret,ret_err = self.shell.install_pkg_from_file(pathname)
         self.shell.start_timer()
         #self.run_in_thread(self.shell.install_pkg_from_files,
         #    {'path_list': path_list})
+        self.shell.alpm_install_pkg_from_files(path_list)
 
         self.try_sem_animate_progress_bar()
 
-        if self.shell.get_prev_return() == None:
-          print 'None!'
-          return None
-        
-        ret, ret_err = self.shell.get_prev_return()
-        
-        if self.shell.get_exit_status() == 0:
-          self.__add_pkg_info_to_local_pkgs__(pkgs)
-          
-          self.current_dialog = install_pkg_popup
-          self.current_dialog_on = True
-          install_pkg_popup.run()
-          install_pkg_popup.hide()
-          self.current_dialog_on = False
-          
-          self.main_window.set_sensitive(True)
-          #self.refresh_pkgs_treeview()
-          
-          #repo = 'no repository'
-          #self.__fill_treeview_with_pkgs_from_repo__(repo.lower())
-        else:
-          #TODO: more cases can happen here
-          deps = []
-          if ret.index('requires'):
-            # dependencies required
-            dependencies_required_dialog =\
-                self.all_widgets.get_widget('dependencies_required_dialog')
-            self.current_dialog = dependencies_required_dialog
-            dependencies_required_label =\
-                self.all_widgets.get_widget('dependencies_required_label')
-
-            pattern = 'requires\s([a-zA-Z0-9\-]*)'
-            regexp = re.compile(pattern)
-
-            iter = regexp.finditer(ret)
-
-            for match in iter:
-              string = ret[match.start()+len('requires '):match.end()]
-              deps.append(string)
-
-            label_text2 = ''
-
-            for dep in deps:
-              if label_text2 == '':
-                label_text2 = dep + '\n'
-              else:
-                label_text2 = label_text2 + dep + '\n'
-
-            dependencies_required_label.set_text(label_text2)
-
-            full_path_deps = self.__expand_deps_list__(deps)
-
-            self.current_dialog_on = True
-            response_3 = dependencies_required_dialog.run()
-            dependencies_required_dialog.hide()
-            self.current_dialog_on = False
-
-            if response_3 == gtk.RESPONSE_OK:
-              self.shell.start_timer()
-              self.run_in_thread(self.shell.install_pkg_from_files,
-                  {'path_list': path_list + full_path_deps})
-
-              self.try_sem_animate_progress_bar()
-
-              self.__add_pkg_info_to_local_pkgs__(pkgs + deps)
-
-              install_pkg_popup.run()
-              install_pkg_popup.hide()
-              self.current_dialog_on = False
-            else:
-              return
-
-          self.main_window.set_sensitive(True)
-            #while (match = regexp.match(ret)):
-            #  print 'dep: ', line[match]
       else:
         return 
     else:
@@ -1021,46 +943,26 @@ class gui:
       # treeview of pkgs
       name = treemodel.get_value(iter, 1)
 
-      #print 'name:<%s>' % name
       buffer = gtk.TextBuffer()
       
       try:
         info = self.local_pkg_info[name]
       except KeyError:
-        #info = self.shell.local_info(name)
-        self.shell.start_timer()
-        self.run_in_thread(self.shell.local_info, {'what': name})
-
-        self.try_sem_animate_progress_bar()
-
-        #info = self.shell.get_prev_return()
         info = self.shell.alpm_local_info(name)
+        #print "local info:", info
         self.local_pkg_info[name] = info
       
       if info == None:
         try:
           remote_info = self.remote_pkg_info[name]
         except KeyError:
-          #remote_info = self.shell.info(name)
-          self.run_in_thread(self.shell.info, {'what': name})
-
-          self.try_sem()
-
-          if self.shell.get_prev_return() == None:
-            print 'None! CC2'
-            return None
-          
-          #remote_info = self.shell.get_prev_return()
           remote_info = self.shell.alpm_info(name)
           self.remote_pkg_info[name] = remote_info
 
         self.__add_pkg_info_markuped_to_text_buffer__(buffer, remote_info,\
             installed = False)
-        #self.__add_pkg_info_markuped_to_pkg_info_label__(remote_info,
-        #    installed = False)
       else:
         self.__add_pkg_info_markuped_to_text_buffer__(buffer, info)
-        #self.__add_pkg_info_markuped_to_pkg_info_label__(info)
       self.information_text.set_buffer(buffer)
       #tag_list = self.information_text.get_buffer().\
       #    get_start_iter().get_tags()
@@ -1171,15 +1073,16 @@ class gui:
         
         if response == gtk.RESPONSE_OK:
           self.shell.start_timer()
-          self.__alpm_trans_install_packages__(['pacman'])
+          #self.__alpm_trans_install_packages__(['pacman'])
+          self.alpm_install_packages(['pacman'])
           self.try_sem_animate_progress_bar()
 
           self.on_update_db_clicked(button, True)
       # }}}
 
-      self.shell.start_timer()
+      #self.shell.start_timer()
 
-      self.try_sem_animate_progress_bar()
+      #self.try_sem_animate_progress_bar()
 
       # setup the dialog querying the user for packages to install {{{
       #fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
@@ -1229,14 +1132,15 @@ class gui:
         if response == gtk.RESPONSE_OK:
           #self.shell.install_fresh_updates()
           if self.init_transaction:
-            self.shell.alpm_transaction_release()
+            #self.shell.alpm_transaction_release()
             self.init_transaction = False
 
           upgrades = self.get_all_selected_packages(l)
           #upgrades = [row[0] for row in l]
 
           print 'upgrades + missed_deps: ', (upgrades + missed_deps)
-          self.__alpm_trans_install_packages__(upgrades + missed_deps)
+          #self.__alpm_trans_install_packages__(upgrades + missed_deps)
+          self.alpm_install_packages(upgrades + missed_deps)
 
           fresh_updates_installed = True  
         else:
@@ -1249,7 +1153,7 @@ class gui:
         # TODO: is this necessary?
         for pkg_name in updates:
           #info = self.shell.info(pkg_name)
-          self.run_in_thread(self.shell.info, {'what':pkg_name})
+          #self.run_in_thread(self.shell.info, {'what':pkg_name})
 
           self.try_sem()
           if self.shell.get_prev_return() == None:
@@ -1259,7 +1163,8 @@ class gui:
               self.init_transaction = False
             return None
           
-          info = self.shell.get_prev_return()
+          #info = self.shell.get_prev_return()
+          info = self.shell.alpm_info(pkg_name)
           #self.local_pkg_info[pkg_name] = info
           self.remote_pkg_info[pkg_name] = info
         
@@ -1282,7 +1187,7 @@ class gui:
         no_upgrades_dialog.hide()
 
       if self.init_transaction:
-        self.shell.alpm_transaction_release()
+        #self.shell.alpm_transaction_release()
         self.init_transaction = False
     else:
       # display a warning window?? switch to root?? gksu???
@@ -1524,7 +1429,7 @@ class gui:
     buffer = gtk.TextBuffer()
     pkg_files_textview.set_buffer(buffer)
 
-    self.run_in_thread(self.shell.get_pkg_files, {'what': name})
+    #self.run_in_thread(self.shell.get_pkg_files, {'what': name})
     self.try_sem()
     
     exit_status, text = self.shell.get_prev_return()
@@ -1846,7 +1751,7 @@ class gui:
       what = what + pkg_name + ' '
 
     self.shell.start_timer()
-    self.run_in_thread(self.shell.download_part_1, {'what': what})
+    #self.run_in_thread(self.shell.download_part_1, {'what': what})
     self.try_sem_animate_progress_bar()
 
     if self.shell.get_prev_return() == None:
@@ -1870,12 +1775,12 @@ class gui:
 
       if response == gtk.RESPONSE_OK:
         self.shell.start_timer()
-        self.run_in_thread(self.shell.download_part_2, {'txt_to_pacman': 'Y'})
+        #self.run_in_thread(self.shell.download_part_2, {'txt_to_pacman': 'Y'})
         self.try_sem_animate_progress_bar()
         return (True, out)
       else:
         self.shell.start_timer()
-        self.run_in_thread(self.shell.download_part_2, {'txt_to_pacman': 'n'})
+        #self.run_in_thread(self.shell.download_part_2, {'txt_to_pacman': 'n'})
         self.try_sem_animate_progress_bar()
         return (False, out)
   # }}}
@@ -1957,7 +1862,7 @@ class gui:
     
     #(ret, output) = self.shell.install_part_1(what)
     self.shell.start_timer()
-    self.run_in_thread(self.shell.install_part_1, {'what': what, 'repo': repo})
+    #self.run_in_thread(self.shell.install_part_1, {'what': what, 'repo': repo})
     self.try_sem_animate_progress_bar()
     if self.shell.get_prev_return() == None:
       print 'None!'
@@ -2020,7 +1925,7 @@ class gui:
       # cancel
       #(exit_status, out) = self.shell.install_part_3('n')
       self.shell.start_timer()
-      self.run_in_thread(self.shell.install_part_3, {'txt_to_pacman': 'n'})
+      #self.run_in_thread(self.shell.install_part_3, {'txt_to_pacman': 'n'})
       self.try_sem_animate_progress_bar()
       if self.shell.get_prev_return() == None:
         print 'None!'
@@ -2035,7 +1940,7 @@ class gui:
       #exit_status = self.shell.install_packages_noconfirm(pkgs_to_install)
       #out = self.shell.install_part_2('Y')
       self.shell.start_timer()
-      self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'Y'})
+      #self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'Y'})
       self.try_sem_animate_progress_bar()
       if self.shell.get_prev_return() == None:
         print 'None!'
@@ -2044,7 +1949,7 @@ class gui:
       out = self.shell.get_prev_return()
       #(exit_status, out) = self.shell.install_part_3('Y')
       self.shell.start_timer()
-      self.run_in_thread(self.shell.install_part_3, {'txt_to_pacman': 'Y'})
+      #self.run_in_thread(self.shell.install_part_3, {'txt_to_pacman': 'Y'})
       self.try_sem_animate_progress_bar()
       if self.shell.get_prev_return() == None:
         print 'None!'
@@ -2078,8 +1983,8 @@ class gui:
       if response3 == gtk.RESPONSE_OK: 
         #self.shell.install_part_2('Y')
         self.shell.start_timer()
-        self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'Y',
-            'wait': True})
+        #self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'Y',
+        #    'wait': True})
         self.try_sem_animate_progress_bar()
 
         (out, exit_status) = self.shell.get_prev_return()
@@ -2104,8 +2009,8 @@ class gui:
           if response == gtk.RESPONSE_OK:
             #force
             self.shell.start_timer()
-            self.run_in_thread(self.shell.install_force_noconfirm,\
-                {'list': list})
+            #self.run_in_thread(self.shell.install_force_noconfirm,\
+            #    {'list': list})
             self.try_sem_animate_progress_bar()
           elif response == gtk.RESPONSE_CANCEL:
             return
@@ -2122,7 +2027,7 @@ class gui:
       elif response3 == gtk.RESPONSE_CANCEL:
         #self.shell.install_part_2('n')
         self.shell.start_timer()
-        self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'n'})
+        #self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'n'})
         self.try_sem_animate_progress_bar()
 
       self.install_pkg_popup.hide()
@@ -2282,8 +2187,8 @@ class gui:
       print 'None!'
       return None
     
-    #self.local_pkgs = self.shell.get_prev_return()
-    self.local_pkgs = self.shell.alpm_local_search()
+    self.local_pkgs = self.shell.get_prev_return()
+    #self.local_pkgs = self.shell.alpm_local_search()
     #print '$$$: LOCAL_PKGS: ', len(self.local_pkgs)
     #for name in self.local_pkgs.iteritems():
     #  print '$$$: ', name
@@ -2293,7 +2198,7 @@ class gui:
   def populate_pkgs_by_repo(self):
     #(self.pkgs_by_repo, self.pkgs) = self.shell.repofiles()
     #(self.pkgs_by_repo, self.pkgs) = self.shell.repofiles2()
-    self.run_in_thread(self.shell.repofiles2, {})
+    #self.run_in_thread(self.shell.repofiles2, {})
 
     #self.try_sem_animate_progress_bar()
     self.try_sem()
@@ -2305,10 +2210,10 @@ class gui:
       if out.index('could not open sync database'):
         print 'It seems there is a database that needs sync\'ing: \n' + out 
         print 'Guzuta will take care of this for you and resume normal startup.'
-        self.run_in_thread(self.shell.updatedb, {})
+        #self.run_in_thread(self.shell.updatedb, {})
         self.try_sem()
 
-        self.run_in_thread(self.shell.repofiles2, {})
+        #self.run_in_thread(self.shell.repofiles2, {})
         self.try_sem()
     else:
       if self.shell.get_prev_return() == None:
@@ -2678,14 +2583,15 @@ class gui:
           info = self.remote_pkg_info[installed_pkg]
         except KeyError:
           #info = self.shell.info(installed_pkg)
-          self.run_in_thread(self.shell.info, {'what': installed_pkg})
-          self.try_sem()
-          if self.shell.get_prev_return() == None:
-            print 'None!'
-            return None
+          #self.run_in_thread(self.shell.info, {'what': installed_pkg})
+          #self.try_sem()
+          #if self.shell.get_prev_return() == None:
+          #  print 'None!'
+          #  return None
           
           #info = self.shell.get_prev_return()
           info = self.shell.alpm_info(installed_pkg)
+          print "remote info: ", info
         self.local_pkg_info[installed_pkg] = info
 
       if info == None:
@@ -2694,14 +2600,15 @@ class gui:
           self.local_pkg_info[installed_pkg] = info
         except KeyError:
           #info = self.shell.local_info(installed_pkg)
-          self.run_in_thread(self.shell.local_info, {'what': installed_pkg})
-          self.try_sem()
-          if self.shell.get_prev_return() == None:
-            print 'None!'
-            return None
+          #self.run_in_thread(self.shell.local_info, {'what': installed_pkg})
+          #self.try_sem()
+          #if self.shell.get_prev_return() == None:
+          #  print 'None!'
+          #  return None
           
           #info = self.shell.get_prev_return()
           info = self.shell.alpm_local_info(installed_pkg)
+          print "local info:", info
           self.local_pkg_info[installed_pkg] = info
 
       n = len(info)

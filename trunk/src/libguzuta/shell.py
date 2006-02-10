@@ -1607,6 +1607,283 @@ class shell:
     return all
   # }}}
   
+  # def local_info(self, what = ''): {{{
+  def local_info(self, what = ''):
+    if what == '':
+      print 'Please specify a package to query for info'
+      return
+    self.prev_return = None
+    
+    self.run_pacman_with('-Qi ' + what)
+    
+    if self.pacman.get_pipeit() == True:
+      list = self.pacman.get_read_pipe().read()
+
+      if list == '\n':
+        (self.pid, self.exit_status) = os.wait()
+        #return None
+        self.prev_return = None
+        return
+
+      all = self.__compile_pkg_info__(list)
+
+      (self.pid, self.exit_status) = os.wait()
+      #return all
+      self.prev_return = all
+      return
+    else:
+      (self.pid, self.exit_status) = os.wait()
+      #return None
+      self.prev_return = None
+      return
+  # }}}
+  
+  # def info(self, what = ''): {{{
+  def info(self, what = ''):
+    if what == '':
+      print 'Please specify a package to query for info'
+      return
+    
+    self.prev_return = None
+    self.run_pacman_with('-Si ' + what)
+    
+    if self.pacman.get_pipeit() == True:
+      list = self.pacman.get_read_pipe().read()
+
+      all = self.__compile_pkg_info__(list)
+
+      (self.pid, self.exit_status) = os.wait()
+      if all == ['', '']:
+        #return None
+        self.prev_return = None
+        return
+      else:
+        #return all
+        self.prev_return = all
+        return
+    else:
+      (self.pid, self.exit_status) = os.wait()
+      #return None
+      self.prev_return = None
+      return
+  # }}}
+  
+  #def remove_nodeps(self, what = ''): {{{
+  def remove_nodeps(self, what = ''):
+    uid = posix.getuid()
+    if uid != 0:
+      print "You are not ROOT. Bye bye."
+      return
+    if what == '':
+      print 'Please specify a package to remove'
+      return
+    self.run_pacman_with('-Rd ' + what)
+    
+    out = self.__capture_output__()
+    (pid, self.exit_status) = os.wait()
+    if self.exit_status != 0:
+      return False
+    return True
+  # }}}
+  
+  # def remove(self, what = ''): {{{
+  def remove(self, what = ''):
+    uid = posix.getuid()
+    self.prev_return = None
+    if uid != 0:
+      print "You are not ROOT. Bye bye."
+      return
+    if what == '':
+      print 'Please specify a package to remove'
+      return
+    self.run_pacman_with('-R ' + what)
+    
+    out = self.__capture_output__()
+    (pid, self.exit_status) = os.wait()
+    
+    dependencies = []
+    if self.exit_status != 0:
+      pattern = '\n'
+      tmp = re.split(pattern, out)
+      for string in tmp:
+        if string != '':
+          dependencies.append(string[string.rfind(' ')+1:])
+    #return (self.exit_status, dependencies, out)
+    self.prev_return = (self.exit_status, dependencies, out)
+    return
+  # }}}
+  
+  # def get_pkg_files(self, what = ''): {{{
+  def get_pkg_files(self, what = ''):
+    uid = posix.getuid()
+    self.prev_return = None
+    #if uid != 0:
+    #  print "You are not ROOT. Bye bye."
+    #  return
+    if what == '':
+      print 'Please specify a package to remove'
+      return
+    
+    self.run_pacman_with('-Ql ' + what)
+
+    out = self.__capture_output__()
+    (pid, self.exit_status) = os.wait()
+
+    self.prev_return = (self.exit_status, out)
+    return
+  # }}}
+
+  # def download(self, what = ''): {{{
+  def download(self, what = ''):
+    uid = posix.getuid()
+    self.prev_return = None
+    if uid != 0:
+      print "You are not ROOT. Bye bye."
+      return
+    if what == '':
+      print 'Please specify a package to remove'
+      return
+    print 'running <%s>' % ('-Sw ' + what)
+    self.run_pacman_with('-Sw ' + what)
+
+    #out = self.__capture_output__()
+    (pid, self.exit_status) = os.wait()
+
+    self.prev_return = (self.exit_status, out)
+    return
+  # }}}
+
+  # help, quit, version {{{
+  # def help(self, what = ''): {{{
+  def help(self, what = ''):
+    print 'Available commands:'
+    for k,v in self.commands.iteritems():
+      print k + ' - ' + self.comm_description[k]
+
+  # }}}
+  
+  # def quit(self, what = ''): {{{
+  def quit(self, what = ''):
+    sys.exit(0)
+  # }}} 
+  
+  # def version(self): {{{
+  def version(self):
+    print 'Guzuta %s' % version
+    print 'Copyright (C) 2005 Joao Estevao <trankas@gmail.com>'
+    print ''
+    print '''This program may be freely redistributed under
+the terms of the GNU General Public License'''
+    print ''
+  # }}}
+  # }}}
+
+  # def read_command(self): {{{
+  def read_command(self):
+    try:
+      ret1 = raw_input(self.prompt)
+      try:
+        space_index = ret1.index(' ')
+        rest = ret1[space_index + 1:]
+      except ValueError:
+        space_index = len(ret1)
+        rest = ''
+      command = ret1[0 : space_index] 
+    except KeyboardInterrupt:
+      print '\nInterrupted!'
+      sys.exit(0)
+    except EOFError:
+      command = ''
+      rest = ''
+      #sys.exit(0)
+      
+    return command, rest
+  # }}}
+
+  # def go(self): {{{
+  def go(self):
+    print self.greet
+    while(True):
+      command, args = self.read_command()
+      if command != '':
+        if command in self.commands:
+          ret = self.commands[command](args) 
+          if ret != None:
+            pass
+        else:
+          print 'Command \'' + command + '\' not found.'
+      pacman_out = self.pacman.get_read_pipe()
+      pacman_in = self.pacman.get_write_pipe()
+  # }}}
+
+  # def run_pacman_with(self, args): {{{
+  def run_pacman_with(self, args):
+    self.pacman.set_args(args)
+    
+    self.pacman.run()
+    
+    # KEEP THIS! {{{
+    if self.pacman.get_pipeit() == True:
+      self.pid = self.pacman.get_pid()
+    #  
+    #  read_pipe = self.pacman.get_read_pipe()
+    #  write_pipe = self.pacman.get_write_pipe()
+
+    #  read_pipe.flush()
+
+    #  if write_pipe != None:
+    #    write_pipe.flush()
+    #  sys.stdout.flush()
+    #  sys.stdin.flush()
+    #  
+    #  line = 'a'
+
+    #  while len(line) == 1: 
+    #    line = self.pacman.get_read_pipe().read(1)
+    #    sys.stdout.write(line)
+    #    if line == '[':
+    #      line2 = self.pacman.get_read_pipe().read(1)
+    #      if line2 == 'Y':
+    #        line3 = self.pacman.get_read_pipe().read(1)
+    #        sys.stdout.write(line2)
+    #        if line3 == '/':
+    #          line4 = self.pacman.get_read_pipe().read(1)
+    #          sys.stdout.write(line3)
+    #          if line4 == 'n':
+    #            line5 = self.pacman.get_read_pipe().read(1)
+    #            sys.stdout.write(line4)
+    #            if line5 == ']':
+    #              line6 = self.pacman.get_read_pipe().read(1)
+    #              sys.stdout.write(line5)
+    #              if line6 == ' ':
+    #                sys.stdout.write(line6)
+    #                # [Y/n] !!!
+    #                if self.pacman.get_write_pipe != None:
+    #                  self.pacman.get_write_pipe().write('Y\n')
+    #                else:
+    #                  print 'write_pipe == None'
+    #      else:
+    #        sys.stdout.write(line)
+    #        
+    #  t = os.waitpid(self.pid, os.WNOHANG)
+    #  while t == (0, 0):
+    #    t = os.waitpid(self.pid, os.WNOHANG)
+    #else:
+    #  (self.pid, self.exit_status) = os.wait()
+    # }}}
+  # }}}
+  
+  # def get_read_pipe(self): {{{
+  def get_read_pipe(self):
+    return self.pacman.get_read_pipe()
+  # }}}
+
+  # def get_err_pipe(self): {{{
+  def get_err_pipe(self):
+    return self.pacman.get_err_pipe()
+  # }}}
+
+  # alpm-ified {{{
   # def alpm_pkg_to_list(self, pkg): {{{
   def alpm_pkg_to_list(self, pkg):
     name = pkg.get_name()
@@ -1933,292 +2210,23 @@ class shell:
     return self.alpm_pkg_to_list(pkg)
   # }}}
 
-  # def local_info(self, what = ''): {{{
-  def local_info(self, what = ''):
-    if what == '':
-      print 'Please specify a package to query for info'
-      return
-    self.prev_return = None
-    
-    self.run_pacman_with('-Qi ' + what)
-    
-    if self.pacman.get_pipeit() == True:
-      list = self.pacman.get_read_pipe().read()
-
-      if list == '\n':
-        (self.pid, self.exit_status) = os.wait()
-        #return None
-        self.prev_return = None
-        return
-
-      all = self.__compile_pkg_info__(list)
-
-      (self.pid, self.exit_status) = os.wait()
-      #return all
-      self.prev_return = all
-      return
-    else:
-      (self.pid, self.exit_status) = os.wait()
-      #return None
-      self.prev_return = None
-      return
-  # }}}
-  
   # def alpm_info(self, what = ''): {{{
   def alpm_info(self, what = ''):
     (repo, version, desc) = self.pkgs[what]
     db = self.dbs_by_name[repo]
+
     try:
-      pkg = db.read_pkg(what)
+      #pkg = db.read_pkg(what)
+      pkg_cache_list = db.get_pkg_cache()
+
+      for pkg_c in pkg_cache_list:
+        if pkg_c.get_name() == what:
+          pkg = pkg_c
+          break
     except alpm.NoSuchPackageException:
       return None
     #return self.alpm_pkg_to_string(pkg)
     return self.alpm_remote_pkg_to_list(pkg)
-  # }}}
-
-  # def info(self, what = ''): {{{
-  def info(self, what = ''):
-    if what == '':
-      print 'Please specify a package to query for info'
-      return
-    
-    self.prev_return = None
-    self.run_pacman_with('-Si ' + what)
-    
-    if self.pacman.get_pipeit() == True:
-      list = self.pacman.get_read_pipe().read()
-
-      all = self.__compile_pkg_info__(list)
-
-      (self.pid, self.exit_status) = os.wait()
-      if all == ['', '']:
-        #return None
-        self.prev_return = None
-        return
-      else:
-        #return all
-        self.prev_return = all
-        return
-    else:
-      (self.pid, self.exit_status) = os.wait()
-      #return None
-      self.prev_return = None
-      return
-  # }}}
-  
-  #def remove_nodeps(self, what = ''): {{{
-  def remove_nodeps(self, what = ''):
-    uid = posix.getuid()
-    if uid != 0:
-      print "You are not ROOT. Bye bye."
-      return
-    if what == '':
-      print 'Please specify a package to remove'
-      return
-    self.run_pacman_with('-Rd ' + what)
-    
-    out = self.__capture_output__()
-    (pid, self.exit_status) = os.wait()
-    if self.exit_status != 0:
-      return False
-    return True
-  # }}}
-  
-  # def remove(self, what = ''): {{{
-  def remove(self, what = ''):
-    uid = posix.getuid()
-    self.prev_return = None
-    if uid != 0:
-      print "You are not ROOT. Bye bye."
-      return
-    if what == '':
-      print 'Please specify a package to remove'
-      return
-    self.run_pacman_with('-R ' + what)
-    
-    out = self.__capture_output__()
-    (pid, self.exit_status) = os.wait()
-    
-    dependencies = []
-    if self.exit_status != 0:
-      pattern = '\n'
-      tmp = re.split(pattern, out)
-      for string in tmp:
-        if string != '':
-          dependencies.append(string[string.rfind(' ')+1:])
-    #return (self.exit_status, dependencies, out)
-    self.prev_return = (self.exit_status, dependencies, out)
-    return
-  # }}}
-  
-  # def get_pkg_files(self, what = ''): {{{
-  def get_pkg_files(self, what = ''):
-    uid = posix.getuid()
-    self.prev_return = None
-    #if uid != 0:
-    #  print "You are not ROOT. Bye bye."
-    #  return
-    if what == '':
-      print 'Please specify a package to remove'
-      return
-    
-    self.run_pacman_with('-Ql ' + what)
-
-    out = self.__capture_output__()
-    (pid, self.exit_status) = os.wait()
-
-    self.prev_return = (self.exit_status, out)
-    return
-  # }}}
-
-  # def download(self, what = ''): {{{
-  def download(self, what = ''):
-    uid = posix.getuid()
-    self.prev_return = None
-    if uid != 0:
-      print "You are not ROOT. Bye bye."
-      return
-    if what == '':
-      print 'Please specify a package to remove'
-      return
-    print 'running <%s>' % ('-Sw ' + what)
-    self.run_pacman_with('-Sw ' + what)
-
-    #out = self.__capture_output__()
-    (pid, self.exit_status) = os.wait()
-
-    self.prev_return = (self.exit_status, out)
-    return
-  # }}}
-
-  # help, quit, version {{{
-  # def help(self, what = ''): {{{
-  def help(self, what = ''):
-    print 'Available commands:'
-    for k,v in self.commands.iteritems():
-      print k + ' - ' + self.comm_description[k]
-
-  # }}}
-  
-  # def quit(self, what = ''): {{{
-  def quit(self, what = ''):
-    sys.exit(0)
-  # }}} 
-  
-  # def version(self): {{{
-  def version(self):
-    print 'Guzuta %s' % version
-    print 'Copyright (C) 2005 Joao Estevao <trankas@gmail.com>'
-    print ''
-    print '''This program may be freely redistributed under
-the terms of the GNU General Public License'''
-    print ''
-  # }}}
-  # }}}
-
-  # def read_command(self): {{{
-  def read_command(self):
-    try:
-      ret1 = raw_input(self.prompt)
-      try:
-        space_index = ret1.index(' ')
-        rest = ret1[space_index + 1:]
-      except ValueError:
-        space_index = len(ret1)
-        rest = ''
-      command = ret1[0 : space_index] 
-    except KeyboardInterrupt:
-      print '\nInterrupted!'
-      sys.exit(0)
-    except EOFError:
-      command = ''
-      rest = ''
-      #sys.exit(0)
-      
-    return command, rest
-  # }}}
-
-  # def go(self): {{{
-  def go(self):
-    print self.greet
-    while(True):
-      command, args = self.read_command()
-      if command != '':
-        if command in self.commands:
-          ret = self.commands[command](args) 
-          if ret != None:
-            pass
-        else:
-          print 'Command \'' + command + '\' not found.'
-      pacman_out = self.pacman.get_read_pipe()
-      pacman_in = self.pacman.get_write_pipe()
-  # }}}
-
-  # def run_pacman_with(self, args): {{{
-  def run_pacman_with(self, args):
-    self.pacman.set_args(args)
-    
-    self.pacman.run()
-    
-    # KEEP THIS! {{{
-    if self.pacman.get_pipeit() == True:
-      self.pid = self.pacman.get_pid()
-    #  
-    #  read_pipe = self.pacman.get_read_pipe()
-    #  write_pipe = self.pacman.get_write_pipe()
-
-    #  read_pipe.flush()
-
-    #  if write_pipe != None:
-    #    write_pipe.flush()
-    #  sys.stdout.flush()
-    #  sys.stdin.flush()
-    #  
-    #  line = 'a'
-
-    #  while len(line) == 1: 
-    #    line = self.pacman.get_read_pipe().read(1)
-    #    sys.stdout.write(line)
-    #    if line == '[':
-    #      line2 = self.pacman.get_read_pipe().read(1)
-    #      if line2 == 'Y':
-    #        line3 = self.pacman.get_read_pipe().read(1)
-    #        sys.stdout.write(line2)
-    #        if line3 == '/':
-    #          line4 = self.pacman.get_read_pipe().read(1)
-    #          sys.stdout.write(line3)
-    #          if line4 == 'n':
-    #            line5 = self.pacman.get_read_pipe().read(1)
-    #            sys.stdout.write(line4)
-    #            if line5 == ']':
-    #              line6 = self.pacman.get_read_pipe().read(1)
-    #              sys.stdout.write(line5)
-    #              if line6 == ' ':
-    #                sys.stdout.write(line6)
-    #                # [Y/n] !!!
-    #                if self.pacman.get_write_pipe != None:
-    #                  self.pacman.get_write_pipe().write('Y\n')
-    #                else:
-    #                  print 'write_pipe == None'
-    #      else:
-    #        sys.stdout.write(line)
-    #        
-    #  t = os.waitpid(self.pid, os.WNOHANG)
-    #  while t == (0, 0):
-    #    t = os.waitpid(self.pid, os.WNOHANG)
-    #else:
-    #  (self.pid, self.exit_status) = os.wait()
-    # }}}
-  # }}}
-  
-  # def get_read_pipe(self): {{{
-  def get_read_pipe(self):
-    return self.pacman.get_read_pipe()
-  # }}}
-
-  # def get_err_pipe(self): {{{
-  def get_err_pipe(self):
-    return self.pacman.get_err_pipe()
   # }}}
 
   # def alpm_download_file(self, url, destination): {{{
@@ -2259,6 +2267,16 @@ the terms of the GNU General Public License'''
           break
   # }}}
 
+  # def alpm_get_pkg_dbname(self, pkg_name): {{{
+  def alpm_get_pkg_dbname(self, pkg_name):
+    return self.pkgs[pkg_name][0]
+  # }}}
+
+  # def alpm_get_pkg_version(self, pkg_name): {{{
+  def alpm_get_pkg_version(self, pkg_name):
+    return self.pkgs[pkg_name][1]
+  # }}}
+
   # def alpm_download_package(self, package_name): {{{
   # pmc: treename, server_list
   #    server_list: path, protocol, server [...]
@@ -2266,8 +2284,10 @@ the terms of the GNU General Public License'''
     #self.all[dbname].append((name, version, description))
     #self.pkgs[name] = (dbname, version, description)
 
-    dbname = self.pkgs[package_name][0]
-    version = self.pkgs[package_name][1]
+    #dbname = self.pkgs[package_name][0]
+    dbname = self.alpm_get_pkg_dbname(package_name)
+    #version = self.pkgs[package_name][1]
+    version = self.alpm_get_pkg_version(package_name)
 
     pmc = None
     for pmc_record in self.pmc_syncs:
@@ -2301,8 +2321,8 @@ the terms of the GNU General Public License'''
   # }}}
 
   # def alpm_transaction_init(self): {{{
-  def alpm_transaction_init(self):
-    self.trans = self.alpm.transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0, trans_cb_ev)
+  #def alpm_transaction_init(self):
+  #  self.trans = self.alpm.transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0, trans_cb_ev)
   # }}}
 
   # def alpm_transaction_init(self, type, flags, cb_event, cb_conversation): {{{
@@ -2322,7 +2342,9 @@ the terms of the GNU General Public License'''
     missed_deps = []
     packages = []
 
-    self.alpm_transaction_init()
+    #self.alpm_transaction_init()
+    self.alpm_transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0, trans_cb_ev,\
+        trans_cb_conv)
 
     try:
       self.trans.sysupgrade()
@@ -2351,6 +2373,11 @@ the terms of the GNU General Public License'''
     return self.trans.prepare()
   # }}}
 
+  # def alpm_transaction_commit(self): {{{
+  def alpm_transaction_commit(self):
+    return self.trans.commit()
+  # }}}
+
   # def alpm_install_pkg_from_files(self, path_list): {{{
   def alpm_install_pkg_from_files(self, path_list):
     self.prev_return = None
@@ -2360,23 +2387,46 @@ the terms of the GNU General Public License'''
       return
     
     self.alpm_transaction_init(alpm.PM_TRANS_TYPE_UPGRADE,\
-        alpm.PM_TRANS_FLAG_RECURSE, self.cb_event, self.cb_conv)
+        alpm.PM_TRANS_FLAG_RECURSE, trans_cb_ev, trans_cb_conv)
 
     for path in path_list:
-      print path
       self.alpm_transaction_add_target(path)
 
-    # TODO: more checks
     try:
-      depmisses = self.alpm_transaction_prepare()
-    except alpm.AlpmUnsatisfiedDependencies:
-      pass
+      self.alpm_transaction_prepare()
+    except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
+      for deps in depmiss_list:
+        for dep in deps:
+          print ":: %s: requires %s" % (dep.get_target(), dep.get_name())
+          mod = dep.get_mod()
+
+          if mod == alpm.PM_DEP_MOD_EQ:
+            print "=%s" % (dep.get_version())
+          elif mod == alpm.PM_DEP_MOD_GE:
+            print ">=%s" % (dep.get_version())
+          elif mod == alpm.PM_DEP_MOD_LE:
+            print "<=%s" % (dep.get_version())
+      return
+    except alpm.ConflictingDependenciesTransactionException, conflict_list:
+      for dep in conflict_list:
+        print ":: %s: conflicts with %s" % (dep.get_target(), dep.get_name())
+      return
+    except alpm.ConflictingFilesTransactionException, conflict_list:
+      for dep in conflict_list:
+        print ":: %s\n" % (dep)
+      return
 
     self.alpm_transaction_release()
 
+    # actually install the packages
+    try:
+      self.alpm_transaction_commit()
+    except RuntimeError, inst:
+      print inst
 
     self.prev_return = None
     return
+  # }}}
   # }}}
 # }}}
 
