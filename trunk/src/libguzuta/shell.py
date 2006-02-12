@@ -396,7 +396,7 @@ class shell:
 
     PACCONF = "/etc/pacman.conf"
     PACDB = "var/lib/pacman"
-    PACCACHE = "var/cache/pacman"
+    PACCACHE = "var/cache/pacman/pkg"
     
     try:
       config["CONFIGFILE"]
@@ -432,23 +432,6 @@ class shell:
       config["DBPATH"] = PACDB
 
     return (a, pmc_syncs, config)
-  # }}}
-
-  # def __alpm_open_dbs__(self): {{{
-  def __alpm_open_dbs__(self):
-    self.dbs_by_name = {}
-    self.db_names = []
-
-    for sync in self.pmc_syncs:
-      try:
-        sync["db"] = self.alpm.register_db(sync["treename"])
-        self.dbs_by_name[sync["treename"]] = sync["db"]
-        self.db_names.append(sync["treename"])
-      except RuntimeError:
-        print "could not register ", sync["treename"]
-        sys.exit(1)
-    self.dbs_by_name["local"] = self.alpm.register_db("local")
-    #self.db_names.append('local')
   # }}}
 
   # def __init__(self, command_line, lock, interactive = False): {{{
@@ -964,23 +947,6 @@ class shell:
       return None
   # }}}
     
-  # def alpm_local_search(self, what = ''): {{{
-  def alpm_local_search(self, what = ''):
-    self.local_pkgs = {}
-
-    #for dbname, db in self.dbs_by_name.iteritems():
-    dbname = 'local'
-    db = self.dbs_by_name[dbname]
-    for pkg in db.get_package_iterator():
-      name = pkg.get_name()
-      version = pkg.get_version()
-      description = pkg.get_description()
-
-      self.local_pkgs[name] = (dbname, version, description)
-
-    return self.local_pkgs
-  # }}}
-
   # def local_search(self, what= ''): {{{
   def local_search(self, what= ''):
     self.prev_return = None
@@ -1009,56 +975,9 @@ class shell:
       return
   # }}}
 
-  # def alpm_get_pmc_syncs(self): {{{
-  def alpm_get_pmc_syncs(self):
-    return self.pmc_syncs
-  # }}}
-
   # def get_db_names(self): {{{
   def get_db_names(self):
     return self.db_names
-  # }}}
-
-  # def alpm_get_dbs(self): {{{
-  def alpm_get_dbs(self):
-    return self.dbs
-  # }}}
-
-  # def alpm_get_dbs_by_name(self): {{{
-  def alpm_get_dbs_by_name(self):
-    return self.dbs_by_name
-  # }}}
-
-  # def alpm_get_package_cache(self, treename): {{{
-  def alpm_get_package_cache(self, treename):
-    return self.dbs_by_name[treename].get_pkg_cache()
-  # }}}
-
-  # def alpm_get_package_iterator(self, treename): {{{
-  def alpm_get_package_iterator(self, treename):
-    #return self.alpm.get_pkg_cache()
-    return self.dbs_by_name[treename].get_package_iterator()
-  # }}}
-  
-  # def alpm_repofiles2(self): {{{
-  def alpm_repofiles2(self):
-    # all[repo].append((name, version, description))
-    # pkgs[name] = (repo, version, description)
-    self.all = {}
-    self.pkgs = {}
-
-    for dbname, db in self.dbs_by_name.iteritems():
-      if dbname != "local":
-        self.all[dbname] = []
-
-        for pkg in db.get_package_iterator():
-          name = pkg.get_name()
-          version = pkg.get_version()
-          description = pkg.get_description()
-
-          self.all[dbname].append((name, version, description))
-          self.pkgs[name] = (dbname, version, description)
-    return (self.all, self.pkgs)
   # }}}
 
   # def repofiles2(self): {{{
@@ -1242,25 +1161,6 @@ class shell:
     #  return (True, out)
   # }}}
     
-  # def alpm_pkg_in_repo(self, pkgname, repo): {{{
-  def alpm_pkg_in_repo(self, pkgname, repo):
-    pkg_cache = self.dbs_by_name[repo].get_pkg_cache()
-
-    for pkg in pkg_cache:
-      if pkg.get_name() == pkgname:
-        return (True, pkg.get_version())
-    return (False, None)
-  # }}}
-
-  # def alpm_get_pkg_repo(self, pkgname): {{{
-  def alpm_get_pkg_repo(self, pkgname):
-    for repo in self.db_names:
-      (found, version) = self.alpm_pkg_in_repo(pkgname, repo)
-      if found:
-        return (repo, version)
-    return (None, '--')
-  # }}}
-
   # def install_noconfirm(self, what = ''): {{{
   def install_noconfirm(self, what = ''):
     if not self.__is_root__():
@@ -1884,6 +1784,106 @@ the terms of the GNU General Public License'''
   # }}}
 
   # alpm-ified {{{
+  # def __alpm_open_dbs__(self): {{{
+  def __alpm_open_dbs__(self):
+    self.dbs_by_name = {}
+    self.db_names = []
+
+    for sync in self.pmc_syncs:
+      try:
+        sync["db"] = self.alpm.register_db(sync["treename"])
+        self.dbs_by_name[sync["treename"]] = sync["db"]
+        self.db_names.append(sync["treename"])
+      except RuntimeError:
+        print "could not register ", sync["treename"]
+        sys.exit(1)
+    self.dbs_by_name["local"] = self.alpm.register_db("local")
+    #self.db_names.append('local')
+  # }}}
+
+  # def alpm_get_dbs(self): {{{
+  def alpm_get_dbs(self):
+    return self.dbs
+  # }}}
+
+  # def alpm_get_dbs_by_name(self): {{{
+  def alpm_get_dbs_by_name(self):
+    return self.dbs_by_name
+  # }}}
+
+  # def alpm_get_package_cache(self, treename): {{{
+  def alpm_get_package_cache(self, treename):
+    return self.dbs_by_name[treename].get_pkg_cache()
+  # }}}
+
+  # def alpm_get_package_iterator(self, treename): {{{
+  def alpm_get_package_iterator(self, treename):
+    #return self.alpm.get_pkg_cache()
+    return self.dbs_by_name[treename].get_package_iterator()
+  # }}}
+  
+  # def alpm_repofiles2(self): {{{
+  def alpm_repofiles2(self):
+    # all[repo].append((name, version, description))
+    # pkgs[name] = (repo, version, description)
+    self.all = {}
+    self.pkgs = {}
+
+    for dbname, db in self.dbs_by_name.iteritems():
+      if dbname != "local":
+        self.all[dbname] = []
+
+        for pkg in db.get_package_iterator():
+          name = pkg.get_name()
+          version = pkg.get_version()
+          description = pkg.get_description()
+
+          self.all[dbname].append((name, version, description))
+          self.pkgs[name] = (dbname, version, description)
+    return (self.all, self.pkgs)
+  # }}}
+
+  # def alpm_get_pmc_syncs(self): {{{
+  def alpm_get_pmc_syncs(self):
+    return self.pmc_syncs
+  # }}}
+
+  # def alpm_local_search(self, what = ''): {{{
+  def alpm_local_search(self, what = ''):
+    self.local_pkgs = {}
+
+    #for dbname, db in self.dbs_by_name.iteritems():
+    dbname = 'local'
+    db = self.dbs_by_name[dbname]
+    for pkg in db.get_package_iterator():
+      name = pkg.get_name()
+      version = pkg.get_version()
+      description = pkg.get_description()
+
+      self.local_pkgs[name] = (dbname, version, description)
+
+    return self.local_pkgs
+  # }}}
+
+  # def alpm_pkg_in_repo(self, pkgname, repo): {{{
+  def alpm_pkg_in_repo(self, pkgname, repo):
+    pkg_cache = self.dbs_by_name[repo].get_pkg_cache()
+
+    for pkg in pkg_cache:
+      if pkg.get_name() == pkgname:
+        return (True, pkg.get_version())
+    return (False, None)
+  # }}}
+
+  # def alpm_get_pkg_repo(self, pkgname): {{{
+  def alpm_get_pkg_repo(self, pkgname):
+    for repo in self.db_names:
+      (found, version) = self.alpm_pkg_in_repo(pkgname, repo)
+      if found:
+        return (repo, version)
+    return (None, '--')
+  # }}}
+
   # def alpm_pkg_to_list(self, pkg): {{{
   def alpm_pkg_to_list(self, pkg):
     name = pkg.get_name()
@@ -2277,17 +2277,59 @@ the terms of the GNU General Public License'''
     return self.pkgs[pkg_name][1]
   # }}}
 
-  # def alpm_download_package(self, package_name): {{{
-  # pmc: treename, server_list
-  #    server_list: path, protocol, server [...]
-  def alpm_download_package(self, package_name):
+  # def alpm_pkg_name_version_from_path(self, path): {{{
+  def alpm_pkg_name_version_from_path(self, path):
+    last_slash_pos = path.rindex('/')
+    lastdash_pos = path.rindex('-')
+    dashver_pos = path[: lastdash_pos].rindex('-')
+    dotpkg_pos = path[: path[: path.rindex('.')].rindex('.')].rindex('.')
+
+    pkg_name = path[last_slash_pos+1: dashver_pos]
+    pkg_ver = path[dashver_pos+1: dotpkg_pos]
+
+    return pkg_name, pkg_ver
+  # }}}
+
+  # def alpm_download_packages(self, files): {{{
+  def alpm_download_packages(self, files):
+    print 'DOWNLOADING: ', files
+    ret = []
+    
+    #for pkg_name in pkg_names:
+    for path in files:
+    #for sync,path in zip(sync_packages, files):
+      pkg_name, pkg_ver = self.alpm_pkg_name_version_from_path(path)
+
+      db_name = ''
+      for pmc in self.pmc_syncs:
+        db = pmc['db']
+
+        try:
+          pkg = db.read_pkg(pkg_name)
+          if pkg:
+            db_name = db.get_tree_name()
+        except alpm.NoSuchPackageException:
+          pass
+
+      filename = self.alpm_download_package(pkg_name, pkg_ver,
+          db_name, path)
+
+      if filename != None:
+        ret.append(filename)
+      else:
+        return None
+  # }}}
+
+  # def alpm_download_package(self, package_name, version, dbname, path): {{{
+  def alpm_download_package(self, package_name, version, dbname, path):
     #self.all[dbname].append((name, version, description))
     #self.pkgs[name] = (dbname, version, description)
 
     #dbname = self.pkgs[package_name][0]
-    dbname = self.alpm_get_pkg_dbname(package_name)
+    #dbname = self.alpm_get_pkg_dbname(package_name)
     #version = self.pkgs[package_name][1]
-    version = self.alpm_get_pkg_version(package_name)
+    #version = self.alpm_get_pkg_version(package_name)
+    
 
     pmc = None
     for pmc_record in self.pmc_syncs:
@@ -2301,13 +2343,17 @@ the terms of the GNU General Public License'''
       except KeyError:
         self.config['CACHEDIR'] = 'var/cache/pacman'
 
-      destination = self.config['ROOT'] + self.config['CACHEDIR'] + '/pkg/'\
-          + package_name + '-' + version + '.pkg.tar.gz'
+      #destination = self.config['ROOT'] + self.config['CACHEDIR'] + '/pkg/'\
+      #    + package_name + '-' + version + '.pkg.tar.gz'
+
+      destination = path
 
       url = server_record['protocol'] + '://' + server_record['server']\
           + server_record['path'] + package_name + '-' + version + '.pkg.tar.gz'
 
       filename = self.alpm_download_file(url, destination)
+
+      print '%s downloaded to %s' % (package_name, filename)
 
       return filename
   # }}}
@@ -2378,9 +2424,15 @@ the terms of the GNU General Public License'''
     return self.trans.commit()
   # }}}
 
+  # def alpm_transaction_get_sync_packages(self): {{{
+  def alpm_transaction_get_sync_packages(self):
+    return self.trans.get_syncpackages()
+  # }}}
+
   # def alpm_install_pkg_from_files(self, path_list): {{{
   def alpm_install_pkg_from_files(self, path_list):
     self.prev_return = None
+    error = ''
     if path_list == [] or None:
       #return (None, None)
       self.prev_return = (None, None)
@@ -2394,27 +2446,14 @@ the terms of the GNU General Public License'''
 
     try:
       self.alpm_transaction_prepare()
-    except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
-      for deps in depmiss_list:
-        for dep in deps:
-          print ":: %s: requires %s" % (dep.get_target(), dep.get_name())
-          mod = dep.get_mod()
-
-          if mod == alpm.PM_DEP_MOD_EQ:
-            print "=%s" % (dep.get_version())
-          elif mod == alpm.PM_DEP_MOD_GE:
-            print ">=%s" % (dep.get_version())
-          elif mod == alpm.PM_DEP_MOD_LE:
-            print "<=%s" % (dep.get_version())
-      return
-    except alpm.ConflictingDependenciesTransactionException, conflict_list:
-      for dep in conflict_list:
-        print ":: %s: conflicts with %s" % (dep.get_target(), dep.get_name())
-      return
-    except alpm.ConflictingFilesTransactionException, conflict_list:
-      for dep in conflict_list:
-        print ":: %s\n" % (dep)
-      return
+    #except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
+    #  raise
+    #except alpm.ConflictingDependenciesTransactionException, conflict_list:
+    #  raise
+    #except alpm.ConflictingFilesTransactionException, conflict_list:
+    #  raise
+    except Exception:
+      raise
 
     self.alpm_transaction_release()
 
@@ -2422,10 +2461,15 @@ the terms of the GNU General Public License'''
     try:
       self.alpm_transaction_commit()
     except RuntimeError, inst:
-      print inst
+      raise
 
     self.prev_return = None
     return
+  # }}}
+
+  # def alpm_get_alpm(self): {{{
+  def alpm_get_alpm(self):
+    return self.alpm
   # }}}
   # }}}
 # }}}

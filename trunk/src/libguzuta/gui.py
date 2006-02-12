@@ -1204,14 +1204,134 @@ class gui:
     self.install_pkg_popup.hide()
   # }}}
 
+  # def alpm_install_targets(self, targets): {{{
+  def alpm_install_targets(self, targets):
+    # create a transaction
+    self.trans = self.shell.alpm_transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0,
+        trans_cb_ev, trans_cb_conv)
+
+    # process targets and add them to the transaction
+    for pkg_name in targets:
+      self.shell.alpm_transaction_add_target(pkg_name)
+
+    # compute the transaction
+    try:
+      self.shell.alpm_transaction_prepare()
+    except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
+      print depmiss_list
+    except alpm.ConflictingDependenciesTransactionException, conflict_list:
+      print conflict_list
+    except alpm.ConflictingFilesTransactionException, conflict_list:
+      print conflict_list
+
+    packages = self.shell.alpm_transaction_get_sync_packages()
+    # TODO: get confirmation
+
+    root_dir = self.shell.alpm.get_root()
+    cache_dir = self.shell.alpm.get_cache_dir()
+    ldir = root_dir + cache_dir
+    
+    pmc_syncs = self.shell.alpm_get_pmc_syncs()
+
+    files = []
+    for pmc_sync in pmc_syncs:
+      dbname = pmc_sync['db'].get_tree_name()
+
+      for sync in packages:
+        pkg = sync.get_package()
+        pkg_db = pkg.get_database()
+        pkg_db_name = pkg_db.get_tree_name()
+
+        if dbname == pkg_db_name:
+          pkg_name = pkg.get_name()
+          pkg_ver = pkg.get_version()
+
+          print '%s-%s belongs to %s, adding it to files' % (pkg_name,
+              pkg_db_name, dbname)
+
+          path = ldir + '/' + pkg_name + '-' + pkg_ver + alpm.PM_EXT_PKG
+
+          print 'PATH: ', path
+          try:
+            os.stat(path)
+          except OSError:
+            # file is not in the cache dir, so add it to the list
+            files.append(path)
+
+      cleanup = False
+      print 'FILES:', files
+      packages = self.shell.alpm_transaction_get_sync_packages()
+      if files != []:
+        # download stuff
+        if not os.stat(ldir):
+          # no cache directory, make it
+          try:
+            os.makedirs(ldir)
+          except Error:
+            # failed to make the dir, fall back to /tmp and unlink the pkg
+            # afterwards
+            ldir = '/tmp'
+            alpm.set_cache_dir(ldir)
+            cleanup = True
+        
+        #pkgs_to_download = []
+        #for sync in packages:
+        #  pkg = sync.get_package()
+        #  pkg_db_name = pkg.get_database().get_tree_name()
+        #  if pkg_db_name == dbname:
+        #    pkgs_to_download.append(sync)
+
+        filenames = self.shell.alpm_download_packages(files)
+        files = []
+
+    # check integrity of the files
+    print 'packages: ', packages
+    for sync in packages:
+      pkg = sync.get_package()
+      try:
+        pkg.check_md5sum()
+      except alpm.PackageCorruptedException:
+        print 'archive %s is corrupted' % pkg.get_name()
+        return
+      except Exception, inst:
+        print 'could not get checksum for package %s (%s)' %\
+            (pkg.get_name(), inst)
+        return
+
+    # actually perform the installation
+    try:
+      self.shell.alpm_transaction_commit()
+    except alpm.ConflictingFilesTransactionException, conflict_list:
+      for conflict in conflict_list:
+        type = conflict.get_type()
+        if type == alpm.PM_CONFLICT_TYPE_TARGET:
+          print "%s exists in \"%s\" (target) and \"%s\" (target)" %\
+              (conflict.get_file(), conflict.get_target(),\
+                  conflict.get_conflict_target())
+        elif type == alpm.PM_CONFLICT_TYPE_FILE:
+          print "%s: %s exists in filesystem" % (conflict.get_target(),\
+              conflict.get_conflict_target())
+
+      print "Bailing out"
+      self.shell.alpm_transaction_release()
+      return
+
+      if cleanup:
+        for f in files:
+          os.unlink(f)
+    except RuntimeError, inst:
+      print inst
+  # }}}
+
   # def on_install_pkg_clicked(self, button): {{{
   def on_install_pkg_clicked(self, button):
     pkgs_to_install = self.get_all_selected_packages(self.liststore)
+    #TODO: HERE
 
     if pkgs_to_install == []:
       return 
-    
-    self.install_packages_from_list(pkgs_to_install)
+
+    self.alpm_install_targets(pkgs_to_install)
   # }}}
 
   # def on_remove_pkg_clicked(self, button): {{{
@@ -1918,6 +2038,18 @@ class gui:
     #  print i
     self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
     (retcode, output, deps) = self.install_packages(list, repo)
+
+    for pkg_name in list:
+      # download package
+      print 'Downloading ', pkg_name
+      filename = self.shell.alpm_download_package(pkg_name)
+      print 'trying to install : ', filename
+      error = self.shell.alpm_install_pkg_from_files(filename)
+      if error == '':
+        print 'done'
+      else:
+        print error
+        return
 
     #print 'retcode: ', retcode
     # TODO: do the same for remove pkg, add 'Are you sure?' dialog to remove
