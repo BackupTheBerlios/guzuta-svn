@@ -11,50 +11,50 @@ from optparse import OptionParser
 # def trans_cb_ev(event, package1, package2): {{{
 def trans_cb_ev(event, package1, package2):
   if event == alpm.PM_TRANS_EVT_CHECKDEPS_START:
-    print 'checking dependencies...'
+    print '[checking dependencies...]'
   elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_START:
-    print 'checking for file conflicts...'
+    print '[checking for file conflicts...]'
   elif event == alpm.PM_TRANS_EVT_RESOLVEDEPS_START:
-    print 'resolving dependencies...'
+    print '[resolving dependencies...]'
   elif event == alpm.PM_TRANS_EVT_INTERCONFLICTS_START:
-    print 'looking for inter-conflicts...'
+    print '[looking for inter-conflicts...]'
   elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_START:
-    print 'checking for file conflicts...'
+    print '[checking for file conflicts...]'
   elif event == alpm.PM_TRANS_EVT_CHECKDEPS_DONE:
-    print 'done.'
+    print '[done.]'
   elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_DONE:
-    print 'done.'
+    print '[done.]'
   elif event == alpm.PM_TRANS_EVT_RESOLVEDEPS_DONE:
-    print 'done.'
+    print '[done.]'
   elif event == alpm.PM_TRANS_EVT_INTERCONFLICTS_DONE:
-    print 'done.'
+    print '[done.]'
   elif event == alpm.PM_TRANS_EVT_ADD_START:
-    print 'installing %s...' % package1.get_name()
+    print '[installing %s...' % package1.get_name()
   elif event == alpm.PM_TRANS_EVT_ADD_DONE:
-    print 'done.'
+    print '[done.]'
   elif event == alpm.PM_TRANS_EVT_REMOVE_START:
-    print 'removing %s...' % package1.get_name()
+    print '[removing %s...' % package1.get_name()
   elif event == alpm.PM_TRANS_EVT_REMOVE_DONE:
-    print 'done.'
+    print '[done.]'
   elif event == alpm.PM_TRANS_EVT_UPGRADE_START:
-    print 'upgrading %s...' % package1.get_name()
+    print '[upgrading %s...' % package1.get_name()
   elif event == alpm.PM_TRANS_EVT_UPGRADE_DONE:
-    print 'done.'
+    print '[done.]'
   #print "Event:", (event, package, package2)
 # }}}
 
 # def trans_cb_conv(question, lpkg, spkg, treename): {{{
 def trans_cb_conv(question, lpkg, spkg, treename):
-  print "Question:", (question, lpkg, spkg, treename)
+  print '[Question:', (question, lpkg, spkg, treename), ']'
 
   if (question == alpm.PM_TRANS_CONV_INSTALL_IGNOREPKG):
-    print "PM_TRANS_CONV_INSTALL_IGNOREPKG"
+    print "[PM_TRANS_CONV_INSTALL_IGNOREPKG]"
   if (question == alpm.PM_TRANS_CONV_REPLACE_PKG):
-    print "PM_TRANS_CONV_REPLACE_PKG"
+    print "[PM_TRANS_CONV_REPLACE_PKG]"
   if (question == alpm.PM_TRANS_CONV_LOCAL_NEWER):
-    print "PM_TRANS_CONV_LOCAL_NEWER"
+    print "[PM_TRANS_CONV_LOCAL_NEWER]"
   if (question == alpm.PM_TRANS_CONV_LOCAL_UPTODATE):
-    print "PM_TRANS_CONV_LOCAL_UPTODATE"
+    print "[PM_TRANS_CONV_LOCAL_UPTODATE]"
   return 4
 # }}}
 
@@ -376,8 +376,8 @@ class shell:
 
   # }}}
 
-  # def __init_alpm__(self): {{{
-  def __init_alpm__(self):
+  # def __init_alpm__(self, debug): {{{
+  def __init_alpm__(self, debug):
     pmc_syncs = []
     config = {}
 
@@ -403,9 +403,10 @@ class shell:
     except KeyError:
       config["CONFIGFILE"] = PACCONF
     
-    config["DEBUG"] = alpm.PM_LOG_WARNING | alpm.PM_LOG_DEBUG |\
-      alpm.PM_LOG_FLOW2 |alpm.PM_LOG_ERROR | alpm.PM_LOG_FLOW1 |\
-      alpm.PM_LOG_FUNCTION
+    #config["DEBUG"] = alpm.PM_LOG_WARNING | alpm.PM_LOG_DEBUG |\
+    #  alpm.PM_LOG_FLOW2 |alpm.PM_LOG_ERROR | alpm.PM_LOG_FLOW1 |\
+    #  alpm.PM_LOG_FUNCTION
+    config["DEBUG"] = debug
 
     self.__parseconfig__(a, config["CONFIGFILE"], pmc_syncs, config)
 
@@ -434,14 +435,14 @@ class shell:
     return (a, pmc_syncs, config)
   # }}}
 
-  # def __init__(self, command_line, lock, interactive = False): {{{
-  def __init__(self, command_line, lock, interactive = False):
+  # def __init__(self, command_line, lock, debug, interactive = False): {{{
+  def __init__(self, command_line, lock, debug, interactive = False):
     #self.pacman = pacman(self)
     self.pacman = pacman()
     self.yesno = False
 
     self.trans = None
-    tuple = self.__init_alpm__()
+    tuple = self.__init_alpm__(debug)
     if tuple == None:
       sys.exit(1)
 
@@ -2411,7 +2412,12 @@ the terms of the GNU General Public License'''
 
   # def alpm_transaction_add_target(self, pkg_name): {{{
   def alpm_transaction_add_target(self, pkg_name):
-    self.trans.add_target(pkg_name)
+    try:
+      self.trans.add_target(pkg_name)
+    except alpm.DuplicateTargetTransactionException, inst:
+      print inst, pkg_name
+    except alpm.PackageNotFoundTransactionException, inst:
+      print inst, pkg_name
   # }}}
 
   # def alpm_transaction_prepare(self): {{{

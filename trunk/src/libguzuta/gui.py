@@ -56,6 +56,94 @@ class gui:
   pango_no_underline = 0
   pango_underline_single = 1
 
+  # def gui_trans_cb_ev(self, event, package1, package2): {{{
+  def gui_trans_cb_ev(self, event, package1, package2):
+    if event == alpm.PM_TRANS_EVT_CHECKDEPS_START:
+      print '[checking dependencies...]'
+    elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_START:
+      print '[checking for file conflicts...]'
+    elif event == alpm.PM_TRANS_EVT_RESOLVEDEPS_START:
+      print '[resolving dependencies...]'
+    elif event == alpm.PM_TRANS_EVT_INTERCONFLICTS_START:
+      print '[looking for inter-conflicts...]'
+    elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_START:
+      print '[checking for file conflicts...]'
+    elif event == alpm.PM_TRANS_EVT_CHECKDEPS_DONE:
+      print '[done.]'
+    elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_DONE:
+      print '[done.]'
+    elif event == alpm.PM_TRANS_EVT_RESOLVEDEPS_DONE:
+      print '[done.]'
+    elif event == alpm.PM_TRANS_EVT_INTERCONFLICTS_DONE:
+      print '[done.]'
+    elif event == alpm.PM_TRANS_EVT_ADD_START:
+      print '[installing %s...' % package1.get_name()
+    elif event == alpm.PM_TRANS_EVT_ADD_DONE:
+      print '[done.]'
+    elif event == alpm.PM_TRANS_EVT_REMOVE_START:
+      print '[removing %s...' % package1.get_name()
+    elif event == alpm.PM_TRANS_EVT_REMOVE_DONE:
+      print '[done.]'
+    elif event == alpm.PM_TRANS_EVT_UPGRADE_START:
+      print '[upgrading %s...' % package1.get_name()
+    elif event == alpm.PM_TRANS_EVT_UPGRADE_DONE:
+      print '[done.]'
+    #print "Event:", (event, package, package2)
+  # }}}
+
+  # def gui_trans_cb_conv(self, event, data1, data2, data3): {{{
+  def gui_trans_cb_conv(self, event, data1, data2, data3):
+    # return > 0 means to go ahead and replace/install ignoring, etc
+    # return == 0 means to stop
+    print '[Question:', (event, data1, data2, data3), ']'
+
+    cb_conv_question_dialog =\
+        self.all_widgets.get_widget('cb_conv_question_dialog')
+    cb_conv_reason_label =\
+        self.all_widgets.get_widget('cb_conv_reason_label')
+    cb_conv_action_label =\
+        self.all_widgets.get_widget('cb_conv_action_label')
+
+    if event == alpm.PM_TRANS_CONV_INSTALL_IGNOREPKG:
+      cb_conv_reason_label.set_markup(\
+          '<b>%s</b> requires <b>%s</b>, but it is in IgnorePkg.' %\
+          (data1.get_name(), data2.get_name()))
+      cb_conv_action_label.set_markup('<i>Install anyway?</i>')
+
+    elif event == alpm.PM_TRANS_CONV_REPLACE_PKG:
+      cb_conv_action_label.set_markup(\
+          'Replace <b>%s</b> with <b>%s/%s</b>?' %\
+          (data1.get_name(), data3, data2.get_name()))
+
+    elif event == alpm.PM_TRANS_CONV_CONFLICT_PKG:
+      cb_conv_reason_label.set_markup(\
+          '<b>%s</b> conflicts with <b>%s</b>' %\
+          (data1, data2))
+      cb_conv_action_label.set_markup(\
+          '<i>Do you want to remove <b>%s</b>?</i>' %\
+          data2)
+
+    elif event == alpm.PM_TRANS_CONV_LOCAL_NEWER:
+      cb_conv_reason_label.set_markup(\
+          'Local version of <b>%s-%s</b> is newer.' %\
+          (data1.get_name(), data1.get_version()))
+      cb_conv_action_label.set_markup('<i>Upgrade anyway?</i>')
+
+    elif event == alpm.PM_TRANS_CONV_LOCAL_UPTODATE:
+      cb_conv_reason_label.set_markup(\
+          'Local version of <b>%s-%s</b> is up to date.' %\
+          (data1.get_name(), data1.get_version()))
+      cb_conv_action_label.set_markup('<i>Upgrade anyway?</i>')
+
+    response = cb_conv_question_dialog.run()
+    cb_conv_question_dialog.hide()
+
+    if response == gtk.RESPONSE_OK:
+      return 1
+    else:
+      return 0
+  # }}}
+
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
   def __init__(self, read_pipe = None, write_pipe = None):
     # signals !!!
@@ -210,7 +298,9 @@ class gui:
       alarm_time = self.pkg_update_alarm * 60 * 60
     #signal.alarm(alarm_time)
 
-    self.shell = shell(command_line = None, lock = self.lock, interactive = True)
+    self.shell = shell(command_line = None, lock = self.lock,\
+        debug = alpm.PM_LOG_WARNING | alpm.PM_LOG_FUNCTION,\
+        interactive = True)
     self.populate_pkg_lists()
     self.populate_pkg_lists2()
     self.dbs_by_name = self.shell.alpm_get_dbs_by_name()
@@ -793,7 +883,6 @@ class gui:
     elif dep_mod == alpm.PM_DEP_MOD_LE:
       str = str + ('<=%s' % dep_ver)
 
-    print 'STR: ',str
     return str
   # }}}
 
@@ -825,7 +914,7 @@ class gui:
       path_list = pkg_filechooser_dialog.get_filenames()
       
       install_pkg_are_you_sure_dialog =\
-      self.all_widgets.get_widget('install_pkg_are_you_sure_dialog')
+        self.all_widgets.get_widget('install_pkg_are_you_sure_dialog')
       self.current_dialog = install_pkg_are_you_sure_dialog
 
       install_are_you_sure_label =\
@@ -860,7 +949,7 @@ class gui:
 
         # Step 1: create a new transaction
         self.trans = self.shell.alpm_transaction_init(alpm.PM_TRANS_TYPE_UPGRADE,
-            0, trans_cb_ev, trans_cb_conv)
+            0, self.gui_trans_cb_ev, self.gui_trans_cb_conv)
 
         # add targets to it
         for path in path_list:
@@ -944,7 +1033,7 @@ class gui:
           conflicts_error_label =\
             self.all_widgets.get_widget('conflicts_error_label')
 
-          conflicts_error_label.set_text(inst)
+          conflicts_error_label.set_text(inst.args[0])
 
           conflicts_error_dialog.run()
           conflicts_error_dialog.hide()
@@ -1318,9 +1407,27 @@ class gui:
 
   # def alpm_install_targets(self, targets, repo = None): {{{
   def alpm_install_targets(self, targets, repo = None):
+    install_pkg_are_you_sure_dialog =\
+      self.all_widgets.get_widget('install_pkg_are_you_sure_dialog')
+
+    install_are_you_sure_textview =\
+      self.all_widgets.get_widget('install_are_you_sure_textview')
+
+    buffer = gtk.TextBuffer()
+    install_are_you_sure_textview.set_buffer(buffer)
+
+    for target in targets:
+      buffer.insert_at_cursor(target + '\n')
+
+    response = install_pkg_are_you_sure_dialog.run()
+    install_pkg_are_you_sure_dialog.hide()
+
+    if response == gtk.RESPONSE_CANCEL:
+      return
+
     # Step 1: create a new transaction
     self.trans = self.shell.alpm_transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0,
-        trans_cb_ev, trans_cb_conv)
+        self.gui_trans_cb_ev, self.gui_trans_cb_conv)
 
     # process targets and add them to the transaction
     for pkg_name in targets:
@@ -1330,31 +1437,50 @@ class gui:
     try:
       self.shell.alpm_transaction_prepare()
     except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
-      conflicts_error_dialog =\
-        self.all_widgets.get_widget('conflicts_error_dialog')
-      conflicts_error_label =\
-        self.all_widgets.get_widget('conflicts_error_label')
+      #conflicts_error_dialog =\
+      #  self.all_widgets.get_widget('conflicts_error_dialog')
+      #conflicts_error_label =\
+      #  self.all_widgets.get_widget('conflicts_error_label')
 
-      str = ''
+      #str = ''
+      #for depmiss in depmiss_list.args[0]:
+      #  str = str + self.alpm_depmiss_to_str(depmiss) + '\n'
+      #
+      #conflicts_error_label.set_text(str)
+      #conflicts_error_dialog.run()
+      #conflicts_error_dialog.hide()
+
+      print '==> UNSATISFIED'
+      unsatisfied_dependencies_dialog = \
+          self.all_widgets.get_widget('unsatisfied_dependencies_dialog')
+      unsatisfied_dependencies_textview = \
+          self.all_widgets.get_widget('unsatisfied_dependencies_textview')
+
+      buffer = gtk.TextBuffer()
+
+      unsatisfied_dependencies_textview.set_buffer(buffer)
+
+      depmiss_names = []
       for depmiss in depmiss_list.args[0]:
-        str = str + self.alpm_depmiss_to_str(depmiss) + '\n'
-      
-      
-      conflicts_error_label.set_text(str)
-      conflicts_error_dialog.run()
-      conflicts_error_dialog.hide()
+        depmiss_names.append(depmiss.get_name())
+        buffer.insert_at_cursor(self.alpm_depmiss_to_str(depmiss) + '\n')
+
+      response = unsatisfied_dependencies_dialog.run()
+      unsatisfied_dependencies_dialog.hide()
 
       self.shell.alpm_transaction_release()
-      print 'Bailing!'
+      if response == gtk.RESPONSE_OK:
+        self.alpm_install_targets(targets + depmiss_names)
       return
     except alpm.ConflictingDependenciesTransactionException, conflict_list:
+      print '==> CONFLICTING DEPS'
       conflicts_error_dialog =\
         self.all_widgets.get_widget('conflicts_error_dialog')
       conflicts_error_label =\
         self.all_widgets.get_widget('conflicts_error_label')
 
       str = ''
-      for conflict in conflict_list:
+      for conflict in conflict_list.args[0]:
         str = str + ('%s: conflicts with %s' % (conflict.get_target(),
           conflict.get_name()))
 
@@ -1368,13 +1494,14 @@ class gui:
       return
     except alpm.ConflictingFilesTransactionException, conflict_list:
       #print 'Conflicting files: ', conflict_list
+      print '==> CONFLICTING FILES'
       conflicts_error_dialog =\
         self.all_widgets.get_widget('conflicts_error_dialog')
       conflicts_error_label =\
         self.all_widgets.get_widget('conflicts_error_label')
 
       str = ''
-      for conflict in conflict_list:
+      for conflict in conflict_list.args[0]:
         conf_type = conflict.get_type()
 
         if conf_type == alpm.PM_CONFLICT_TYPE_TARGET:
@@ -1393,8 +1520,29 @@ class gui:
       return
 
     packages = self.shell.alpm_transaction_get_sync_packages()
-    # TODO: get confirmation
+    print 'PACKAGES IN THE TRANSACTION: ', packages
+    to_remove = []
+    to_install = []
+    # list targets and get confirmation
+    for sync in packages:
+      pkg = sync.get_package()
+      if sync.get_type() == alpm.PM_SYNC_TYPE_REPLACE:
+        # replace
+        data = sync.get_data()
+        for pkg2 in data:
+          pkg_name = pkg2.get_name()
+          if pkg_name not in to_remove:
+            to_remove.append(pkg_name)
 
+      pkgname = pkg.get_name()
+      pkgver = pkg.get_version()
+      str = '%s-%s' % (pkgname, pkgver)
+      to_install.append(str)
+
+    if to_remove != []:
+      print 'Remove: \n', to_remove
+
+    print 'Targets: \n', to_install
     # group sync records by repository and download
     root_dir = self.shell.alpm.get_root()
     cache_dir = self.shell.alpm.get_cache_dir()
@@ -1464,7 +1612,10 @@ class gui:
         files = []
 
     # check integrity of the files
-    print 'packages: ', packages
+    #print 'packages: ', packages
+    print 'PACKAGES TO BE VERIFIED'
+    for package in packages:
+      print package
     bail = False
 
     conflicts_error_dialog =\
@@ -1499,6 +1650,13 @@ class gui:
     # Step 3: actually perform the installation
     try:
       self.shell.alpm_transaction_commit()
+      list = [syncpkg.get_package().get_name() for syncpkg in packages]
+
+      self.__add_pkg_info_to_local_pkgs__(list)
+      self.refresh_pkgs_treeview()
+
+      self.shell.alpm_transaction_release()
+      return
     except alpm.ConflictingFilesTransactionException, conflict_list:
       conflicts_error_dialog =\
         self.all_widgets.get_widget('conflicts_error_dialog')
@@ -1533,7 +1691,7 @@ class gui:
       conflicts_error_label =\
         self.all_widgets.get_widget('conflicts_error_label')
 
-      conflicts_error_label.set_text(inst)
+      conflicts_error_label.set_text(inst.args[0])
 
       conflicts_error_dialog.run()
       conflicts_error_dialog.hide()
@@ -1577,10 +1735,9 @@ class gui:
     if response == gtk.RESPONSE_CANCEL:
       return
     else:
-      # TODO: show the same stuff that is shown in alpm_install_targets
       # Step 1: create a new transaction
       self.trans = self.shell.alpm_transaction_init(alpm.PM_TRANS_TYPE_REMOVE,
-          0, trans_cb_ev, trans_cb_conv)
+          0, self.gui_trans_cb_ev, self.gui_trans_cb_conv)
 
       # and add targets to it
       for pkg_name in targets:
@@ -1590,35 +1747,68 @@ class gui:
       try:
         self.shell.alpm_transaction_prepare()
       except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
-        print 'Unsatisfied dependencies: ', depmiss_list
+        conflicts_error_dialog =\
+          self.all_widgets.get_widget('conflicts_error_dialog')
+        conflicts_error_label =\
+          self.all_widgets.get_widget('conflicts_error_label')
+
+        str = ''
+        for depmiss in depmiss_list.args[0]:
+          str = str + self.alpm_depmiss_to_str(depmiss) + '\n'
+        
+        conflicts_error_label.set_text(str)
+        conflicts_error_dialog.run()
+        conflicts_error_dialog.hide()
+        
         self.shell.alpm_transaction_release()
-        print 'Bailing!'
         return
       except RuntimeException, conflict_list:
-        print inst
+        conflicts_error_dialog =\
+          self.all_widgets.get_widget('conflicts_error_dialog')
+        conflicts_error_label =\
+          self.all_widgets.get_widget('conflicts_error_label')
+
+        str = inst.args[0]
+
+        conflicts_error_label.set_text(str)
+        conflicts_error_dialog.run()
+        conflicts_error_dialog.hide()
+        
         self.shell.alpm_transaction_release()
-        print 'Bailing!'
         return
 
       # Step 3: actually perform the removal
       try:
         self.shell.alpm_transaction_commit()
+
+        # for removed_pkg in list: {{{
+        for removed_pkg in targets:
+          # unset self.local_pkg_info and self.local_pkgs
+          try:
+            #del self.local_pkg_info[removed_pkg]
+            del self.local_pkgs[removed_pkg]
+          except KeyError:
+            pass
+        # }}}
+
+        self.shell.alpm_transaction_release()
+        self.refresh_pkgs_treeview()
+
+        return
       except RuntimeError, inst:
-        print inst
+        conflicts_error_dialog =\
+          self.all_widgets.get_widget('conflicts_error_dialog')
+        conflicts_error_label =\
+          self.all_widgets.get_widget('conflicts_error_label')
+
+        str = inst.args[0]
+
+        conflicts_error_label.set_text(str)
+        conflicts_error_dialog.run()
+        conflicts_error_dialog.hide()
+        
         self.shell.alpm_transaction_release()
         return
-      
-      # for removed_pkg in list: {{{
-      for removed_pkg in targets:
-        # unset self.local_pkg_info and self.local_pkgs
-        try:
-          del self.local_pkg_info[removed_pkg]
-          del self.local_pkgs[removed_pkg]
-        except KeyError:
-          pass
-      # }}}
-
-      self.refresh_pkgs_treeview()
   # }}}
 
   # def on_remove_pkg_clicked(self, button): {{{
@@ -2807,11 +2997,13 @@ class gui:
           text_buffer.insert(iterator, line + '\n')
   # }}}
 
-  # def __refresh_pkgs_treeview__(self): {{{
-  def __refresh_pkgs_treeview__(self):
+  # def __refresh_pkgs_treeview__(self, iter_to_remove): {{{
+  def __refresh_pkgs_treeview__(self, iter_to_remove):
     new_liststore = gtk.ListStore('gboolean', str, str, str)
     
     new_liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
+    self.liststore.remove(iter_to_remove)
+
     for row in self.liststore:
       name = row[1]
       try:
@@ -2983,9 +3175,11 @@ class gui:
   def refresh_pkgs_treeview(self):
     selection = self.treeview_repos.get_selection()
     treemodel, iter = selection.get_selected()
+    selection_pkgs = self.treeview.get_selection()
+    treemodel_pkgs, iter_pkgs = selection_pkgs.get_selected()
 
     if not iter:
-      self.__refresh_pkgs_treeview__()
+      self.__refresh_pkgs_treeview__(iter_pkgs)
     else:
       repo = treemodel.get_value(iter, 0)
       # fill treeview with pkgs from 'repo'
@@ -3014,7 +3208,7 @@ class gui:
           
           #info = self.shell.get_prev_return()
           info = self.shell.alpm_info(installed_pkg)
-          print "remote info: ", info
+          #print "remote info: ", info
         self.local_pkg_info[installed_pkg] = info
 
       if info == None:
@@ -3031,7 +3225,7 @@ class gui:
           
           #info = self.shell.get_prev_return()
           info = self.shell.alpm_local_info(installed_pkg)
-          print "local info:", info
+          #print "local info:", info
           self.local_pkg_info[installed_pkg] = info
 
       n = len(info)
@@ -3050,13 +3244,7 @@ class gui:
         elif line.startswith('Description'):
           description = line[line.index(':')+1:].strip()
           
-          try:
-            info[i+1].index(':')
-          except ValueError:
-            # no ':' found
-            description = description + ' ' + info[i+1].strip()
-            # skip next iteration
-            i = i+1
+          description = info[i]
         else:
           pass
       self.local_pkgs[installed_pkg] = (repo, version, description)
