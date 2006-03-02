@@ -7,6 +7,13 @@ import urllib, ftplib, httplib, shutil
 from subprocess import *
 import alpm
 from optparse import OptionParser
+import pygtk
+pygtk.require('2.0')
+import gtk
+import gtk.gdk
+if gtk.pygtk_version < (2,3,90):
+  raise SystemExit
+import gobject
 
 # def trans_cb_ev(event, package1, package2): {{{
 def trans_cb_ev(event, package1, package2):
@@ -1802,6 +1809,34 @@ the terms of the GNU General Public License'''
     #self.db_names.append('local')
   # }}}
 
+  # def alpm_reopen_dbs(self, db_names): {{{
+  def alpm_reopen_dbs(self, db_names_dict):
+    print 'RE-OPENING DBS'
+    for db_name, v in db_names_dict.iteritems():
+      try:
+        print 'unregistering %s ...' % db_name
+        self.dbs_by_name[db_name].unregister()
+        print 're-registering %s ...' % db_name
+        self.dbs_by_name[db_name] = self.alpm.register_db(db_name)
+      except KeyError, inst:
+        print inst
+        return
+  # }}}
+
+  # def __alpm_close_dbs__(self): {{{
+  def __alpm_close_dbs__(self):
+    #self.dbs_by_name = {}
+    #self.db_names = []
+
+    for sync in self.pmc_syncs:
+      try:
+        sync["db"].unregister()
+        #del dbs_by_name[sync["treename"]]
+      except KeyError:
+        pass
+    self.dbs_by_name["local"].unregister()
+  # }}}
+
   # def alpm_get_dbs(self): {{{
   def alpm_get_dbs(self):
     return self.dbs
@@ -2258,7 +2293,7 @@ the terms of the GNU General Public License'''
           try:
             print db.update(destination)
           except alpm.DatabaseException, instance:
-            print inst
+            print instance
             return None
           try:
             os.remove(destination)
@@ -2291,9 +2326,10 @@ the terms of the GNU General Public License'''
     return pkg_name, pkg_ver
   # }}}
 
-  # def alpm_download_packages(self, files): {{{
-  def alpm_download_packages(self, files):
+  # def alpm_download_packages(self, files, progress_bar): {{{
+  def alpm_download_packages(self, files, progress_bar):
     print 'DOWNLOADING: ', files
+    self.prev_return = None
     ret = []
     
     #for pkg_name in pkg_names:
@@ -2317,8 +2353,17 @@ the terms of the GNU General Public License'''
 
       if filename != None:
         ret.append(filename)
+        str = '%s/%s-%s downloaded.' %\
+            (db_name, pkg_name, pkg_ver)
+        gtk.gdk.threads_enter()
+        progress_bar.set_text(str)
+        #progress_bar.pulse()
+        gtk.gdk.threads_leave()
       else:
-        return None
+        self.prev_return = None
+        return
+    self.prev_return = ret
+    return
   # }}}
 
   # def alpm_download_package(self, package_name, version, dbname, path): {{{
@@ -2407,6 +2452,7 @@ the terms of the GNU General Public License'''
 
   # def alpm_transaction_release(self): {{{
   def alpm_transaction_release(self):
+    print 'TRANSACTION RELEASED'
     self.trans.release()
   # }}}
 
@@ -2416,8 +2462,11 @@ the terms of the GNU General Public License'''
       self.trans.add_target(pkg_name)
     except alpm.DuplicateTargetTransactionException, inst:
       print inst, pkg_name
+      return True
     except alpm.PackageNotFoundTransactionException, inst:
       print inst, pkg_name
+      return False
+    return True
   # }}}
 
   # def alpm_transaction_prepare(self): {{{
