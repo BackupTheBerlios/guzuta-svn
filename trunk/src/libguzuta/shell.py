@@ -14,6 +14,7 @@ import gtk.gdk
 if gtk.pygtk_version < (2,3,90):
   raise SystemExit
 import gobject
+import threading
 
 # def trans_cb_ev(event, package1, package2): {{{
 def trans_cb_ev(event, package1, package2):
@@ -445,7 +446,7 @@ class shell:
   # def __init__(self, command_line, lock, debug, interactive = False): {{{
   def __init__(self, command_line, lock, debug, interactive = False):
     #self.pacman = pacman(self)
-    self.pacman = pacman()
+    #self.pacman = pacman()
     self.yesno = False
 
     self.trans = None
@@ -458,10 +459,13 @@ class shell:
     self.__alpm_open_dbs__()
 
     self.lock = lock
+
+    self.th_ended_event = threading.Event()
+
     self.timer = threading.Timer(1.0, self.handle_timer)
     
-    if interactive == True:
-      self.pacman.set_pipeit(True)
+    #if interactive == True:
+    #  self.pacman.set_pipeit(True)
     
     self.uid = posix.getuid()
     # pid of pacman process
@@ -2303,6 +2307,20 @@ the terms of the GNU General Public License'''
           break
   # }}}
 
+  # def alpm_get_package_files(self, pkg_name): {{{
+  def alpm_get_package_files(self, pkg_name):
+    db_name = self.alpm_get_pkg_dbname(pkg_name)
+
+    db = self.dbs_by_name['local']
+
+    try:
+      pkg = db.read_pkg(pkg_name)
+    except alpm.NoSuchPackageException:
+      return None
+
+    return pkg.get_files()
+  # }}}
+
   # def alpm_get_pkg_dbname(self, pkg_name): {{{
   def alpm_get_pkg_dbname(self, pkg_name):
     return self.pkgs[pkg_name][0]
@@ -2471,12 +2489,14 @@ the terms of the GNU General Public License'''
 
   # def alpm_transaction_prepare(self): {{{
   def alpm_transaction_prepare(self):
-    return self.trans.prepare()
+    self.trans.prepare()
+    self.th_ended_event.set()
   # }}}
 
   # def alpm_transaction_commit(self): {{{
   def alpm_transaction_commit(self):
-    return self.trans.commit()
+    self.trans.commit()
+    self.th_ended_event.set()
   # }}}
 
   # def alpm_transaction_get_sync_packages(self): {{{

@@ -62,6 +62,7 @@ class gui:
   # def gui_trans_cb_ev(self, event, package1, package2): {{{
   def gui_trans_cb_ev(self, event, package1, package2):
     prev_text = ''
+    time.sleep(1)
     if event == alpm.PM_TRANS_EVT_CHECKDEPS_START:
       print 'event: ', event, self.busy_dialog, self.busy_progress_bar3
       print 'Checking dependencies... '
@@ -200,9 +201,8 @@ class gui:
   def __init__(self, read_pipe = None, write_pipe = None):
     # signals !!!
     #fname = '/usr/share/guzuta/guzuta2.glade'
-    gtk.gdk.threads_init()
+    #gtk.gdk.threads_init()
     
-    gtk.gdk.threads_enter()
     self.th = None
 
     self.lock = threading.Lock()
@@ -233,6 +233,8 @@ class gui:
         print os.getcwd()
         print 'no glade file found!'
         sys.exit(2)
+
+    # signals dictionary {{{
     signals_dict = {\
     #'on_treeview_row_activated': self.on_row_activated,
     'on_treeview_cursor_changed': self.on_cursor_changed,
@@ -305,6 +307,7 @@ class gui:
     #    self.on_systray_eventbox_leave_notify_event
     }
     # end signals
+    # }}}
 
     #self.pacman = pacman(self)
     self.treeview = None
@@ -419,7 +422,7 @@ class gui:
     
     self.busy_window = None
     self.busy_window_hidden = True
-    self.timer = gobject.timeout_add (100, self.progress_timeout)
+    #self.timer = gobject.timeout_add (100, self.progress_timeout)
 
     self.main_window.show()
 
@@ -454,8 +457,9 @@ class gui:
     #print 'registered'
     #print 'ids: ', (read_watch_id, err_watch_id)
 
+    #gtk.gdk.threads_enter()
     gtk.main()
-    gtk.gdk.threads_leave()
+    #gtk.gdk.threads_leave()
   # }}}
   
   # def progress_timeout(self, progress_bar): {{{
@@ -1261,7 +1265,7 @@ class gui:
 
   # def on_quit_activate(self, menuitem): {{{
   def on_quit_activate(self, menuitem):
-    gobject.source_remove(self.timer)
+    #gobject.source_remove(self.timer)
     self.timer = 0
     self.shell.release()
     gtk.main_quit()
@@ -1271,7 +1275,7 @@ class gui:
   # def on_destroy(self, widget, data=None): {{{
   def on_destroy(self, widget, data=None):
     if widget == self.main_window:
-      gobject.source_remove(self.timer)
+      #gobject.source_remove(self.timer)
       self.timer = 0
       gtk.main_quit()
       return False
@@ -1480,12 +1484,15 @@ class gui:
 
   # def alpm_install_targets(self, targets, repo = None): {{{
   def alpm_install_targets(self, targets, repo = None):
-    print 'INSTALL_TARGETS: ', (targets, repo)
+    #print 'INSTALL_TARGETS: ', (targets, repo)
     
-    self.thread_started_lock.release()
-    self.lock.acquire()
+    #self.thread_started_lock.release()
+    #print 'RELEASED THREAD STARTED LOCK'
+    #self.lock.acquire()
+    #print 'ACQUIRED LOCK'
 
-    gtk.threads_enter()
+    #print 'THREADS_ENTER'
+    #gtk.gdk.threads_enter()
     install_pkg_are_you_sure_dialog =\
       self.all_widgets.get_widget('install_pkg_are_you_sure_dialog')
 
@@ -1498,21 +1505,25 @@ class gui:
     for target in targets:
       buffer.insert_at_cursor(target + '\n')
 
+    #print 'RUNNING INSTALL DIALOG'
     response = install_pkg_are_you_sure_dialog.run()
     install_pkg_are_you_sure_dialog.hide()
-    gtk.threads_leave()
+    #gtk.gdk.threads_leave()
+    #print 'THREADS_LEAVE'
 
     if response == gtk.RESPONSE_CANCEL:
-      print 'RESPONSE_CANCEL'
-      self.lock.release()
+      #print 'RESPONSE_CANCEL'
+      #print 'RELEASING LOCK'
+      #self.lock.release()
       return
 
-    gtk.threads_enter()
+    #gtk.gdk.threads_enter()
     self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
     self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
-    gtk.threads_leave()
+    self.busy_dialog.show_now()
+    #gtk.gdk.threads_leave()
 
-    print 'creating transaction...'
+    #print 'creating transaction...'
     # Step 1: create a new transaction
     self.trans = self.shell.alpm_transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0,
         self.gui_trans_cb_ev, self.gui_trans_cb_conv)
@@ -1523,17 +1534,29 @@ class gui:
       ret = self.shell.alpm_transaction_add_target(pkg_name)
       if not ret:
         self.shell.alpm_transaction_release()
-        gtk.gdk.threads_enter()
+        #gtk.gdk.threads_enter()
         self.busy_dialog.hide()
-        self.lock.release()
-        gtk.gdk.threads_leave()
+        #print 'RELEASING LOCK'
+        #self.lock.release()
+        #gtk.gdk.threads_leave()
         return
 
     print 'UI'
     # Step 2: compute the transaction
     try:
       # TODO: run this in a thread
-      self.shell.alpm_transaction_prepare()
+      self.run_in_thread(self.shell.alpm_transaction_prepare, {})
+
+      # waiting for thread to finish
+      while not self.shell.th_ended_event.isSet():
+        #print '====> WAITING FOR PREPARE'
+        #self.shell.th_ended_event.wait(0.01)
+        while gtk.events_pending():
+          gtk.main_iteration(False)
+      #print 'PREPARE FINISHED'
+      self.shell.th_ended_event.clear()
+
+      #self.shell.alpm_transaction_prepare()
     except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
       #conflicts_error_dialog =\
       #  self.all_widgets.get_widget('conflicts_error_dialog')
@@ -1549,7 +1572,7 @@ class gui:
       #conflicts_error_dialog.hide()
 
       #print '==> UNSATISFIED'
-      gtk.threads_enter()
+      #gtk.gdk.threads_enter()
       unsatisfied_dependencies_dialog = \
           self.all_widgets.get_widget('unsatisfied_dependencies_dialog')
       unsatisfied_dependencies_textview = \
@@ -1566,7 +1589,7 @@ class gui:
 
       response = unsatisfied_dependencies_dialog.run()
       unsatisfied_dependencies_dialog.hide()
-      gtk.threads_leave()
+      #gtk.gdk.threads_leave()
 
       self.shell.alpm_transaction_release()
       # TEST
@@ -1574,11 +1597,12 @@ class gui:
 
       if response == gtk.RESPONSE_OK:
         self.alpm_install_targets(targets + depmiss_names)
-      self.lock.release()
+      #print 'RELEASING LOCK'
+      #self.lock.release()
       return
     except alpm.ConflictingDependenciesTransactionException, conflict_list:
       #print '==> CONFLICTING DEPS'
-      gtk.threads_enter()
+      #gtk.gdk.threads_enter()
       conflicts_error_dialog =\
         self.all_widgets.get_widget('conflicts_error_dialog')
       conflicts_error_label =\
@@ -1593,10 +1617,11 @@ class gui:
 
       conflicts_error_dialog.run()
       conflicts_error_dialog.hide()
-      gtk.threads_leave()
+      #gtk.gdk.threads_leave()
 
       self.shell.alpm_transaction_release()
-      self.lock.release()
+      #print 'RELEASING LOCK'
+      #self.lock.release()
       # TEST
       #self.shell.__alpm_close_dbs__()
       #print 'Bailing!'
@@ -1604,7 +1629,7 @@ class gui:
     except alpm.ConflictingFilesTransactionException, conflict_list:
       #print 'Conflicting files: ', conflict_list
       #print '==> CONFLICTING FILES'
-      gtk.threads_enter()
+      #gtk.gdk.threads_enter()
       conflicts_error_dialog =\
         self.all_widgets.get_widget('conflicts_error_dialog')
       conflicts_error_label =\
@@ -1625,28 +1650,31 @@ class gui:
       conflicts_error_label.set_text(str)
       conflicts_error_dialog.run()
       conflicts_error_dialog.hide()
-      gtk.threads_leave()
+      #gtk.gdk.threads_leave()
 
       self.shell.alpm_transaction_release()
-      self.lock.release()
+      #print 'RELEASING LOCK'
+      #self.lock.release()
 
       # TEST
       #self.shell.__alpm_close_dbs__()
       return
 
-    gtk.threads_enter()
+    #gtk.gdk.threads_enter()
     self.busy_dialog.show_all()
-    gtk.threads_leave()
+    #gtk.gdk.threads_leave()
     packages = self.shell.alpm_transaction_get_sync_packages()
     if packages == []:
-      print 'No packages to install/remove'
+      # TODO: use a dialog for the following print
+      #print 'No packages to install/remove'
       self.shell.alpm_transaction_release()
-      gtk.threads_enter()
+      #gtk.gdk.threads_enter()
       self.busy_dialog.hide()
-      gtk.threads_leave()
+      #gtk.gdk.threads_leave()
       # TEST
       #self.shell.__alpm_close_dbs__()
-      self.lock.release()
+      #print 'RELEASING LOCK'
+      #self.lock.release()
       return
 
     #print 'PACKAGES IN THE TRANSACTION: ', packages
@@ -1668,8 +1696,8 @@ class gui:
       str = '%s-%s' % (pkgname, pkgver)
       to_install.append(str)
 
-    if to_remove != []:
-      print 'Remove: \n', to_remove
+    #if to_remove != []:
+    #  print 'Remove: \n', to_remove
 
     print 'Targets: \n', to_install
     # group sync records by repository and download
@@ -1727,10 +1755,10 @@ class gui:
     if files != []:
       # download stuff
       #print 'Retrieving packages from %s...' % (dbname)
-      gtk.threads_enter()
+      #gtk.gdk.threads_enter()
       self.busy_progress_bar3.set_text('Retrieving packages from %s...' %
           dbname)
-      gtk.threads_leave()
+      #gtk.gdk.threads_leave()
       #self.busy_progress_bar3.pulse()
       if not os.stat(ldir):
         # no cache directory, make it
@@ -1751,16 +1779,16 @@ class gui:
     # check integrity of the files
     #print 'packages: ', packages
     #print 'PACKAGES TO BE VERIFIED'
-    for package in packages:
-      print package
+    #for package in packages:
+    #  print 'UUUU: ', package
     bail = False
 
-    gtk.threads_enter()
+    #gtk.gdk.threads_enter()
     conflicts_error_dialog =\
       self.all_widgets.get_widget('conflicts_error_dialog')
     conflicts_error_label =\
       self.all_widgets.get_widget('conflicts_error_label')
-    gtk.threads_leave()
+    #gtk.gdk.threads_leave()
 
     str = ''
     for sync in packages:
@@ -1779,14 +1807,15 @@ class gui:
         bail = True
         
     if bail:
-      gtk.threads_enter()
+      #gtk.gdk.threads_enter()
       conflicts_error_dialog.run()
       conflicts_error_dialog.hide()
       self.busy_dialog.hide()
-      gtk.threads_leave()
+      #gtk.gdk.threads_leave()
 
       self.shell.alpm_transaction_release()
-      self.lock.release();
+      #print 'RELEASING LOCK'
+      #self.lock.release();
       # TEST
       #self.shell.__alpm_close_dbs__()
       return
@@ -1797,31 +1826,42 @@ class gui:
     # Step 3: actually perform the installation
     try:
       # TODO: run this in a thread
-      self.shell.alpm_transaction_commit()
+      #print 'RUNNING COMMIT'
+      #self.shell.alpm_transaction_commit()
+      self.run_in_thread(self.shell.alpm_transaction_commit, {})
+      
+      while not self.shell.th_ended_event.isSet():
+        #print '====> WAITING FOR COMMIT'
+        #self.shell.th_ended_event.wait(0.01)
+        while gtk.events_pending():
+          gtk.main_iteration(False)
+      #print 'COMMIT FINISHED'
+      self.shell.th_ended_event.clear()
 
       list = [syncpkg.get_package().get_name() for syncpkg in packages]
 
       print 'packages installed: ', list
 
-      gtk.threads_enter()
+      #gtk.gdk.threads_enter()
       self.__add_pkg_info_to_local_pkgs__(list)
       self.refresh_pkgs_treeview()
       self.busy_dialog.hide()
-      gtk.threads_leave()
+      #gtk.gdk.threads_leave()
 
       self.shell.alpm_transaction_release()
       if cleanup:
         for f in files:
           os.unlink(f)
-      self.lock.release();
+      #print 'RELEASING LOCK'
+      #self.lock.release();
       return
     except alpm.ConflictingFilesTransactionException, conflict_list:
-      gtk.threads_enter()
+      #gtk.gdk.threads_enter()
       conflicts_error_dialog =\
         self.all_widgets.get_widget('conflicts_error_dialog')
       conflicts_error_label =\
         self.all_widgets.get_widget('conflicts_error_label')
-      gtk.threads_leave()
+      #gtk.gdk.threads_leave()
 
       str = ''
       for conflict in conflict_list:
@@ -1835,12 +1875,12 @@ class gui:
               % (conflict.get_target(), conflict.get_conflict_target()))
 
       #print "Bailing out"
-      gtk.threads_enter()
+      #gtk.gdk.threads_enter()
       conflicts_error_label.set_text(str)
       conflicts_error_dialog.run()
       conflicts_error_dialog.hide()
       self.busy_dialog.hide()
-      gtk.threads_leave()
+      #gtk.gdk.threads_leave()
 
       self.shell.alpm_transaction_release()
       # TEST
@@ -1849,10 +1889,11 @@ class gui:
       if cleanup:
         for f in files:
           os.unlink(f)
-      self.lock.release();
+      #print 'RELEASING LOCK'
+      #self.lock.release();
       return
     except RuntimeError, inst:
-      gtk.threads_enter()
+      #gtk.gdk.threads_enter()
       conflicts_error_dialog =\
         self.all_widgets.get_widget('conflicts_error_dialog')
       conflicts_error_label =\
@@ -1863,7 +1904,7 @@ class gui:
       conflicts_error_dialog.run()
       conflicts_error_dialog.hide()
       self.busy_dialog.hide()
-      gtk.threads_leave()
+      #gtk.gdk.threads_leave()
 
       self.shell.alpm_transaction_release()
       # TEST
@@ -1871,7 +1912,8 @@ class gui:
       if cleanup:
         for f in files:
           os.unlink(f)
-      self.lock.release();
+      #print 'RELEASING LOCK'
+      #self.lock.release();
       return
   # }}}
 
@@ -1882,21 +1924,25 @@ class gui:
     if pkgs_to_install == []:
       return 
 
-    self.run_in_thread(self.alpm_install_targets, {'targets': pkgs_to_install,
-        'repo': None})
-    #self.alpm_install_targets(pkgs_to_install)
+    #self.run_in_thread(self.alpm_install_targets, {'targets': pkgs_to_install,
+    #    'repo': None})
+    self.alpm_install_targets(pkgs_to_install)
 
-    # while thread not started, update the gui
-    while not self.thread_started_lock.acquire(False):
-      while gtk.events_pending():
-        gtk.main_iteration()
-      #time.sleep(0.1)
+    ## while thread not started, update the gui
+    #while not self.thread_started_lock.acquire(False):
+    #  #print 'THREAD STARTED LOCK NOT POSSIBLE: ', gtk.get_current_event()
+    #  while gtk.events_pending():
+    #    gtk.main_iteration(False)
+    #  time.sleep(0.1)
+    #print 'THREAD STARTED LOCK ACQUIRED'
 
-    # while thread not finished, update the gui
-    while not self.lock.acquire(False):
-      while gtk.events_pending():
-        gtk.main_iteration()
-      #time.sleep(0.1)
+    ## while thread not finished, update the gui
+    #while not self.lock.acquire(False):
+    #  #print 'LOCK NOT POSSIBLE: ', gtk.get_current_event()
+    #  while gtk.events_pending():
+    #    gtk.main_iteration(False)
+    #  time.sleep(0.1)
+    #print 'LOCK ACQUIRED'
   # }}}
 
   # def alpm_remove_targets(self, targets): {{{
@@ -1925,7 +1971,7 @@ class gui:
       return
     else:
       self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
-      self.busy_dialog.run()
+      self.busy_dialog.show()
       # Step 1: create a new transaction
       self.trans = self.shell.alpm_transaction_init(alpm.PM_TRANS_TYPE_REMOVE,
           0, self.gui_trans_cb_ev, self.gui_trans_cb_conv)
@@ -1940,7 +1986,17 @@ class gui:
 
       # Step 2: prepare the transaction
       try:
-        self.shell.alpm_transaction_prepare()
+        #self.shell.alpm_transaction_prepare()
+        self.run_in_thread(self.shell.alpm_transaction_prepare, {})
+
+        # waiting for thread to finish
+        while not self.shell.th_ended_event.isSet():
+          #print '====> WAITING FOR PREPARE'
+          #self.shell.th_ended_event.wait(0.01)
+          while gtk.events_pending():
+            gtk.main_iteration(False)
+        #print 'PREPARE FINISHED'
+        self.shell.th_ended_event.clear()
       except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
         conflicts_error_dialog =\
           self.all_widgets.get_widget('conflicts_error_dialog')
@@ -1978,7 +2034,17 @@ class gui:
 
       # Step 3: actually perform the removal
       try:
-        self.shell.alpm_transaction_commit()
+        #self.shell.alpm_transaction_commit()
+        self.run_in_thread(self.shell.alpm_transaction_commit, {})
+        
+        # waiting for thread to finish
+        while not self.shell.th_ended_event.isSet():
+          #print '====> WAITING FOR COMMIT'
+          #self.shell.th_ended_event.wait(0.01)
+          while gtk.events_pending():
+            gtk.main_iteration(False)
+        #print 'COMMIT FINISHED'
+        self.shell.th_ended_event.clear()
 
         # for removed_pkg in list: {{{
         for removed_pkg in targets:
@@ -2009,6 +2075,12 @@ class gui:
         self.shell.alpm_transaction_release()
         self.busy_dialog.hide()
         return
+  # }}}
+
+  # def alpm_update_gui(self): {{{
+  def alpm_update_gui(self):
+    while gtk.events_pending():
+      gtk.main_iteration(False)
   # }}}
 
   # def on_remove_pkg_clicked(self, button): {{{
@@ -2217,7 +2289,8 @@ class gui:
 
     name = treemodel.get_value(iter, 1)
     pkgs_to_remove = [name]
-    self.remove_packages_from_list(pkgs_to_remove)
+    #self.remove_packages_from_list(pkgs_to_remove)
+    self.alpm_remove_targets(pkgs_to_remove)
   # }}}
 
   # def on_view_files_popup_menu_activate(self, menuitem): {{{
@@ -2240,10 +2313,18 @@ class gui:
     #self.run_in_thread(self.shell.get_pkg_files, {'what': name})
     self.try_sem()
     
-    exit_status, text = self.shell.get_prev_return()
+    #exit_status, text = self.shell.get_prev_return()
+    lines = self.shell.alpm_get_package_files(name)
+    #if exit_status:
+    #  return
+    text = ''
 
-    if exit_status:
-      return
+    if lines:
+      for line in lines:
+        text = text + line + '\n'
+    else:
+      text = 'Viewing a package\'s files only works with installed packages.'
+
     buffer.insert_at_cursor(text)
 
     self.current_dialog = pkg_files_dialog
@@ -2999,19 +3080,20 @@ class gui:
   # def populate_local_pkg_list(self): {{{
   def populate_local_pkg_list(self):
     #self.local_pkgs = self.shell.local_search()
-    self.run_in_thread(self.shell.local_search, {})
+    #self.run_in_thread(self.shell.local_search, {})
     #self.try_sem_animate_progress_bar()
-    self.try_sem()
+    #self.try_sem()
 
-    if self.shell.get_prev_return() == None:
-      print 'None!'
-      return None
-    
-    self.local_pkgs = self.shell.get_prev_return()
+    #if self.shell.get_prev_return() == None:
+    #  print 'None!'
+    #  return None
+    #
+    #self.local_pkgs = self.shell.get_prev_return()
     #self.local_pkgs = self.shell.alpm_local_search()
     #print '$$$: LOCAL_PKGS: ', len(self.local_pkgs)
     #for name in self.local_pkgs.iteritems():
     #  print '$$$: ', name
+    self.local_pkgs = self.shell.alpm_local_search()
   # }}}
 
   # def populate_pkgs_by_repo(self): {{{
@@ -3021,24 +3103,24 @@ class gui:
     #self.run_in_thread(self.shell.repofiles2, {})
 
     #self.try_sem_animate_progress_bar()
-    self.try_sem()
+    #self.try_sem()
 
-    exit_status = self.shell.get_exit_status()
+    #exit_status = self.shell.get_exit_status()
 
-    if exit_status:
-      out = self.shell.__capture_stderr__()
-      if out.index('could not open sync database'):
-        print 'It seems there is a database that needs sync\'ing: \n' + out 
-        print 'Guzuta will take care of this for you and resume normal startup.'
-        #self.run_in_thread(self.shell.updatedb, {})
-        self.try_sem()
+    #if exit_status:
+    #  out = self.shell.__capture_stderr__()
+    #  if out.index('could not open sync database'):
+    #    print 'It seems there is a database that needs sync\'ing: \n' + out 
+    #    print 'Guzuta will take care of this for you and resume normal startup.'
+    #    #self.run_in_thread(self.shell.updatedb, {})
+    #    self.try_sem()
 
-        #self.run_in_thread(self.shell.repofiles2, {})
-        self.try_sem()
-    else:
-      if self.shell.get_prev_return() == None:
-        print 'None!'
-        return None
+    #    #self.run_in_thread(self.shell.repofiles2, {})
+    #    self.try_sem()
+    #else:
+    #  if self.shell.get_prev_return() == None:
+    #    print 'None!'
+    #    return None
     
     #(self.pkgs_by_repo, self.pkgs) = self.shell.get_prev_return()
     (self.pkgs_by_repo, self.pkgs) = self.shell.alpm_repofiles2()
