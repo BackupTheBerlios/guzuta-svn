@@ -201,6 +201,7 @@ class gui:
     #fname = '/usr/share/guzuta/guzuta2.glade'
     
     self.th = None
+    self.prev_return = None
 
     self.lock = threading.Lock()
     self.thread_started_lock = threading.Lock()
@@ -2200,7 +2201,6 @@ class gui:
     pkg_cache_name_column.pack_start(textrenderer)
     pkg_cache_name_column.set_attributes(textrenderer, text=0)
 
-
     pkg_cache_version_column = gtk.TreeViewColumn('Version')
     pkg_cache_version_column.set_sort_column_id(1)
     pkg_cache_version_column.pack_start(textrenderer)
@@ -2215,7 +2215,14 @@ class gui:
     cache_treeview.append_column(pkg_cache_version_column)
     #cache_treeview.append_column(pkg_cache_days_column)
     
-    cache_pkgs = self.get_cache_pkgs()
+    #cache_pkgs = self.get_cache_pkgs()
+    self.run_in_thread(self.get_cache_pkgs, {})
+
+    while not self.shell.th_ended_event.isSet():
+      while gtk.events_pending():
+        gtk.main_iteration(False)
+    self.shell.th_ended_event.clear()
+    cache_pkgs = self.prev_return
 
     self.already_seen = {}
     self.pkg_versions = {}
@@ -2360,6 +2367,7 @@ class gui:
 
   # def get_cache_pkgs(self): {{{
   def get_cache_pkgs(self):
+    self.prev_return = None
     cache_dir = '/var/cache/pacman/pkg'
 
     ret = []
@@ -2367,7 +2375,9 @@ class gui:
     for pkg_name in sorted(os.listdir(cache_dir)):
       if not os.path.isdir(os.path.join(cache_dir, pkg_name)):
         ret.append(pkg_name)
-    return ret
+    self.prev_return = ret
+    self.shell.th_ended_event.set()
+    return
   # }}}
 
   # def write_conf(self): {{{
