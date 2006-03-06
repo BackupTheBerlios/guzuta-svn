@@ -2,8 +2,9 @@
 # -*- coding: UTF-8 -*
 # vim:set fdm=marker:
 
+# imports {{{
 import os, os.path, sys, posix, signal, re, threading
-import urllib, ftplib, httplib, shutil
+import urllib, ftplib, httplib, shutil, time
 from subprocess import *
 import alpm
 from optparse import OptionParser
@@ -15,6 +16,7 @@ if gtk.pygtk_version < (2,3,90):
   raise SystemExit
 import gobject
 import threading
+# }}}
 
 # def trans_cb_ev(event, package1, package2): {{{
 def trans_cb_ev(event, package1, package2):
@@ -2352,6 +2354,7 @@ the terms of the GNU General Public License'''
     
     #for pkg_name in pkg_names:
     for path in files:
+      print 'PATH: ', path
     #for sync,path in zip(sync_packages, files):
       pkg_name, pkg_ver = self.alpm_pkg_name_version_from_path(path)
 
@@ -2373,14 +2376,17 @@ the terms of the GNU General Public License'''
         ret.append(filename)
         str = '%s/%s-%s downloaded.' %\
             (db_name, pkg_name, pkg_ver)
-        gtk.gdk.threads_enter()
+        #gtk.gdk.threads_enter()
         progress_bar.set_text(str)
+        time.sleep(1)
         #progress_bar.pulse()
-        gtk.gdk.threads_leave()
+        #gtk.gdk.threads_leave()
       else:
         self.prev_return = None
+        self.th_ended_event.set()
         return
     self.prev_return = ret
+    self.th_ended_event.set()
     return
   # }}}
 
@@ -2394,7 +2400,6 @@ the terms of the GNU General Public License'''
     #version = self.pkgs[package_name][1]
     #version = self.alpm_get_pkg_version(package_name)
     
-
     pmc = None
     for pmc_record in self.pmc_syncs:
       if pmc_record['treename'] == dbname:
@@ -2419,7 +2424,8 @@ the terms of the GNU General Public License'''
 
       print '%s downloaded to %s' % (package_name, filename)
 
-      return filename
+      self.prev_return = filename
+      return
   # }}}
 
   # def alpm_check_if_pkg_in_pkg_list(self, pkg_name, syncpkg_list): {{{
