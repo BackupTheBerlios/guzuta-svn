@@ -1171,6 +1171,8 @@ class gui:
         self.init_transaction = True
         self.shell.alpm_refresh_dbs()
 
+        # TODO: run this in thread and display the busy_dialog &
+        # busy_progress_bar3
         (upgrades, missed_deps) = self.shell.alpm_update_databases()
         #print "GUI: upgrades: ", upgrades
         #print "GUI: missed_deps: ", missed_deps
@@ -2106,7 +2108,7 @@ class gui:
     pkg_files_textview.set_buffer(buffer)
 
     #self.run_in_thread(self.shell.get_pkg_files, {'what': name})
-    self.try_sem()
+    #self.try_sem()
     
     #exit_status, text = self.shell.get_prev_return()
     lines = self.shell.alpm_get_package_files(name)
@@ -2482,288 +2484,6 @@ class gui:
     self.current_dialog_on = False
   # }}}
   
-  # def get_dependencies(self, pkgs_installed, output): {{{
-  def get_dependencies(self, pkgs_installed, output):
-    output_list = output.splitlines()
-    deps_list = []
-    print output_list
-    for line in output_list:
-      if line.startswith('Targets'):
-        #deps_list = [self.split_pkg_name(x) for x in (line.split(' ')[1:])]
-        deps_list = [self.get_pkg_name(x) for x in (line.split(' ')[1:])]
-        break
-    print deps_list
-    deps_list2 = []
-    for dep_name in deps_list:
-      if dep_name not in pkgs_installed:
-        deps_list2.append(dep_name)
-    return deps_list2
-  # }}}
-
-  # def install_packages(self, pkg_list, repo = ''): {{{
-  def install_packages(self, pkg_list, repo = ''):
-    what = ''
-    pkg_names_by_comma = ''
-
-    for pkg_name in pkg_list:
-      what = what + pkg_name + ' '
-      if pkg_names_by_comma == '':
-        # first
-        pkg_names_by_comma = pkg_name
-      else:
-        pkg_names_by_comma = pkg_names_by_comma + ', ' + pkg_name
-    
-    #(ret, output) = self.shell.install_part_1(what)
-    self.shell.start_timer()
-    #self.run_in_thread(self.shell.install_part_1, {'what': what, 'repo': repo})
-    self.try_sem_animate_progress_bar()
-    if self.shell.get_prev_return() == None:
-      print 'None!'
-      return None
-    
-    (ret, output) = self.shell.get_prev_return()
-    
-    deps = self.get_dependencies(pkg_list, output)
-
-    #print 'output1: ', output
-    #print 'ret: ', ret
-
-    if ret:
-      # is/are already up to date, get confirmation from user about forcing the
-      # install of the package
-      
-      install_pkg_error = self.all_widgets.get_widget('install_pkg_error')
-      self.current_dialog = install_pkg_error
-      install_pkg_error_label =\
-        self.all_widgets.get_widget('install_pkg_error_label')
-      #install_pkg_error_label.set_use_markup(True)
-      text = '''<span weight="bold">Package(s) %s is(are) up to date.</span>
-<span weight="bold">Upgrade anyway?</span>''' % pkg_names_by_comma
-      install_pkg_error_label.set_markup(text)
-      self.current_dialog_on = True
-      response2 = install_pkg_error.run()
-
-      install_pkg_error.hide()
-      self.current_dialog_on = False
-      if response2 == gtk.RESPONSE_CANCEL:
-        return (False, output, deps)
-      elif response2 == gtk.RESPONSE_OK:
-        return (True, output, deps)
-    else:
-      # not installed, install
-      return (None, output, deps)
-    #return ret
-
-    #retcode_dict = {}
-    #for pkg_name in pkg_list:
-    #  ret = self.shell.install(pkg_name)
-    #  if self.yesno:
-    #    #self.shell.send_to_pacman
-    #    pass
-    #  retcode_dict[pkg_name] = ret
-
-  # }}}
-
-  # def install_packages_from_list(self, list, repo = ''): {{{
-  def install_packages_from_list(self, list, repo = ''):
-    #print 'installing: '
-    #for i in list:
-    #  print i
-    self.install_pkg_popup = self.all_widgets.get_widget('install_pkg_popup')
-    (retcode, output, deps) = self.install_packages(list, repo)
-
-    for pkg_name in list:
-      # download package
-      print 'Downloading ', pkg_name
-      filename = self.shell.alpm_download_package(pkg_name)
-      print 'trying to install : ', filename
-      error = self.shell.alpm_install_pkg_from_files(filename)
-      if error == '':
-        print 'done'
-      else:
-        print error
-        return
-
-    #print 'retcode: ', retcode
-    # TODO: do the same for remove pkg, add 'Are you sure?' dialog to remove
-    if retcode == False:
-      # cancel
-      #(exit_status, out) = self.shell.install_part_3('n')
-      self.shell.start_timer()
-      #self.run_in_thread(self.shell.install_part_3, {'txt_to_pacman': 'n'})
-      self.try_sem_animate_progress_bar()
-      if self.shell.get_prev_return() == None:
-        print 'None!'
-        return None
-      
-      (exit_status, out) = self.get_prev_return()
-      print 'retcode was False, bailing now with exit_status: ',\
-        exit_status, out
-      return
-    elif retcode == True:
-      # force upgrade 
-      #exit_status = self.shell.install_packages_noconfirm(pkgs_to_install)
-      #out = self.shell.install_part_2('Y')
-      self.shell.start_timer()
-      #self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'Y'})
-      self.try_sem_animate_progress_bar()
-      if self.shell.get_prev_return() == None:
-        print 'None!'
-        return None
-      
-      out = self.shell.get_prev_return()
-      #(exit_status, out) = self.shell.install_part_3('Y')
-      self.shell.start_timer()
-      #self.run_in_thread(self.shell.install_part_3, {'txt_to_pacman': 'Y'})
-      self.try_sem_animate_progress_bar()
-      if self.shell.get_prev_return() == None:
-        print 'None!'
-        return None
-      
-      (exit_status, out) = self.get_prev_return()
-      self.__add_pkg_info_to_local_pkgs__(list)
-      self.refresh_pkgs_treeview()
-      # TODO: check for proper pkg install, check for file conflicts, etc. Build
-      # another popup
-      print 'retcode was True, bailing now with exit_status: ', exit_status
-      return
-    else:
-      # display generic_cancel_ok, all went well, prompt user for action
-      generic_cancel_ok = self.all_widgets.get_widget('generic_cancel_ok')
-      self.current_dialog = generic_cancel_ok
-
-      generic_cancel_ok_label =\
-        self.all_widgets.get_widget('generic_cancel_ok_label')
-
-      text = '''<span weight="bold">Warning</span>
-%s''' % output[:-7]
-
-      generic_cancel_ok_label.set_markup(text)
-      self.current_dialog_on = True
-      response3 = generic_cancel_ok.run()
-
-      generic_cancel_ok.hide()
-      self.current_dialog_on = False
-      
-      if response3 == gtk.RESPONSE_OK: 
-        #self.shell.install_part_2('Y')
-        self.shell.start_timer()
-        #self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'Y',
-        #    'wait': True})
-        self.try_sem_animate_progress_bar()
-
-        (out, exit_status) = self.shell.get_prev_return()
-
-        #print 'exit_status: ', exit_status
-        #print 'out3: ', out
-
-        if exit_status:
-          generic_error_dialog =\
-            self.all_widgets.get_widget('generic_error_dialog')
-          self.current_dialog = generic_error_dialog
-          generic_error_label =\
-            self.all_widgets.get_widget('generic_error_label')
-          
-          generic_error_label.set_text(out)
-
-          self.current_dialog_on = True
-          response = generic_error_dialog.run()
-          generic_error_dialog.hide()
-          self.current_dialog_on = False
-
-          if response == gtk.RESPONSE_OK:
-            #force
-            self.shell.start_timer()
-            #self.run_in_thread(self.shell.install_force_noconfirm,\
-            #    {'list': list})
-            self.try_sem_animate_progress_bar()
-          elif response == gtk.RESPONSE_CANCEL:
-            return
-        
-        self.current_dialog = self.install_pkg_popup
-        self.current_dialog_on = True
-        response = self.install_pkg_popup.run()
-        # TODO: do this for the dependencies to.
-        #       replace list with list + deps or something like that.
-        #self.__add_pkg_info_to_local_pkgs__(list)
-        self.__add_pkg_info_to_local_pkgs__(list + deps)
-        self.refresh_pkgs_treeview()
-
-      elif response3 == gtk.RESPONSE_CANCEL:
-        #self.shell.install_part_2('n')
-        self.shell.start_timer()
-        #self.run_in_thread(self.shell.install_part_2, {'txt_to_pacman': 'n'})
-        self.try_sem_animate_progress_bar()
-
-      self.install_pkg_popup.hide()
-      self.current_dialog_on = False
-
-    #self.install_pkg_popup.hide()
-  # }}}
-
-  # def remove_packages_from_list(self, list): {{{
-  def remove_packages_from_list(self, list):
-    remove_pkg_are_you_sure =\
-      self.all_widgets.get_widget('remove_pkg_are_you_sure')
-    self.current_dialog = remove_pkg_are_you_sure
-
-    are_you_sure_label = self.all_widgets.get_widget('are_you_sure_label')
-
-    #text = 'Are you sure you want to remove the following packages?\n'
-    text = ''
-
-    for pkg_name in list:
-      text = text + pkg_name + '\n'
-
-    are_you_sure_label.set_text(text)
-    self.current_dialog_on = True
-    response = remove_pkg_are_you_sure.run()
-    remove_pkg_are_you_sure.hide()
-    self.current_dialog_on = False
-
-    if response == gtk.RESPONSE_CANCEL:
-      return
-    else:
-      (exit_status, dependencies, out) =\
-        self.remove_packages(list)
-
-      if exit_status != 0:
-        # error ocurred
-        self.remove_pkg_error = self.all_widgets.get_widget('remove_pkg_error')
-        self.current_dialog = self.remove_pkg_error
-        self.remove_dependencies_broken =\
-          self.all_widgets.get_widget('remove_dependencies_broken')
-       
-        self.remove_dependencies_broken.set_text(out.rstrip())
-        self.current_dialog_on = True
-        response = self.remove_pkg_error.run()
-        self.remove_pkg_error.hide()
-        self.current_dialog_on = False
-      else:
-        self.remove_pkg_popup = self.all_widgets.get_widget('remove_pkg_popup')
-        self.current_dialog = self.remove_pkg_popup
-        self.current_dialog_on = True
-        response = self.remove_pkg_popup.run()
-
-        if response == gtk.RESPONSE_OK:
-          # force
-          pass
-        self.remove_pkg_popup.hide()
-        self.current_dialog_on = False
-
-        # for removed_pkg in list: {{{
-        for removed_pkg in list:
-          # unset self.local_pkg_info and self.local_pkgs
-          try:
-            del self.local_pkg_info[removed_pkg]
-            del self.local_pkgs[removed_pkg]
-          except KeyError:
-            pass
-        # }}}
-
-        self.refresh_pkgs_treeview()
-  # }}}
-
   # def __build_trayicon__(self): {{{
   def __build_trayicon__(self):
     #self.trayicon = egg.trayicon.TrayIcon('Tray!')
@@ -2824,69 +2544,13 @@ class gui:
     self.all_widgets.get_widget('remove_popup_menu').set_sensitive(False)
   # }}}
 
-  # def populate_remote_pkg_info(self): {{{
-  def populate_remote_pkg_info(self):
-    for repo,v in self.pkgs_by_repo.iteritems():
-      for pkg_desc in v:
-        name = pkg_desc[0]
-        #self.remote_pkg_info[name] = self.shell.info(name)
-        self.shell.start_timer()
-        self.run_in_thread(self.shell.info, {'what': name})
-        self.try_sem_animate_progress_bar()
-        if self.shell.get_prev_return() == None:
-          print 'None!'
-          return None
-        
-        #self.remote_pkg_info[name] = self.shell.get_prev_return()
-        self.remote_pkg_info[name] = self.shell.alpm_info(name)
-  # }}}
-
   # def populate_local_pkg_list(self): {{{
   def populate_local_pkg_list(self):
-    #self.local_pkgs = self.shell.local_search()
-    #self.run_in_thread(self.shell.local_search, {})
-    #self.try_sem_animate_progress_bar()
-    #self.try_sem()
-
-    #if self.shell.get_prev_return() == None:
-    #  print 'None!'
-    #  return None
-    #
-    #self.local_pkgs = self.shell.get_prev_return()
-    #self.local_pkgs = self.shell.alpm_local_search()
-    #print '$$$: LOCAL_PKGS: ', len(self.local_pkgs)
-    #for name in self.local_pkgs.iteritems():
-    #  print '$$$: ', name
     self.local_pkgs = self.shell.alpm_local_search()
   # }}}
 
   # def populate_pkgs_by_repo(self): {{{
   def populate_pkgs_by_repo(self):
-    #(self.pkgs_by_repo, self.pkgs) = self.shell.repofiles()
-    #(self.pkgs_by_repo, self.pkgs) = self.shell.repofiles2()
-    #self.run_in_thread(self.shell.repofiles2, {})
-
-    #self.try_sem_animate_progress_bar()
-    #self.try_sem()
-
-    #exit_status = self.shell.get_exit_status()
-
-    #if exit_status:
-    #  out = self.shell.__capture_stderr__()
-    #  if out.index('could not open sync database'):
-    #    print 'It seems there is a database that needs sync\'ing: \n' + out 
-    #    print 'Guzuta will take care of this for you and resume normal startup.'
-    #    #self.run_in_thread(self.shell.updatedb, {})
-    #    self.try_sem()
-
-    #    #self.run_in_thread(self.shell.repofiles2, {})
-    #    self.try_sem()
-    #else:
-    #  if self.shell.get_prev_return() == None:
-    #    print 'None!'
-    #    return None
-    
-    #(self.pkgs_by_repo, self.pkgs) = self.shell.get_prev_return()
     (self.pkgs_by_repo, self.pkgs) = self.shell.alpm_repofiles2()
   # }}}
 
@@ -2900,11 +2564,6 @@ class gui:
   def populate_pkg_lists(self):
     self.populate_local_pkg_list()
     self.populate_pkgs_by_repo()
-  # }}}
-
-  # def set_shell(self, shell): {{{
-  def set_shell(self, shell):
-    self.shell = shell
   # }}}
 
   # def toggled(self, toggle_renderer, path): {{{
@@ -3300,26 +2959,6 @@ class gui:
         else:
           pass
       self.local_pkgs[installed_pkg] = (repo, version, description)
-  # }}}
-
-  # def remove_packages(self, pkg_list): {{{
-  def remove_packages(self, pkg_list):
-    what = ''
-
-    for pkg_name in pkg_list:
-      what = what + pkg_name + ' '
-    
-    #self.remove_noconfirm(what)
-    #(exit_status, dependencies, out) = self.shell.remove(what)
-    self.shell.start_timer()
-    self.run_in_thread(self.shell.remove, {'what': what})
-    self.try_sem_animate_progress_bar()
-    if self.shell.get_prev_return() == None:
-      print 'None!'
-      return None
-    
-    (exit_status, dependencies, out) = self.shell.get_prev_return()
-    return (exit_status, dependencies, out)
   # }}}
 
   # def __alpm_trans_install_packages__(self, names): {{{
