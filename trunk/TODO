@@ -1,22 +1,7 @@
-0.0.4
-=====
-* FIX when -Su'ing :: kernel26-2.6.13.2-1: ignoring package upgrade (2.6.13.3-1)
-      :: Above packages will be skipped.  To manually upgrade use 'pacman -S <pkg>'
-      :: stellarium conflicts with mesa. Remove mesa? [Y/n]
-* FIX corrupted downloads
-* Use libpypac
-
 0.0.5
 =====
-* Check for pkg conflicting with another
-* Make a 'Cancel' button in the busy_window
-* change "/usr/share" bla bla to honour the DESTDIR
+* integrate with pynealpm
 * add support for groups
-* Have a pseudo console for pacman output. Use gobject.io_add_watch() on the
-  pipes (stdout and stderr) <- does not work, maybe because of the reads in
-  shell.py. pass the textbuffer to shell.updatedb and use gobject.io_add_watch
-  fill a buffer of stdout and stderr to return and at the same time update the
-  textbuffer???? or maybe the problem is the os.wait(). DECIDE THIS, CHECK
 
 0.0.6
 =====

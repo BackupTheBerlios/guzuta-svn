@@ -368,6 +368,7 @@ class shell:
     self.lock = lock
 
     self.th_ended_event = threading.Event()
+    self.th_ended_event.clear()
 
     self.timer = threading.Timer(1.0, self.handle_timer)
     

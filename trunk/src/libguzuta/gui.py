@@ -56,14 +56,12 @@ class gui:
   pango_no_underline = 0
   pango_underline_single = 1
 
-  # TODO: use both callbacks that call a gui.gui function with gobject.idle_add
-  # that do what the callbacks now do.
-  # see http://www.async.com.br/faq/pygtk/index.py?querytype=simple&query=threading&req=search
   # def gui_trans_cb_ev(self, event, package1, package2): {{{
   def gui_trans_cb_ev(self, event, package1, package2):
     prev_text = ''
     time.sleep(1)
     
+    #gtk.threads_enter()
     print 'event: ', event, self.busy_dialog, self.busy_progress_bar3
     if event == alpm.PM_TRANS_EVT_CHECKDEPS_START:
       print 'Checking dependencies... '
@@ -134,25 +132,62 @@ class gui:
       self.busy_progress_bar3.set_text(prev_text + 'done.')
     self.current_fraction = self.current_fraction + self.fraction_increment
     self.busy_progress_bar3.set_fraction(self.current_fraction)
+    #gtk.threads_leave()
 
     #while gtk.events_pending():
     #  gtk.main_iteration(False)
 
   # }}}
 
-  # def gui_trans_cb_conv(self, event, data1, data2, data3): {{{
+  # def dialog_response_callback(self, dialog, response): {{{
+  def dialog_response_callback(self, dialog, response):
+    dialog.destroy()
+
+    if response == gtk.RESPONSE_OK:
+      print 'OK CLICKED'
+    self.response = response
+    self.dialog_ended_event.set()
+  # }}}
+
+  # def dialog_run(self, dialog): {{{
+  def dialog_run(self, dialog):
+    if not dialog.modal:
+      dialog.set_modal(True)
+
+    dialog.connect('response', self.dialog_response_callback)
+    print 'SHOWING DIALOG'
+    dialog.show()
+    print 'DONE'
+  # }}}
+
   def gui_trans_cb_conv(self, event, data1, data2, data3):
+    self.response = None
+    id = gobject.idle_add(self.gui_trans_cb_conv2, event, data1, data2, data3)
+    while not self.dialog_ended_event.isSet():
+      print self.response
+      while gtk.events_pending():
+        gtk.main_iteration(False)
+      time.sleep(0.1)
+    gobject.source_remove(id)
+    print 'RETURNING: ', self.response
+    return self.response
+
+  # def gui_trans_cb_conv2(self, event, data1, data2, data3): {{{
+  def gui_trans_cb_conv2(self, event, data1, data2, data3):
     # return > 0 means to go ahead and replace/install ignoring, etc
     # return == 0 means to stop
-    #print '[Question:', (event, data1, data2, data3), ']'
+    print 'Question:', (event, data1, data2, data3)
 
+    #time.sleep(1)
     cb_conv_question_dialog =\
         self.all_widgets.get_widget('cb_conv_question_dialog')
+    #gtk.threads_enter()
+    #cb_conv_question_window =\
+    #    self.all_widgets.get_widget('cb_conv_question_window')
     cb_conv_reason_label =\
         self.all_widgets.get_widget('cb_conv_reason_label')
     cb_conv_action_label =\
         self.all_widgets.get_widget('cb_conv_action_label')
-
     if event == alpm.PM_TRANS_CONV_INSTALL_IGNOREPKG:
       cb_conv_reason_label.set_markup(\
           '<b>%s</b> requires <b>%s</b>, but it is in IgnorePkg.' %\
@@ -165,12 +200,17 @@ class gui:
           (data1.get_name(), data3, data2.get_name()))
 
     elif event == alpm.PM_TRANS_CONV_CONFLICT_PKG:
+      print 'HERE'
+      print '<', cb_conv_reason_label, cb_conv_action_label,\
+        cb_conv_question_dialog, '>'
       cb_conv_reason_label.set_markup(\
           '<b>%s</b> conflicts with <b>%s</b>' %\
           (data1, data2))
+      print 'DONE'
       cb_conv_action_label.set_markup(\
           '<i>Do you want to remove <b>%s</b>?</i>' %\
           data2)
+      print 'DONE SETTING STUFF'
 
     elif event == alpm.PM_TRANS_CONV_LOCAL_NEWER:
       cb_conv_reason_label.set_markup(\
@@ -184,15 +224,25 @@ class gui:
           (data1.get_name(), data1.get_version()))
       cb_conv_action_label.set_markup('<i>Upgrade anyway?</i>')
 
-    response = cb_conv_question_dialog.run()
+    self.response = None
+    self.dialog_ended_event.clear()
+    print 'ATE AQUI TA TUDO BEM'
+    #cb_conv_question_dialog.show_all()
+    resp = cb_conv_question_dialog.run()
+    #cb_conv_question_dialog.connect('response', self.dialog_response_callback)
+    #self.dialog_run(cb_conv_question_dialog)
+    print 'DIALOG SHOWN'
     cb_conv_question_dialog.hide()
+    print 'DIALOG DONE'
 
-    while gtk.events_pending():
-      gtk.main_iteration()
-    if response == gtk.RESPONSE_OK:
-      return 1
+    print 'RESP == gtk.RESPONSE_OK: ', (resp == gtk.RESPONSE_OK)
+    if resp == gtk.RESPONSE_OK:
+      self.response = 1
     else:
-      return 0
+      self.response = 0
+    print 'SELF.RESPONSE: ', self.response
+    self.dialog_ended_event.set()
+    return False
   # }}}
 
   # def __init__(self, read_pipe = None, write_pipe = None): {{{
@@ -200,9 +250,12 @@ class gui:
     # signals !!!
     #fname = '/usr/share/guzuta/guzuta2.glade'
     
+    #gtk.threads_init()
     self.th = None
     self.prev_return = None
 
+    self.dialog_ended_event = threading.Event()
+    self.dialog_ended_event.clear()
     self.lock = threading.Lock()
     self.thread_started_lock = threading.Lock()
     self.thread_started_lock.acquire()
@@ -353,7 +406,7 @@ class gui:
 
     guzuta_debug = alpm.PM_LOG_WARNING | alpm.PM_LOG_FLOW1 | alpm.PM_LOG_FLOW2\
         | alpm.PM_LOG_DEBUG | alpm.PM_LOG_ERROR | alpm.PM_LOG_FUNCTION
-    guzuta_debug = 0xFF
+    #guzuta_debug = 0xFF
     self.shell = shell(command_line = None, lock = self.lock,\
         debug = guzuta_debug,
         interactive = True)
@@ -422,7 +475,9 @@ class gui:
       #sys.exit(1)
 
 
+    #gtk.threads_enter()
     gtk.main()
+    #gtk.threads_leave()
   # }}}
   
   # def run_in_thread(self, method, args_dict, wait=False): {{{
@@ -1364,8 +1419,22 @@ class gui:
     return number
   # }}}
 
+  # def alpm_run_in_thread_and_wait(self, method, args): {{{
+  def alpm_run_in_thread_and_wait(self, method, args):
+    self.run_in_thread(method, args)
+
+    # waiting for thread to finish
+    while not self.shell.th_ended_event.isSet():
+      self.shell.th_ended_event.wait(0.01)
+      while gtk.events_pending():
+        gtk.main_iteration(False)
+    self.shell.th_ended_event.clear()
+  # }}}
+
   # def alpm_install_targets(self, targets, repo = None): {{{
   def alpm_install_targets(self, targets, repo = None):
+    # TODO: check if there's something searched for or a repo selected, and
+    # update the pkg_treeview accordingly
     number_pkgs_to_download =\
       self.alpm_get_number_of_packages_to_download(targets)
 
@@ -1412,16 +1481,7 @@ class gui:
 
     # Step 2: compute the transaction
     try:
-      self.run_in_thread(self.shell.alpm_transaction_prepare, {})
-
-      # waiting for thread to finish
-      while not self.shell.th_ended_event.isSet():
-        #print '====> WAITING FOR PREPARE'
-        #self.shell.th_ended_event.wait(0.01)
-        while gtk.events_pending():
-          gtk.main_iteration(False)
-      #print 'PREPARE FINISHED'
-      self.shell.th_ended_event.clear()
+      self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_prepare, {})
 
       #self.shell.alpm_transaction_prepare()
     except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
@@ -1499,7 +1559,7 @@ class gui:
       self.busy_dialog.hide()
       return
 
-    #print 'PACKAGES IN THE TRANSACTION: ', packages
+    print 'PACKAGES IN THE TRANSACTION: ', packages
     to_remove = []
     to_install = []
     # list targets and get confirmation
@@ -1510,18 +1570,40 @@ class gui:
         data = sync.get_data()
         for pkg2 in data:
           pkg_name = pkg2.get_name()
-          if pkg_name not in to_remove:
-            to_remove.append(pkg_name)
+          pkg_ver = pkg2.get_version()
+          #if pkg_name not in to_remove:
+          tuple = (pkg_name, pkg_ver)
+          if tuple not in to_remove:
+            to_remove.append(tuple)
 
       pkgname = pkg.get_name()
       pkgver = pkg.get_version()
       str = '%s-%s' % (pkgname, pkgver)
       to_install.append(str)
 
-    #if to_remove != []:
-    #  print 'Remove: \n', to_remove
+    install_remove_pkgs_dialog =\
+      self.all_widgets.get_widget('install_remove_pkgs_dialog')
+    to_remove_label = self.all_widgets.get_widget('to_remove_label')
+    to_install_label = self.all_widgets.get_widget('to_install_label')
 
-    print 'Targets: \n', to_install
+    # fill to_remove_label
+    remove_text = '<b>Remove:</b>'
+    for (pkg_name, pkg_ver) in to_remove:
+      remove_text = '%s %s-%s ' % (remove_text, pkg_name, pkg_ver)
+    to_remove_label.set_markup(remove_text)
+
+    # fill to_install_label
+    install_text = '<b>Targets:</b>'
+    for pkg_str in to_install:
+      install_text = '%s %s ' % (install_text, pkg_str)
+    to_install_label.set_markup(install_text)
+
+    response = install_remove_pkgs_dialog.run()
+    install_remove_pkgs_dialog.hide()
+
+    if response == gtk.RESPONSE_CANCEL:
+      return
+
     # group sync records by repository and download
     root_dir = self.shell.alpm.get_root()
     cache_dir = self.shell.alpm.get_cache_dir()
@@ -1588,16 +1670,9 @@ class gui:
           alpm.set_cache_dir(ldir)
           cleanup = True
       
-      self.run_in_thread(self.shell.alpm_download_packages, {'files': files,
-          'progress_bar': self.busy_progress_bar3})
-
-      while not self.shell.th_ended_event.isSet():
-        #print '====> WAITING FOR COMMIT'
-        #self.shell.th_ended_event.wait(0.01)
-        while gtk.events_pending():
-          gtk.main_iteration(False)
-      #print 'COMMIT FINISHED'
-      self.shell.th_ended_event.clear()
+      kwargs = {'files': files, 'progress_bar': self.busy_progress_bar3}
+      self.alpm_run_in_thread_and_wait(self.shell.alpm_download_packages,
+          kwargs)
       filenames = self.shell.get_prev_return()
       
       files = []
@@ -1640,15 +1715,7 @@ class gui:
     # Step 3: actually perform the installation
     try:
       #self.shell.alpm_transaction_commit()
-      self.run_in_thread(self.shell.alpm_transaction_commit, {})
-      
-      while not self.shell.th_ended_event.isSet():
-        #print '====> WAITING FOR COMMIT'
-        #self.shell.th_ended_event.wait(0.01)
-        while gtk.events_pending():
-          gtk.main_iteration(False)
-      #print 'COMMIT FINISHED'
-      self.shell.th_ended_event.clear()
+      self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_commit, {})
 
       list = [syncpkg.get_package().get_name() for syncpkg in packages]
 
@@ -1740,6 +1807,8 @@ class gui:
 
   # def alpm_remove_targets(self, targets): {{{
   def alpm_remove_targets(self, targets):
+    # TODO: check if there's something searched for or a repo selected, and
+    # update the pkg_treeview accordingly
     self.fraction_increment = (1.0 / (2 + 2 * len(targets)))
     self.current_fraction = 0.0
     remove_pkg_are_you_sure =\
@@ -1785,16 +1854,7 @@ class gui:
       # Step 2: prepare the transaction
       try:
         #self.shell.alpm_transaction_prepare()
-        self.run_in_thread(self.shell.alpm_transaction_prepare, {})
-
-        # waiting for thread to finish
-        while not self.shell.th_ended_event.isSet():
-          #print '====> WAITING FOR PREPARE'
-          #self.shell.th_ended_event.wait(0.01)
-          while gtk.events_pending():
-            gtk.main_iteration(False)
-        #print 'PREPARE FINISHED'
-        self.shell.th_ended_event.clear()
+        self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_prepare,{})
       except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
         conflicts_error_dialog =\
           self.all_widgets.get_widget('conflicts_error_dialog')
@@ -1833,16 +1893,7 @@ class gui:
       # Step 3: actually perform the removal
       try:
         #self.shell.alpm_transaction_commit()
-        self.run_in_thread(self.shell.alpm_transaction_commit, {})
-        
-        # waiting for thread to finish
-        while not self.shell.th_ended_event.isSet():
-          #print '====> WAITING FOR COMMIT'
-          #self.shell.th_ended_event.wait(0.01)
-          while gtk.events_pending():
-            gtk.main_iteration(False)
-        #print 'COMMIT FINISHED'
-        self.shell.th_ended_event.clear()
+        self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_commit, {})
 
         # for removed_pkg in list: {{{
         for removed_pkg in targets:
@@ -2216,12 +2267,7 @@ class gui:
     #cache_treeview.append_column(pkg_cache_days_column)
     
     #cache_pkgs = self.get_cache_pkgs()
-    self.run_in_thread(self.get_cache_pkgs, {})
-
-    while not self.shell.th_ended_event.isSet():
-      while gtk.events_pending():
-        gtk.main_iteration(False)
-    self.shell.th_ended_event.clear()
+    self.alpm_run_in_thread_and_wait(self.get_cache_pkgs, {})
     cache_pkgs = self.prev_return
 
     self.already_seen = {}
@@ -2463,14 +2509,8 @@ class gui:
     self.busy_window_on = True
     
     # TODO: see pacman-lib/src/pacman/sync.c:356
-    self.run_in_thread(self.shell.alpm_download_packages,
-        {'files': list, 'progress_bar': self.busy_progress_bar3})
-
-    # wait for it
-    while not self.shell.th_ended_event.isSet():
-      while gtk.events_pending():
-        gtk.main_iteration(False)
-    self.shell.th_ended_event.clear()
+    kwargs = {'files': list, 'progress_bar': self.busy_progress_bar3}
+    self.alpm_run_in_thread_and_wait(self.shell.alpm_download_packages, kwargs)
     filenames = self.shell.get_prev_return()
     print filenames
 
