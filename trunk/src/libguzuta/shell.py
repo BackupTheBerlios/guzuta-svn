@@ -1137,7 +1137,12 @@ the terms of the GNU General Public License'''
 
   # def alpm_transaction_prepare(self): {{{
   def alpm_transaction_prepare(self):
-    self.trans.prepare()
+    try:
+      self.trans.prepare()
+    except Exception, inst:
+      print 'INST: ', inst
+      self.th_ended_event.set()
+      raise Exception, inst
     self.th_ended_event.set()
   # }}}
 

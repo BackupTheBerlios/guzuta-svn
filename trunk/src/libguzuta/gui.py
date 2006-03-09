@@ -139,38 +139,18 @@ class gui:
 
   # }}}
 
-  # def dialog_response_callback(self, dialog, response): {{{
-  def dialog_response_callback(self, dialog, response):
-    dialog.destroy()
-
-    if response == gtk.RESPONSE_OK:
-      print 'OK CLICKED'
-    self.response = response
-    self.dialog_ended_event.set()
-  # }}}
-
-  # def dialog_run(self, dialog): {{{
-  def dialog_run(self, dialog):
-    if not dialog.modal:
-      dialog.set_modal(True)
-
-    dialog.connect('response', self.dialog_response_callback)
-    print 'SHOWING DIALOG'
-    dialog.show()
-    print 'DONE'
-  # }}}
-
+  # def gui_trans_cb_conv(self, event, data1, data2, data3): {{{
   def gui_trans_cb_conv(self, event, data1, data2, data3):
     self.response = None
     id = gobject.idle_add(self.gui_trans_cb_conv2, event, data1, data2, data3)
     while not self.dialog_ended_event.isSet():
-      print self.response
+      #print self.response
       while gtk.events_pending():
         gtk.main_iteration(False)
       time.sleep(0.1)
     gobject.source_remove(id)
-    print 'RETURNING: ', self.response
     return self.response
+  # }}}
 
   # def gui_trans_cb_conv2(self, event, data1, data2, data3): {{{
   def gui_trans_cb_conv2(self, event, data1, data2, data3):
@@ -181,9 +161,6 @@ class gui:
     #time.sleep(1)
     cb_conv_question_dialog =\
         self.all_widgets.get_widget('cb_conv_question_dialog')
-    #gtk.threads_enter()
-    #cb_conv_question_window =\
-    #    self.all_widgets.get_widget('cb_conv_question_window')
     cb_conv_reason_label =\
         self.all_widgets.get_widget('cb_conv_reason_label')
     cb_conv_action_label =\
@@ -226,21 +203,13 @@ class gui:
 
     self.response = None
     self.dialog_ended_event.clear()
-    print 'ATE AQUI TA TUDO BEM'
-    #cb_conv_question_dialog.show_all()
     resp = cb_conv_question_dialog.run()
-    #cb_conv_question_dialog.connect('response', self.dialog_response_callback)
-    #self.dialog_run(cb_conv_question_dialog)
-    print 'DIALOG SHOWN'
     cb_conv_question_dialog.hide()
-    print 'DIALOG DONE'
 
-    print 'RESP == gtk.RESPONSE_OK: ', (resp == gtk.RESPONSE_OK)
     if resp == gtk.RESPONSE_OK:
       self.response = 1
     else:
       self.response = 0
-    print 'SELF.RESPONSE: ', self.response
     self.dialog_ended_event.set()
     return False
   # }}}
