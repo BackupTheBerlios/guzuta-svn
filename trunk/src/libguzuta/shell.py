@@ -923,34 +923,6 @@ the terms of the GNU General Public License'''
     return filename
   # }}}
 
-  # def alpm_refresh_dbs(self): {{{
-  def alpm_refresh_dbs(self):
-    for pmc in self.pmc_syncs:
-      treename = pmc['treename']
-      db = pmc['db']
-      gzfile = treename + '.db.tar.gz'
-      destination = '/tmp/' + gzfile
-      servers = pmc['servers']
-      for server in servers:
-        url = server['protocol'] + '://' + server['server'] + server['path'] +\
-          gzfile
-        #(filename, headers) = urllib.urlretrieve(url, destination)
-        filename = self.alpm_download_file(url, destination)
-        if filename:
-          # sync alpm
-          try:
-            print db.update(destination)
-          except alpm.DatabaseException, instance:
-            print instance
-            return None
-          try:
-            os.remove(destination)
-          except OSError:
-            print '%s is a directory?' % destination
-            return None
-          break
-  # }}}
-
   # def alpm_get_package_files(self, pkg_name): {{{
   def alpm_get_package_files(self, pkg_name):
     db_name = self.alpm_get_pkg_dbname(pkg_name)
@@ -1092,8 +1064,48 @@ the terms of the GNU General Public License'''
       self.trans = self.alpm.transaction_init(type, flags, cb_event)
   # }}}
 
+  # def alpm_refresh_dbs(self): {{{
+  def alpm_refresh_dbs(self):
+    for pmc in self.pmc_syncs:
+      treename = pmc['treename']
+      db = pmc['db']
+      gzfile = treename + '.db.tar.gz'
+      destination = '/tmp/' + gzfile
+      servers = pmc['servers']
+      for server in servers:
+        url = server['protocol'] + '://' + server['server'] + server['path'] +\
+          gzfile
+        #(filename, headers) = urllib.urlretrieve(url, destination)
+        filename = self.alpm_download_file(url, destination)
+        if filename:
+          # sync alpm
+          try:
+            print db.update(destination)
+          except alpm.DatabaseException, instance:
+            #print instance
+            self.th_ended_event.set()
+            raise alpm.DatabaseException, instance
+          try:
+            os.remove(destination)
+          except OSError, instance:
+            #print '%s is a directory?' % destination
+            self.th_ended_event.set()
+            raise OSError, instance
+          break
+    self.th_ended_event.set()
+  # }}}
+
+  # def alpm_transaction_sysupgrade(self): {{{
+  def alpm_transaction_sysupgrade(self):
+    try:
+      self.trans.sysupgrade()
+    except Exception, inst:
+      raise Exception, inst
+  # }}}
+
   # def alpm_update_databases(self): {{{
   def alpm_update_databases(self):
+    self.prev_return = None
     root = self.alpm.get_root()
     dbpath = self.alpm.get_db_path()
     upgrades = []
@@ -1105,15 +1117,17 @@ the terms of the GNU General Public License'''
         trans_cb_conv)
 
     try:
+      # TODO: run this in thread and display the busy_dialog &
+      # busy_progress_bar3
       self.trans.sysupgrade()
       upgrades = self.trans.get_syncpackages()
       missed_deps = self.trans.prepare()
     except alpm.TransactionException, inst:
-      print inst
+      self.th_ended_event.set()
+      raise alpm.TransactionException, inst
 
-    self.alpm_transaction_release()
-    
-    return (upgrades, missed_deps)
+    self.prev_return = (upgrades, missed_deps)
+    self.th_ended_event.set()
   # }}}
 
   # def alpm_transaction_release(self): {{{
@@ -1140,7 +1154,6 @@ the terms of the GNU General Public License'''
     try:
       self.trans.prepare()
     except Exception, inst:
-      print 'INST: ', inst
       self.th_ended_event.set()
       raise Exception, inst
     self.th_ended_event.set()

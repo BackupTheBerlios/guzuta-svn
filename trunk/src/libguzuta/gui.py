@@ -910,7 +910,8 @@ class gui:
             return
         # Step 2: compute the transaction
         try:
-          self.shell.alpm_transaction_prepare()
+          #self.shell.alpm_transaction_prepare()
+          self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_prepare, {})
         except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
           #print 'Unsatisfied dependencies: ', depmiss_list
           conflicts_error_dialog =\
@@ -973,7 +974,8 @@ class gui:
 
         # Step 3: actually perform the installation
         try:
-          self.shell.alpm_transaction_commit()
+          #self.shell.alpm_transaction_commit()
+          self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_commit, {})
         except RuntimeError, inst:
           #print inst
 
@@ -1191,17 +1193,18 @@ class gui:
         upgrades = []
         missed_deps = []
         self.shell.start_timer()
-        #self.run_in_thread(self.shell.updatedb, {})
 
         self.init_transaction = True
-        self.shell.alpm_refresh_dbs()
 
-        # TODO: run this in thread and display the busy_dialog &
-        # busy_progress_bar3
-        (upgrades, missed_deps) = self.shell.alpm_update_databases()
+        #self.shell.alpm_refresh_dbs()
+        self.alpm_run_in_thread_and_wait(self.shell.alpm_refresh_dbs, {})
+
+        #(upgrades, missed_deps) = self.shell.alpm_update_databases()
+        self.alpm_run_in_thread_and_wait(self.shell.alpm_update_databases, {})
+        (upgrades, missed_deps) = self.shell.get_prev_return()
         #print "GUI: upgrades: ", upgrades
         #print "GUI: missed_deps: ", missed_deps
-        self.try_sem_animate_progress_bar()
+        #self.try_sem_animate_progress_bar()
 
         self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
         self.current_dialog = self.update_db_popup
@@ -1341,6 +1344,7 @@ class gui:
       if self.init_transaction:
         #self.shell.alpm_transaction_release()
         self.init_transaction = False
+      self.shell.alpm_transaction_release()
     else:
       # display a warning window?? switch to root?? gksu???
       print 'not root!'
