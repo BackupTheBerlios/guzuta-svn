@@ -4,7 +4,7 @@
 
 # imports {{{
 import os, os.path, sys, posix, signal, re, threading
-import urllib, ftplib, httplib, shutil, time
+import urllib, ftplib, httplib, urllib2, shutil, time
 from subprocess import *
 import alpm
 from optparse import OptionParser
@@ -913,10 +913,19 @@ the terms of the GNU General Public License'''
     return self.alpm_remote_pkg_to_list(pkg)
   # }}}
 
-  # def alpm_download_file(self, url, destination): {{{
-  def alpm_download_file(self, url, destination):
+  # def alpm_download_file(self, url, destination, report_hook = None): {{{
+  def alpm_download_file(self, url, destination, report_hook):
+    #time.sleep(4)
     try:
-      (filename, headers) = urllib.urlretrieve(url, destination)
+      #print 'RETRIEVING: ', url
+      if not report_hook:
+        (filename, headers) = urllib.urlretrieve(url, destination)
+      else:
+        #self.retrieving = url
+        self.retrieving = url[url.rindex("/")+1:url.rindex(".db.tar.gz")]
+        (filename, headers) = urllib.urlretrieve(url, destination, report_hook)
+      #urllib.urlcleanup()
+      #print 'DONE RETRIEVING'
     except IOError:
       filename = None
 
@@ -1064,8 +1073,8 @@ the terms of the GNU General Public License'''
       self.trans = self.alpm.transaction_init(type, flags, cb_event)
   # }}}
 
-  # def alpm_refresh_dbs(self): {{{
-  def alpm_refresh_dbs(self):
+  # def alpm_refresh_dbs(self, report_hook = None): {{{
+  def alpm_refresh_dbs(self, report_hook = None):
     for pmc in self.pmc_syncs:
       treename = pmc['treename']
       db = pmc['db']
@@ -1075,8 +1084,7 @@ the terms of the GNU General Public License'''
       for server in servers:
         url = server['protocol'] + '://' + server['server'] + server['path'] +\
           gzfile
-        #(filename, headers) = urllib.urlretrieve(url, destination)
-        filename = self.alpm_download_file(url, destination)
+        filename = self.alpm_download_file(url, destination, report_hook)
         if filename:
           # sync alpm
           try:
@@ -1086,13 +1094,15 @@ the terms of the GNU General Public License'''
             self.th_ended_event.set()
             raise alpm.DatabaseException, instance
           try:
-            os.remove(destination)
+            pass
+            #os.remove(destination)
           except OSError, instance:
             #print '%s is a directory?' % destination
             self.th_ended_event.set()
             raise OSError, instance
           break
     self.th_ended_event.set()
+    return
   # }}}
 
   # def alpm_transaction_sysupgrade(self): {{{
@@ -1128,6 +1138,7 @@ the terms of the GNU General Public License'''
 
     self.prev_return = (upgrades, missed_deps)
     self.th_ended_event.set()
+    return
   # }}}
 
   # def alpm_transaction_release(self): {{{

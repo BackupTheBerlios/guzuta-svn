@@ -12,6 +12,7 @@ if gtk.pygtk_version < (2,3,90):
 import gobject
 import gtk.glade
 import pango, sys, os, os.path, posix, re, threading, thread, time, glob
+import math
 
 # "our" trayicon
 import trayicon
@@ -56,82 +57,124 @@ class gui:
   pango_no_underline = 0
   pango_underline_single = 1
 
+  # def alpm_progress_bar_set_text_and_fraction(self, progress_bar, {{{
+  #     text, append_text, frac):
+  def alpm_progress_bar_set_text_and_fraction(self, progress_bar, text,
+      append_text, frac):
+    gtk.gdk.threads_enter()
+    if append_text:
+      t = progress_bar.get_text() + text
+    else:
+      t = text
+    progress_bar.set_text(t)
+    progress_bar.set_fraction(frac)
+    gtk.gdk.threads_leave()
+    return False
+  # }}}
+
   # def gui_trans_cb_ev(self, event, package1, package2): {{{
   def gui_trans_cb_ev(self, event, package1, package2):
     prev_text = ''
     time.sleep(1)
     
+    text = ''
+    append_text = False
     #gtk.threads_enter()
     print 'event: ', event, self.busy_dialog, self.busy_progress_bar3
     if event == alpm.PM_TRANS_EVT_CHECKDEPS_START:
       print 'Checking dependencies... '
-      self.busy_progress_bar3.set_text('checking dependencies... ')
+      #self.busy_progress_bar3.set_text('checking dependencies... ')
+      text = 'checking dependencies... '
     
     elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_START:
       print 'checking for file conflicts... '
-      self.busy_progress_bar3.set_text('checking for file conflicts... ')
+      #self.busy_progress_bar3.set_text('checking for file conflicts... ')
+      text = 'checking for file conflicts... '
     
     elif event == alpm.PM_TRANS_EVT_RESOLVEDEPS_START:
       print 'resolving dependencies'
-      self.busy_progress_bar3.set_text('resolving dependencies... ')
+      #self.busy_progress_bar3.set_text('resolving dependencies... ')
+      text = 'resolving dependencies... '
     
     elif event == alpm.PM_TRANS_EVT_INTERCONFLICTS_START:
       print 'looking for inter-conflicts... '
-      self.busy_progress_bar3.set_text('looking for inter-conflicts... ')
+      #self.busy_progress_bar3.set_text('looking for inter-conflicts... ')
+      text = 'looking for inter-conflicts... '
     
     elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_START:
       print 'checking for file conflicts... '
-      self.busy_progress_bar3.set_text('checking for file conflicts... ')
+      #self.busy_progress_bar3.set_text('checking for file conflicts... ')
+      text = 'checking for file conflicts... '
     
     elif event == alpm.PM_TRANS_EVT_CHECKDEPS_DONE:
       print 'done.'
-      prev_text = self.busy_progress_bar3.get_text()
-      self.busy_progress_bar3.set_text(prev_text + 'done.')
+      #prev_text = self.busy_progress_bar3.get_text()
+      #self.busy_progress_bar3.set_text(prev_text + 'done.')
+      text = 'done.'
+      append_text = True
     
     elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_DONE:
       print 'done.'
-      prev_text = self.busy_progress_bar3.get_text()
-      self.busy_progress_bar3.set_text(prev_text + 'done.')
+      #prev_text = self.busy_progress_bar3.get_text()
+      #self.busy_progress_bar3.set_text(prev_text + 'done.')
+      text = 'done.'
+      append_text = True
     
     elif event == alpm.PM_TRANS_EVT_RESOLVEDEPS_DONE:
       print 'done.'
-      prev_text = self.busy_progress_bar3.get_text()
-      self.busy_progress_bar3.set_text(prev_text + 'done.')
+      #prev_text = self.busy_progress_bar3.get_text()
+      #self.busy_progress_bar3.set_text(prev_text + 'done.')
+      text = 'done.'
+      append_text = True
     
     elif event == alpm.PM_TRANS_EVT_INTERCONFLICTS_DONE:
       print 'done.'
-      prev_text = self.busy_progress_bar3.get_text()
-      self.busy_progress_bar3.set_text(prev_text + 'done.')
+      #prev_text = self.busy_progress_bar3.get_text()
+      #self.busy_progress_bar3.set_text(prev_text + 'done.')
+      text = 'done.'
+      append_text = True
     
     elif event == alpm.PM_TRANS_EVT_ADD_START:
       print 'installing %s... ' % package1.get_name()
-      self.busy_progress_bar3.set_text('installing %s... ' %\
-        package1.get_name())
+      #self.busy_progress_bar3.set_text('installing %s... ' %\
+      #  package1.get_name())
+      text = 'installing %s... ' % package1.get_name()
     
     elif event == alpm.PM_TRANS_EVT_ADD_DONE:
       print 'done.'
-      prev_text = self.busy_progress_bar3.get_text()
-      self.busy_progress_bar3.set_text(prev_text + 'done.')
+      #prev_text = self.busy_progress_bar3.get_text()
+      #self.busy_progress_bar3.set_text(prev_text + 'done.')
+      text = 'done.'
+      append_text = True
 
     elif event == alpm.PM_TRANS_EVT_REMOVE_START:
       print 'removing %s... ' % package1.get_name()
-      self.busy_progress_bar3.set_text('removing %s... ' % package1.get_name())
+      #self.busy_progress_bar3.set_text('removing %s... ' % package1.get_name())
+      text = 'removing %s... ' % package1.get_name()
     
     elif event == alpm.PM_TRANS_EVT_REMOVE_DONE:
       print 'done.'
-      prev_text = self.busy_progress_bar3.get_text()
-      self.busy_progress_bar3.set_text(prev_text + 'done.')
+      #prev_text = self.busy_progress_bar3.get_text()
+      #self.busy_progress_bar3.set_text(prev_text + 'done.')
+      text = 'done.'
+      append_text = True
     
     elif event == alpm.PM_TRANS_EVT_UPGRADE_START:
       print 'upgrading %s... ' % package1.get_name()
-      self.busy_progress_bar3.set_text('upgrading %s... ' % package1.get_name())
+      #self.busy_progress_bar3.set_text('upgrading %s... ' % package1.get_name())
+      text = 'upgrading %s... ' % package1.get_name()
     
     elif event == alpm.PM_TRANS_EVT_UPGRADE_DONE:
       print 'done.'
-      prev_text = self.busy_progress_bar3.get_text()
-      self.busy_progress_bar3.set_text(prev_text + 'done.')
+      #prev_text = self.busy_progress_bar3.get_text()
+      #self.busy_progress_bar3.set_text(prev_text + 'done.')
+      text = 'done.'
+      append_text = True
+
     self.current_fraction = self.current_fraction + self.fraction_increment
-    self.busy_progress_bar3.set_fraction(self.current_fraction)
+    #self.busy_progress_bar3.set_fraction(self.current_fraction)
+    gobject.idle_add(self.alpm_progress_bar_set_text_and_fraction,\
+        self.busy_progress_bar3, text, append_text, self.current_fraction)
     #gtk.threads_leave()
 
     #while gtk.events_pending():
@@ -159,6 +202,7 @@ class gui:
     print 'Question:', (event, data1, data2, data3)
 
     #time.sleep(1)
+    gtk.gdk.threads_enter()
     cb_conv_question_dialog =\
         self.all_widgets.get_widget('cb_conv_question_dialog')
     cb_conv_reason_label =\
@@ -210,16 +254,17 @@ class gui:
       self.response = 1
     else:
       self.response = 0
+    gtk.gdk.threads_leave()
     self.dialog_ended_event.set()
     return False
   # }}}
 
-  # def __init__(self, read_pipe = None, write_pipe = None): {{{
-  def __init__(self, read_pipe = None, write_pipe = None):
+  # def __init__(self): {{{
+  def __init__(self):
     # signals !!!
     #fname = '/usr/share/guzuta/guzuta2.glade'
     
-    #gtk.threads_init()
+    gtk.gdk.threads_init()
     self.th = None
     self.prev_return = None
 
@@ -342,6 +387,7 @@ class gui:
     self.trayicon = None
     self.systray_eventbox = None
 
+
     self.all_widgets = gtk.glade.XML(self.glade_file)
 
     self.systray_tooltips = gtk.Tooltips()
@@ -444,9 +490,11 @@ class gui:
       #sys.exit(1)
 
 
-    #gtk.threads_enter()
+    #gtk.gdk.threads_enter()
     gtk.main()
-    #gtk.threads_leave()
+    #self.run_in_thread(gtk.main, {})
+    #threading.Thread(target=gtk.main, kwargs={}).start()
+    #gtk.gdk.threads_leave()
   # }}}
   
   # def run_in_thread(self, method, args_dict, wait=False): {{{
@@ -454,7 +502,34 @@ class gui:
     self.th = threading.Thread(target=method, kwargs=args_dict)
     self.th.start()
     if wait:
-      th.join()
+      self.th.join()
+  # }}}
+
+  # def alpm_run_in_thread_and_wait(self, method, args): {{{
+  def alpm_run_in_thread_and_wait(self, method, args):
+    #print 'ALPM_RUN_IN_THREAD_AND_WAIT'
+    th_obj = None
+    self.run_in_thread(method, args)
+
+    # waiting for thread to finish
+    while not self.shell.th_ended_event.isSet():
+      self.shell.th_ended_event.wait(0.1)
+      while gtk.events_pending():
+        gtk.main_iteration(False)
+    self.shell.th_ended_event.clear()
+  # }}}
+
+  # def alpm_urllib_report_hook(self, blocks_so_far, block_size_bytes, {{{
+  #   total_size):
+  def alpm_urllib_report_hook(self, blocks_so_far, block_size_bytes,
+      total_size):
+    if total_size < block_size_bytes:
+      total_blocks = 1
+    else:
+      total_blocks = math.ceil(float(total_size)/float(block_size_bytes))
+    division = float(blocks_so_far) / float(total_blocks)
+    self.busy_progress_bar3.set_text('Downloading ' + self.shell.retrieving + ' ' + str(division * 100) + '%')
+    self.busy_progress_bar3.set_fraction(division)
   # }}}
 
   # def __setup_pkg_treeview__(self): {{{
@@ -1152,6 +1227,8 @@ class gui:
       #gobject.source_remove(self.timer)
       self.timer = 0
       gtk.main_quit()
+      print 'ON_DESTROY: THREAD: ',self.th
+      del self.th
       return False
     else:
       self.update_db_popup.hide()
@@ -1188,23 +1265,27 @@ class gui:
     if button == self.update_db:
       self.init_transaction = False
 
+      self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+      self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+      self.busy_progress_bar3.set_text('')
+      self.busy_progress_bar3.set_fraction(0.0)
+      self.busy_dialog.show_now()
+
       # update the databases {{{
       if not skip_update_db:
         upgrades = []
         missed_deps = []
-        self.shell.start_timer()
-
         self.init_transaction = True
 
-        #self.shell.alpm_refresh_dbs()
-        self.alpm_run_in_thread_and_wait(self.shell.alpm_refresh_dbs, {})
+        #self.alpm_run_in_thread_and_wait(self.shell.alpm_refresh_dbs, {})
+        self.alpm_run_in_thread_and_wait(self.shell.alpm_refresh_dbs,
+            {'report_hook': self.alpm_urllib_report_hook})
 
-        #(upgrades, missed_deps) = self.shell.alpm_update_databases()
         self.alpm_run_in_thread_and_wait(self.shell.alpm_update_databases, {})
         (upgrades, missed_deps) = self.shell.get_prev_return()
         #print "GUI: upgrades: ", upgrades
         #print "GUI: missed_deps: ", missed_deps
-        #self.try_sem_animate_progress_bar()
+        self.busy_dialog.hide()
 
         self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
         self.current_dialog = self.update_db_popup
@@ -1310,13 +1391,14 @@ class gui:
           #info = self.shell.info(pkg_name)
           #self.run_in_thread(self.shell.info, {'what':pkg_name})
 
-          self.try_sem()
-          if self.shell.get_prev_return() == None:
-            print 'None!'
-            if self.init_transaction:
-              self.shell.alpm_transaction_release()
-              self.init_transaction = False
-            return None
+          #self.try_sem()
+          #if self.shell.get_prev_return() == None:
+          #  print 'None!'
+          #  if self.init_transaction:
+          #    self.shell.alpm_transaction_release()
+          #    self.init_transaction = False
+          #    self.busy_dialog.hide()
+          #  return None
           
           #info = self.shell.get_prev_return()
           info = self.shell.alpm_info(pkg_name)
@@ -1390,18 +1472,6 @@ class gui:
         # file is not in the cache dir
         number = number + 1
     return number
-  # }}}
-
-  # def alpm_run_in_thread_and_wait(self, method, args): {{{
-  def alpm_run_in_thread_and_wait(self, method, args):
-    self.run_in_thread(method, args)
-
-    # waiting for thread to finish
-    while not self.shell.th_ended_event.isSet():
-      self.shell.th_ended_event.wait(0.01)
-      while gtk.events_pending():
-        gtk.main_iteration(False)
-    self.shell.th_ended_event.clear()
   # }}}
 
   # def alpm_install_targets(self, targets, repo = None): {{{
@@ -1903,6 +1973,7 @@ class gui:
   def alpm_update_gui(self):
     while gtk.events_pending():
       gtk.main_iteration(False)
+    return True
   # }}}
 
   # def on_remove_pkg_clicked(self, button): {{{
@@ -2863,6 +2934,11 @@ class gui:
         #  installed_version = '--'
         #
         #self.liststore.append([False, v[0], installed_version, v[1]])
+      # }}}
+    elif repo == 'pseudo repos':
+      # pseudo repos {{{
+      # do nothing
+      pass
       # }}}
     else:
       # something else {{{
