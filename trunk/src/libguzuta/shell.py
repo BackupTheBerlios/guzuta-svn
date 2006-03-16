@@ -355,6 +355,7 @@ class shell:
     #self.pacman = pacman(self)
     #self.pacman = pacman()
     self.yesno = False
+    self.last_exception = None
 
     self.trans = None
     tuple = self.__init_alpm__(debug)
@@ -514,16 +515,16 @@ the terms of the GNU General Public License'''
     self.pkgs = {}
 
     for dbname, db in self.dbs_by_name.iteritems():
-      if dbname != "local":
-        self.all[dbname] = []
+      #if dbname != "local":
+      self.all[dbname] = []
 
-        for pkg in db.get_package_iterator():
-          name = pkg.get_name()
-          version = pkg.get_version()
-          description = pkg.get_description()
+      for pkg in db.get_package_iterator():
+        name = pkg.get_name()
+        version = pkg.get_version()
+        description = pkg.get_description()
 
-          self.all[dbname].append((name, version, description))
-          self.pkgs[name] = (dbname, version, description)
+        self.all[dbname].append((name, version, description))
+        self.pkgs[name] = (dbname, version, description)
     return (self.all, self.pkgs)
   # }}}
 
@@ -1164,15 +1165,35 @@ the terms of the GNU General Public License'''
   def alpm_transaction_prepare(self):
     try:
       self.trans.prepare()
-    except Exception:
+    #except Exception:
+    except alpm.UnsatisfiedDependenciesTransactionException, inst:
+      self.last_exception = (1, inst)
       self.th_ended_event.set()
-      raise
+    except alpm.ConflictingDependenciesTransactionException, inst:
+      self.last_exception = (2, inst)
+      self.th_ended_event.set()
+    except RuntimeError, inst:
+      self.last_exception = (3, inst)
+      self.th_ended_event.set()
+    except alpm.ConflictingFilesTransactionException, inst:
+      self.last_exception = (4, inst)
+      self.th_ended_event.set()
     self.th_ended_event.set()
   # }}}
 
   # def alpm_transaction_commit(self): {{{
   def alpm_transaction_commit(self):
-    self.trans.commit()
+    try:
+      self.trans.commit()
+    except alpm.ConflictingDependenciesTransactionException, inst:
+      self.last_exception = (2, inst)
+      self.th_ended_event
+    except RuntimeError, inst:
+      self.last_exception = (3, inst)
+      self.th_ended_event
+    except alpm.ConflictingFilesTransactionException, inst:
+      self.last_exception = (4, inst)
+      self.th_ended_event.set()
     self.th_ended_event.set()
   # }}}
 
