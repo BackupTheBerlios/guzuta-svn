@@ -12,7 +12,7 @@ if gtk.pygtk_version < (2,3,90):
 import gobject
 import gtk.glade
 import pango, sys, os, os.path, posix, re, threading, thread, time, glob
-import math
+import math, sys
 
 # "our" trayicon
 import trayicon
@@ -523,12 +523,19 @@ class gui:
   #   total_size):
   def alpm_urllib_report_hook(self, blocks_so_far, block_size_bytes,
       total_size):
+    #FIXME: maybe turn this sleep on to make things more visible
+    time.sleep(0.5)
     if total_size < block_size_bytes:
       total_blocks = 1
     else:
       total_blocks = math.ceil(float(total_size)/float(block_size_bytes))
     division = float(blocks_so_far) / float(total_blocks)
-    self.busy_progress_bar3.set_text('Downloading ' + self.shell.retrieving + ' ' + str(division * 100) + '%')
+    #self.busy_progress_bar3.set_text('Downloading ' + self.shell.retrieving + ' ' + str(division * 100) + '%')
+    self.busy_progress_bar3.set_text('%.2f %%' % (division * 100))
+    #self.busy_progress_bar3.set_text('%d out of %d bytes' %\
+    #    ((blocks_so_far * block_size_bytes), total_size))
+    self.busy_status_label.set_markup('<i>Downloading database \'%s\'...</i>' %
+        (self.shell.retrieving))
     self.busy_progress_bar3.set_fraction(division)
   # }}}
 
@@ -1227,7 +1234,6 @@ class gui:
       #gobject.source_remove(self.timer)
       self.timer = 0
       gtk.main_quit()
-      print 'ON_DESTROY: THREAD: ',self.th
       del self.th
       return False
     else:
@@ -1267,6 +1273,7 @@ class gui:
 
       self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
       self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+      self.busy_status_label = self.all_widgets.get_widget('busy_status_label')
       self.busy_progress_bar3.set_text('')
       self.busy_progress_bar3.set_fraction(0.0)
       self.busy_dialog.show_now()
@@ -1474,6 +1481,9 @@ class gui:
     return number
   # }}}
 
+  def alpm_excepthook(self, type, value, traceback):
+    print 'BBBBBBBBBBBBBBB: ',type, value, traceback
+
   # def alpm_install_targets(self, targets, repo = None): {{{
   def alpm_install_targets(self, targets, repo = None):
     # TODO: check if there's something searched for or a repo selected, and
@@ -1525,7 +1535,6 @@ class gui:
     # Step 2: compute the transaction
     try:
       self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_prepare, {})
-
       #self.shell.alpm_transaction_prepare()
     except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
       unsatisfied_dependencies_dialog = \
@@ -1624,27 +1633,67 @@ class gui:
       str = '%s-%s' % (pkgname, pkgver)
       to_install.append(str)
 
+    self.fraction_increment = 1.0 / (6 + (2 * len(packages)) +\
+        number_pkgs_to_download)
+    #self.current_fraction = 0.0
+
     install_remove_pkgs_dialog =\
       self.all_widgets.get_widget('install_remove_pkgs_dialog')
-    to_remove_label = self.all_widgets.get_widget('to_remove_label')
-    to_install_label = self.all_widgets.get_widget('to_install_label')
+    #to_remove_label = self.all_widgets.get_widget('to_remove_label')
+    #to_install_label = self.all_widgets.get_widget('to_install_label')
+    to_remove_treeview = self.all_widgets.get_widget('to_remove_treeview')
+    to_install_treeview = self.all_widgets.get_widget('to_install_treeview')
 
-    # fill to_remove_label
-    remove_text = '<b>Remove:</b>'
+    textrenderer = gtk.CellRendererText()
+    namecolumn = gtk.TreeViewColumn('Name')
+    namecolumn.set_sort_column_id(0)
+    namecolumn.pack_start(textrenderer)
+    namecolumn.set_attributes(textrenderer, text=0)
+    
+    namecolumn2 = gtk.TreeViewColumn('Name')
+    namecolumn2.set_sort_column_id(0)
+    namecolumn2.pack_start(textrenderer)
+    namecolumn2.set_attributes(textrenderer, text=0)
+
+    versioncolumn = gtk.TreeViewColumn('Name')
+    versioncolumn.set_sort_column_id(1)
+    versioncolumn.pack_start(textrenderer)
+    versioncolumn.set_attributes(textrenderer, text=1)
+
+    versioncolumn2 = gtk.TreeViewColumn('Name')
+    versioncolumn2.set_sort_column_id(1)
+    versioncolumn2.pack_start(textrenderer)
+    versioncolumn2.set_attributes(textrenderer, text=1)
+
+    to_remove_treeview.append_column(namecolumn)
+    to_remove_treeview.append_column(versioncolumn)
+    to_install_treeview.append_column(namecolumn2)
+    to_install_treeview.append_column(versioncolumn2)
+
+    to_remove_liststore = gtk.ListStore('gchararray', 'gchararray')
+    to_install_liststore = gtk.ListStore('gchararray', 'gchararray')
+
+    # fill to_remove_treeview
     for (pkg_name, pkg_ver) in to_remove:
-      remove_text = '%s %s-%s ' % (remove_text, pkg_name, pkg_ver)
-    to_remove_label.set_markup(remove_text)
+      to_remove_liststore.append([pkg_name, pkg_ver])
 
-    # fill to_install_label
-    install_text = '<b>Targets:</b>'
+    # fill to_install_treeview
     for pkg_str in to_install:
-      install_text = '%s %s ' % (install_text, pkg_str)
-    to_install_label.set_markup(install_text)
+      print 'PKG_STR: <%s> '  % pkg_str
+      pkg_str2 = pkg_str[:pkg_str.rindex('-')]
+
+      pkg_name = pkg_str2[:pkg_str2.rindex('-')]
+      pkg_ver = pkg_str[pkg_str[:pkg_str.rindex('-')].rindex('-')+1:]
+      to_install_liststore.append([pkg_name, pkg_ver])
+
+    to_remove_treeview.set_model(to_remove_liststore)
+    to_install_treeview.set_model(to_install_liststore)
 
     response = install_remove_pkgs_dialog.run()
     install_remove_pkgs_dialog.hide()
 
     if response == gtk.RESPONSE_CANCEL:
+      self.busy_dialog.hide()
       return
 
     # group sync records by repository and download
@@ -1899,6 +1948,7 @@ class gui:
         #self.shell.alpm_transaction_prepare()
         self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_prepare,{})
       except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
+        print 'UNSATISF2'
         conflicts_error_dialog =\
           self.all_widgets.get_widget('conflicts_error_dialog')
         conflicts_error_label =\

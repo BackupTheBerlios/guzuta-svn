@@ -915,7 +915,7 @@ the terms of the GNU General Public License'''
 
   # def alpm_download_file(self, url, destination, report_hook = None): {{{
   def alpm_download_file(self, url, destination, report_hook):
-    #time.sleep(4)
+    #time.sleep(2)
     try:
       #print 'RETRIEVING: ', url
       if not report_hook:
@@ -1164,9 +1164,9 @@ the terms of the GNU General Public License'''
   def alpm_transaction_prepare(self):
     try:
       self.trans.prepare()
-    except Exception, inst:
+    except Exception:
       self.th_ended_event.set()
-      raise Exception, inst
+      raise
     self.th_ended_event.set()
   # }}}
 
