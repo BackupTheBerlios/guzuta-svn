@@ -2222,6 +2222,10 @@ class gui:
           del self.local_pkgs[removed_pkg]
         except KeyError:
           pass
+      # refresh the local_groups
+      # TODO: remove only the group(s) that were removed, don't refresh all of
+      # them
+      self.local_groups = self.shell.alpm_get_groups('local')
       # }}}
 
       self.shell.alpm_transaction_release()
@@ -2323,23 +2327,25 @@ class gui:
         for grp_name, grp_packages in self.local_groups.iteritems():
           match = regexp.match(grp_name)
           if match:
+            if grp_packages == []:
+              break
             iter = self.liststore.append(None, [False, grp_name, '', ''])
 
             for pkg_name in grp_packages:
-              already_seen_pkgs[pkg_name] = None
-              print 'this is group <%s>' % grp_name
-              try:
-                version = self.pkgs[pkg_name]
-              except KeyError:
-                version = '--'
-              
-              try:
-                installed_version = self.local_pkgs[pkg_name][1]
-              except KeyError:
-                installed_version = '--'
+              if pkg_name in self.local_pkgs or pkg_name in self.pkgs:
+                already_seen_pkgs[pkg_name] = None
+                try:
+                  version = self.pkgs[pkg_name][1]
+                except KeyError:
+                  version = '--'
+                
+                try:
+                  installed_version = self.local_pkgs[pkg_name][1]
+                except KeyError:
+                  installed_version = '--'
 
-              self.liststore.append(iter, [False, pkg_name, installed_version,\
-                  version])
+                self.liststore.append(iter, [False, pkg_name, installed_version,\
+                    version])
 
       # search current, community, extra, etc...
       for repo, repo_list in self.pkgs_by_repo.iteritems():
@@ -2975,14 +2981,10 @@ class gui:
 
   # def toggled(self, toggle_renderer, path): {{{
   def toggled(self, toggle_renderer, path):
-    # get iter from model
-    iter = self.liststore.get_iter_from_string(path)
-    # get value
-    checked = self.liststore.get_value(iter, 0)
-    # toggle it
-    checked = not checked
-    # set value
-    self.liststore.set_value(iter, 0, checked)
+    treemodelrow = self.liststore[path]
+    for row in treemodelrow.iterchildren():
+      self.liststore[row.path][0] = not self.liststore[row.path][0]
+    self.liststore[path][0] = not self.liststore[path][0]
   # }}}
 
   # def __add_pkg_info_markuped_to_pkg_info_label__(self, lines, {{{
@@ -3312,14 +3314,14 @@ class gui:
   # }}}
 
   # def get_all_selected_packages(tree_model): {{{
-  # TODO: put outside of class
   def get_all_selected_packages(self, tree_model):
     n = len(tree_model)
     
     names = []
-    for i in range(n):
-      if tree_model[i][0]:
-        names.append(tree_model[i][1])
+    for row in tree_model:
+      if row[0]:
+        for child_row in row.iterchildren():
+          names.append(child_row[1])
 
     return names
   # }}}
