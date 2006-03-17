@@ -377,6 +377,8 @@ class gui:
     self.local_pkg_info = {}
     self.remote_pkg_info = {}
 
+    self.pkgs_in_local = {}
+
     self.pkgs_by_repo = {}
     self.pkgs_by_repo['no repository'] = []
 
@@ -538,10 +540,76 @@ class gui:
     self.busy_progress_bar3.set_fraction(division)
   # }}}
 
+  # def alpm_get_group(self, name, repo): {{{
+  def alpm_get_group(self, name, repo):
+    db = self.dbs_by_name[repo]
+    try:
+      pkg = db.read_pkg(name)
+    except alpm.NoSuchPackageException:
+      try:
+        group = db.read_group(name)
+      except alpm.NoSuchGroupException:
+        return None
+      else:
+        return group
+    return None
+  # }}}
+
+  # def alpm_fill_treestore_with_pkgs_and_grps(self, treestore, pkgs, groups): {{{
+  def alpm_fill_treestore_with_pkgs_and_grps(self, treestore, pkgs, groups):
+    already_visited_pkgs = {}
+    already_visited_grps = {}
+
+    keys = sorted(pkgs.keys() + groups.keys())
+
+    for k in keys:
+      if k in groups:
+        if k not in already_visited_grps:
+          grp_name = k
+          already_visited_grps[grp_name] = None
+          pkg_names = groups[grp_name]
+
+          iter = self.liststore.append(None, [False, grp_name, '', ''])
+
+          for pkg_name in pkg_names:
+            already_visited_pkgs[pkg_name] = None
+
+            try:
+              local_version = self.local_pkgs[pkg_name][1]
+            except KeyError:
+              local_version = '--'
+
+            #available version
+            try:
+              available_version = self.pkgs[pkg_name][1]
+            except KeyError:
+              # pkg was installed separately
+              available_version = '--'
+              
+            self.liststore.append(iter, [False, pkg_name, local_version, available_version])
+      else: # package
+        if k not in already_visited_pkgs:
+          try:
+            local_version = self.local_pkgs[k][1]
+          except KeyError:
+            local_version = '--'
+          
+          #available version
+          try:
+            available_version = self.pkgs[k][1]
+          except KeyError:
+            # pkg was installed separately
+            available_version = '--'
+            
+          self.liststore.append(None, [False, k, local_version, available_version])
+  # }}}
+
   # def __setup_pkg_treeview__(self): {{{
   def __setup_pkg_treeview__(self):
     # checked, name, version, description 
-    self.liststore = gtk.ListStore('gboolean', str, str, str)
+    #self.liststore = gtk.ListStore('gboolean', str, str, str)
+    self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
+        'gchararray')
 
     self.textrenderer = gtk.CellRendererText()
     self.togglerenderer = gtk.CellRendererToggle()
@@ -587,22 +655,57 @@ class gui:
     self.treeview.append_column(self.availableversioncolumn)
 
     #self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
-    # positions are as follows:
-    # name, version, description
-    # TODO: sort this
-    keys = self.local_pkgs.keys()
-    keys.sort()
-    for k in keys:
-      v = self.local_pkgs[k]
-      #available version
-      try:
-        available_version = self.pkgs[k][1]
-      except KeyError:
-        # pkg was installed separately
-        available_version = '--'
-        
-      self.liststore.append([False, k, v[1], available_version])
-  
+
+    # BACKUP {{{
+    #already_visited = {}
+
+    #self.local_groups = self.shell.alpm_get_groups('local')
+
+    #tmp_dict = {}
+    #tmp_dict.update(self.local_pkgs)
+    #tmp_dict.update(self.local_groups)
+    #keys = tmp_dict.keys()
+    #keys.sort()
+
+    #for k in keys:
+    #  v = tmp_dict[k]
+    #  if type(v) == list: # group
+    #    grp_name = k
+    #    pkg_names = v
+
+    #    iter = self.liststore.append(None, [False, grp_name, '', ''])
+
+    #    for pkg_name in pkg_names:
+    #      already_visited[pkg_name] = None
+
+    #      v = self.local_pkgs[pkg_name]
+
+    #      #available version
+    #      try:
+    #        available_version = self.pkgs[pkg_name][1]
+    #      except KeyError:
+    #        # pkg was installed separately
+    #        available_version = '--'
+    #        
+    #      self.liststore.append(iter, [False, pkg_name, v[1], available_version])
+    #  else: # package
+    #    if k not in already_visited:
+    #      v = self.local_pkgs[k]
+    #      
+    #      #available version
+    #      try:
+    #        available_version = self.pkgs[k][1]
+    #      except KeyError:
+    #        # pkg was installed separately
+    #        available_version = '--'
+    #        
+    #      self.liststore.append(None, [False, k, v[1], available_version])
+    # }}}
+
+    self.local_groups = self.shell.alpm_get_groups('local')
+
+    self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+        self.local_pkgs, self.local_groups)
     self.treeview.set_model(self.liststore)
   # }}}
   
@@ -1495,25 +1598,42 @@ class gui:
     number_pkgs_to_download =\
       self.alpm_get_number_of_packages_to_download(targets)
 
-    print 'NUMBER: ', number_pkgs_to_download
+    #print 'NUMBER: ', number_pkgs_to_download
     self.fraction_increment = 1.0 / (6 + (2 * len(targets)) +\
         number_pkgs_to_download)
     self.current_fraction = 0.0
 
-    install_pkg_are_you_sure_dialog =\
-      self.all_widgets.get_widget('install_pkg_are_you_sure_dialog')
+    pkg_are_you_sure_dialog =\
+      self.all_widgets.get_widget('pkg_are_you_sure_dialog2')
 
-    install_are_you_sure_textview =\
-      self.all_widgets.get_widget('install_are_you_sure_textview')
+    are_you_sure_treeview =\
+        self.all_widgets.get_widget('pkgs_treeview')
 
-    buffer = gtk.TextBuffer()
-    install_are_you_sure_textview.set_buffer(buffer)
+    liststore = gtk.ListStore('gchararray')
+    textrenderer = gtk.CellRendererText()
+
+    namecolumn = gtk.TreeViewColumn('Name')
+    namecolumn.set_sort_column_id(0)
+    namecolumn.pack_start(textrenderer)
+    namecolumn.set_attributes(textrenderer, text=0)
+
+    are_you_sure_treeview.append_column(namecolumn)
+
+    are_you_sure_message_label =\
+        self.all_widgets.get_widget('are_you_sure_message_label')
+
+    are_you_sure_message_label.set_text(\
+        'Do you wish to install these packages?')
 
     for target in targets:
-      buffer.insert_at_cursor(target + '\n')
+      liststore.append([target])
 
-    response = install_pkg_are_you_sure_dialog.run()
-    install_pkg_are_you_sure_dialog.hide()
+    liststore.set_sort_column_id(0, gtk.SORT_ASCENDING)
+
+    are_you_sure_treeview.set_model(liststore)
+
+    response = pkg_are_you_sure_dialog.run()
+    pkg_are_you_sure_dialog.destroy()
 
     if response == gtk.RESPONSE_CANCEL:
       return
@@ -1684,12 +1804,12 @@ class gui:
     namecolumn2.pack_start(textrenderer)
     namecolumn2.set_attributes(textrenderer, text=0)
 
-    versioncolumn = gtk.TreeViewColumn('Name')
+    versioncolumn = gtk.TreeViewColumn('Version')
     versioncolumn.set_sort_column_id(1)
     versioncolumn.pack_start(textrenderer)
     versioncolumn.set_attributes(textrenderer, text=1)
 
-    versioncolumn2 = gtk.TreeViewColumn('Name')
+    versioncolumn2 = gtk.TreeViewColumn('Version')
     versioncolumn2.set_sort_column_id(1)
     versioncolumn2.pack_start(textrenderer)
     versioncolumn2.set_attributes(textrenderer, text=1)
@@ -1939,23 +2059,66 @@ class gui:
     # update the pkg_treeview accordingly
     self.fraction_increment = (1.0 / (2 + 2 * len(targets)))
     self.current_fraction = 0.0
-    remove_pkg_are_you_sure =\
-      self.all_widgets.get_widget('remove_pkg_are_you_sure')
-    self.current_dialog = remove_pkg_are_you_sure
 
-    are_you_sure_label = self.all_widgets.get_widget('are_you_sure_label')
+    pkg_are_you_sure_dialog =\
+      self.all_widgets.get_widget('pkg_are_you_sure_dialog2')
 
-    #text = 'Are you sure you want to remove the following packages?\n'
-    text = ''
+    are_you_sure_treeview =\
+        self.all_widgets.get_widget('pkgs_treeview')
 
-    for pkg_name in targets:
-      text = text + pkg_name + '\n'
+    liststore = gtk.ListStore('gchararray')
+    textrenderer = gtk.CellRendererText()
 
-    are_you_sure_label.set_text(text)
+    namecolumn = gtk.TreeViewColumn('Name')
+    namecolumn.set_sort_column_id(0)
+    namecolumn.pack_start(textrenderer)
+    namecolumn.set_attributes(textrenderer, text=0)
+
+    are_you_sure_treeview.append_column(namecolumn)
+
+    are_you_sure_message_label =\
+        self.all_widgets.get_widget('are_you_sure_message_label')
+
+    are_you_sure_message_label.set_text(\
+        'Do you wish to remove these packages?')
+
+    #remove_pkg_are_you_sure =\
+    #  self.all_widgets.get_widget('remove_pkg_are_you_sure')
+    #self.current_dialog = remove_pkg_are_you_sure
+
+    #are_you_sure_label = self.all_widgets.get_widget('are_you_sure_label')
+
+    ##text = 'Are you sure you want to remove the following packages?\n'
+
+    #install_pkg_are_you_sure_dialog =\
+    #  self.all_widgets.get_widget('pkg_are_you_sure_dialog2')
+
+    #install_are_you_sure_textview =\
+    #  self.all_widgets.get_widget('pkgs_textview')
+
+    #are_you_sure_message_label =\
+    #    self.all_widgets.get_widget('are_you_sure_message_label')
+
+    #are_you_sure_label.set_text('What packages do you want to install?')
+    #text = ''
+
+    #for pkg_name in targets:
+    #  text = text + pkg_name + '\n'
+
+    #are_you_sure_label.set_text(text)
     
+    for pkg_name in targets:
+      liststore.append([pkg_name])
+
+    liststore.set_sort_column_id(0, gtk.SORT_ASCENDING)
+
+    are_you_sure_treeview.set_model(liststore)
+
     self.current_dialog_on = True
-    response = remove_pkg_are_you_sure.run()
-    remove_pkg_are_you_sure.hide()
+    #response = remove_pkg_are_you_sure.run()
+    #remove_pkg_are_you_sure.hide()
+    response = pkg_are_you_sure_dialog.run()
+    pkg_are_you_sure_dialog.destroy()
     
     self.current_dialog_on = False
 
@@ -2135,9 +2298,11 @@ class gui:
 
   # def on_search_clicked(self, button): {{{
   def on_search_clicked(self, button):
-    self.liststore = gtk.ListStore('gboolean', str, str, str)
+    #self.liststore = gtk.ListStore('gboolean', str, str, str)
+    already_seen_pkgs = {}
+    self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
+        'gchararray')
 
-    print '$$$$$$$$$$$$$$$$$$$ ', self.local_pkgs['armyops']
     try:
       regexp = re.compile(self.search_entry.get_text())
     except sre_constants.error:
@@ -2151,26 +2316,75 @@ class gui:
     # TODO: search in remote_pkg_info ??
     where_to_search = search_combobox.get_active_text()
     
+    found = False
     if where_to_search != None:
+      # search local groups
+      if where_to_search == 'Name':
+        for grp_name, grp_packages in self.local_groups.iteritems():
+          match = regexp.match(grp_name)
+          if match:
+            iter = self.liststore.append(None, [False, grp_name, '', ''])
+
+            for pkg_name in grp_packages:
+              already_seen_pkgs[pkg_name] = None
+              print 'this is group <%s>' % grp_name
+              try:
+                version = self.pkgs[pkg_name]
+              except KeyError:
+                version = '--'
+              
+              try:
+                installed_version = self.local_pkgs[pkg_name][1]
+              except KeyError:
+                installed_version = '--'
+
+              self.liststore.append(iter, [False, pkg_name, installed_version,\
+                  version])
+
+      # search current, community, extra, etc...
       for repo, repo_list in self.pkgs_by_repo.iteritems():
         #for pkg_info in repo_list:
         for name, version, description in repo_list:
-          if where_to_search == 'Version':
-            match = regexp.match(version)
-          elif where_to_search == 'Name':
-            match = regexp.match(name)
-          else: # description
-            match = regexp.match(description)
-          if match:
-            try:
-              installed_version = self.local_pkgs[name][1]
-            except KeyError:
-              installed_version = '--'
-            self.liststore.append([False, name, installed_version, version])
+          if name not in already_seen_pkgs:
+            if where_to_search == 'Version':
+              match = regexp.match(version)
+            elif where_to_search == 'Name':
+              match = regexp.match(name)
+            else: # description
+              match = regexp.match(description)
+            if match:
+              if where_to_search == 'Name' and not found:
+                found = True
+              try:
+                installed_version = self.local_pkgs[name][1]
+              except KeyError:
+                installed_version = '--'
+              self.liststore.append(None, [False, name, installed_version, version])
           
+      if not found:
+        # search 'local'
+        for name in self.local_pkgs.keys():
+          if name not in already_seen_pkgs:
+            version = self.local_pkgs[name][1]
+            description = self.local_pkgs[name][2]
+            if where_to_search == 'Version':
+              match = regexp.match(version)
+            elif where_to_search == 'Name':
+              match = regexp.match(name)
+            else: # description
+              match = regexp.match(description)
+            if match:
+              if not found:
+                found = True
+              try:
+                installed_version = self.local_pkgs[name][1]
+              except KeyError:
+                installed_version = '--'
+              self.liststore.append(None, [False, name, installed_version, version])
+
       self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
       self.treeview.set_model(self.liststore)
-    else: # this should not happed but it stays here for completeness
+    else: # this should not happen but it stays here for completeness
       no_search_selected_dialog =\
         self.all_widgets.get_widget('no_search_selected_dialog')
       self.current_dialog = no_search_selected_dialog
@@ -2928,56 +3142,86 @@ class gui:
   def __fill_treeview_with_pkgs_from_repo__(self, repo):
     self.treeview.set_model(None) # unsetting model to speed things up
 
-    self.liststore = gtk.ListStore('gboolean', str, str, str)
+    #self.liststore = gtk.ListStore('gboolean', str, str, str)
+    self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
+        'gchararray')
 
     if repo == 'current' or repo == 'extra' or repo == 'community':
       # current, extra, community {{{
-      for v in self.pkgs_by_repo[repo]:
-        
-        name = v[0] # name
-        try:
-          # repo, version, description
-          #print '###: ', self.local_pkgs[name]
-          installed_version = self.local_pkgs[name][1]
-        except KeyError:
-          # not installed
-          #try:
-          #  self.not_installed[name]
-          #except KeyError:
-          #  self.not_installed[name] = None
-          installed_version = '--'
-        
-        self.liststore.append([False, v[0], installed_version, v[1]])
+      groups = self.shell.alpm_get_groups(repo)
+
+      tmp_dict = dict([(pkg_name,(repo, pkg_ver, desc))\
+          for (pkg_name, pkg_ver, desc) in self.pkgs_by_repo[repo]])
+      self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+          tmp_dict, groups)
+
+      #for v in self.pkgs_by_repo[repo]:
+      #  
+      #  name = v[0] # name
+      #  try:
+      #    # repo, version, description
+      #    #print '###: ', self.local_pkgs[name]
+      #    installed_version = self.local_pkgs[name][1]
+      #  except KeyError:
+      #    # not installed
+      #    #try:
+      #    #  self.not_installed[name]
+      #    #except KeyError:
+      #    #  self.not_installed[name] = None
+      #    installed_version = '--'
+      #  
+      #  self.liststore.append([False, v[0], installed_version, v[1]])
       # }}}
     elif repo == 'installed':
       # installed {{{
-      for name, v in self.local_pkgs.iteritems():
-        #available version
-        try:
-          available_version = self.pkgs[name][1]
-        except KeyError:
-          # pkg was installed separately
-          available_version = '--'
-          
-        self.liststore.append([False, name, v[1], available_version])
+      #self.local_groups = self.shell.alpm_get_groups('local')
+
+      self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+          self.local_pkgs, self.local_groups)
+      #for name, v in self.local_pkgs.iteritems():
+      #  #available version
+      #  try:
+      #    available_version = self.pkgs[name][1]
+      #  except KeyError:
+      #    # pkg was installed separately
+      #    available_version = '--'
+      #    
+      #  self.liststore.append([False, name, v[1], available_version])
       # }}}
     elif repo == 'all':
       # all {{{
       # community, extra, current
-      for repo,v in self.pkgs_by_repo.iteritems():
-        for pkg in v:
 
-          name = pkg[0] # name
-          try:
-            installed_version = self.local_pkgs[name][1]
-          except KeyError:
-            #try:
-            #  self.not_installed[name]
-            #except KeyError:
-            #  self.not_installed[name] = None
-            installed_version = '--'
+      groups = {}
+      for db_name in self.dbs_by_name:
+        groups.update(self.shell.alpm_get_groups(db_name))
 
-          self.liststore.append([False, pkg[0], installed_version, pkg[1]])
+      #tmp_dict = dict([(pkg_name,(repo, pkg_ver, desc))\
+      #    for (repo, (pkg_name, pkg_ver, desc)) in\
+      #    self.pkgs_by_repo.iteritems()])
+
+      tmp_dict = {}
+      for (repo, l) in self.pkgs_by_repo.iteritems():
+        for (pkg_name, pkg_ver, desc) in l:
+          tmp_dict[pkg_name] = (repo, pkg_ver, desc)
+
+      self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+          tmp_dict, groups)
+
+      #for repo,v in self.pkgs_by_repo.iteritems():
+      #  for pkg in v:
+
+      #    name = pkg[0] # name
+      #    try:
+      #      installed_version = self.local_pkgs[name][1]
+      #    except KeyError:
+      #      #try:
+      #      #  self.not_installed[name]
+      #      #except KeyError:
+      #      #  self.not_installed[name] = None
+      #      installed_version = '--'
+
+      #    self.liststore.append([False, pkg[0], installed_version, pkg[1]])
       # }}}
     elif repo == 'not installed':
       # not installed {{{

@@ -1,5 +1,8 @@
 0.0.5
 =====
+* make a click in a group select all packages that belong to it, and when
+  installing, install all the packages that belong to it minus the group name
+  selected
 * integrate with pynealpm
 * add support for groups
 

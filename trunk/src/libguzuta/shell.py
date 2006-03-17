@@ -513,24 +513,47 @@ the terms of the GNU General Public License'''
     # pkgs[name] = (repo, version, description)
     self.all = {}
     self.pkgs = {}
+    #self.pkgs_in_local = []
 
     for dbname, db in self.dbs_by_name.iteritems():
-      #if dbname != "local":
-      self.all[dbname] = []
+      if dbname != "local":
+        self.all[dbname] = []
 
-      for pkg in db.get_package_iterator():
-        name = pkg.get_name()
-        version = pkg.get_version()
-        description = pkg.get_description()
+        for pkg in db.get_package_iterator():
+          name = pkg.get_name()
+          version = pkg.get_version()
+          description = pkg.get_description()
 
-        self.all[dbname].append((name, version, description))
-        self.pkgs[name] = (dbname, version, description)
-    return (self.all, self.pkgs)
+          self.all[dbname].append((name, version, description))
+          self.pkgs[name] = (dbname, version, description)
+      #else: # 'local'
+      #  for pkg in db.get_package_iterator():
+      #    name = pkg.get_name()
+      #    version = pkg.get_version()
+      #    description = pkg.get_description()
+
+      #    self.pkgs_in_local.append((name, version, description))
+    return (self.all, self.pkgs)#, self.pkgs_in_local)
   # }}}
 
   # def alpm_get_pmc_syncs(self): {{{
   def alpm_get_pmc_syncs(self):
     return self.pmc_syncs
+  # }}}
+
+  # def alpm_get_groups(self, db_name): {{{
+  def alpm_get_groups(self, db_name):
+    self.local_groups = {}
+
+    db = self.dbs_by_name[db_name]
+    try:
+      for grp in db.get_group_iterator():
+        name = grp.get_name()
+        package_names = grp.get_package_names()
+        self.local_groups[name] = package_names
+    except RuntimeError:
+      return {}
+    return self.local_groups
   # }}}
 
   # def alpm_local_search(self, what = ''): {{{
@@ -949,7 +972,10 @@ the terms of the GNU General Public License'''
 
   # def alpm_get_pkg_dbname(self, pkg_name): {{{
   def alpm_get_pkg_dbname(self, pkg_name):
-    return self.pkgs[pkg_name][0]
+    try:
+      self.pkgs[pkg_name][0]
+    except KeyError:
+      return self.local_pkgs[pkg_name][0]
   # }}}
 
   # def alpm_get_pkg_version(self, pkg_name): {{{
