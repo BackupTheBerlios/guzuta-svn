@@ -222,7 +222,9 @@ class gui:
   # def gui_trans_cb_conv(self, event, data1, data2, data3): {{{
   def gui_trans_cb_conv(self, event, data1, data2, data3):
     self.response = None
-    id = gobject.idle_add(self.gui_trans_cb_conv2, event, data1, data2, data3)
+    response = 0
+    id = gobject.idle_add(self.gui_trans_cb_conv2, event, data1, data2, data3,
+        response)
     while not self.dialog_ended_event.isSet():
       #print self.response
       while gtk.events_pending():
@@ -232,8 +234,8 @@ class gui:
     return self.response
   # }}}
 
-  # def gui_trans_cb_conv2(self, event, data1, data2, data3): {{{
-  def gui_trans_cb_conv2(self, event, data1, data2, data3):
+  # def gui_trans_cb_conv2(self, event, data1, data2, data3, response): {{{
+  def gui_trans_cb_conv2(self, event, data1, data2, data3, response):
     # return > 0 means to go ahead and replace/install ignoring, etc
     # return == 0 means to stop
     print 'Question:', (event, data1, data2, data3)
@@ -258,17 +260,12 @@ class gui:
           (data1.get_name(), data3, data2.get_name()))
 
     elif event == alpm.PM_TRANS_CONV_CONFLICT_PKG:
-      print 'HERE'
-      print '<', cb_conv_reason_label, cb_conv_action_label,\
-        cb_conv_question_dialog, '>'
       cb_conv_reason_label.set_markup(\
           '<b>%s</b> conflicts with <b>%s</b>' %\
           (data1, data2))
-      print 'DONE'
       cb_conv_action_label.set_markup(\
           '<i>Do you want to remove <b>%s</b>?</i>' %\
           data2)
-      print 'DONE SETTING STUFF'
 
     elif event == alpm.PM_TRANS_CONV_LOCAL_NEWER:
       cb_conv_reason_label.set_markup(\
