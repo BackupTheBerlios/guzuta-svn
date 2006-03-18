@@ -513,12 +513,16 @@ the terms of the GNU General Public License'''
     # pkgs[name] = (repo, version, description)
     self.all = {}
     self.pkgs = {}
+    self.groups = {}
+    self.groups_by_repo = {}
     #self.pkgs_in_local = []
 
     for dbname, db in self.dbs_by_name.iteritems():
       if dbname != "local":
         self.all[dbname] = []
+        self.groups_by_repo[dbname] = []
 
+        # get packages
         for pkg in db.get_package_iterator():
           name = pkg.get_name()
           version = pkg.get_version()
@@ -526,6 +530,20 @@ the terms of the GNU General Public License'''
 
           self.all[dbname].append((name, version, description))
           self.pkgs[name] = (dbname, version, description)
+
+        # get groups
+        try:
+          for grp in db.get_group_iterator():
+            grp_name = grp.get_name()
+            grp_pkgs = grp.get_package_names()
+
+            self.groups_by_repo[dbname].append((grp_name, grp_pkgs))
+            self.groups[grp_name] = (dbname, grp_pkgs)
+        except alpm.NoGroupsFoundException:
+          # no groups found
+          pass
+
+
       #else: # 'local'
       #  for pkg in db.get_package_iterator():
       #    name = pkg.get_name()
@@ -533,7 +551,7 @@ the terms of the GNU General Public License'''
       #    description = pkg.get_description()
 
       #    self.pkgs_in_local.append((name, version, description))
-    return (self.all, self.pkgs)#, self.pkgs_in_local)
+    return (self.all, self.pkgs, self.groups, self.groups_by_repo)
   # }}}
 
   # def alpm_get_pmc_syncs(self): {{{

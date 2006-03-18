@@ -22,27 +22,35 @@ from shell import *
 # }}}
 
 # def xor_two_dicts(a, b): {{{
+# return all things that are in 'b' and that are not in 'a'
 def xor_two_dicts(a, b):
+  #ret = {}
+  #not_ret = {}
+
+  ## if key,value exist in both dicts, scrap
+  ## else put it in ret
+  #for key, value in a.iteritems():
+  #  try:
+  #    b[key]
+  #    not_ret[key] = value
+  #  except KeyError:
+  #    ret[key] = value
+
+  #for key, value in b.iteritems():
+  #  try:
+  #    not_ret[key]
+  #  except KeyError:
+  #    try:
+  #      a[key]
+  #    except KeyError:
+  #      ret[key] = value
+
+  #return ret
+
   ret = {}
-  not_ret = {}
-
-  # if key,value exist in both dicts, scrap
-  # else put it in ret
-  for key, value in a.iteritems():
-    try:
-      b[key]
-      not_ret[key] = value
-    except KeyError:
-      ret[key] = value
-
   for key, value in b.iteritems():
-    try:
-      not_ret[key]
-    except KeyError:
-      try:
-        a[key]
-      except KeyError:
-        ret[key] = value
+    if key not in a:
+      ret[key] = value
 
   return ret
 # }}}
@@ -56,6 +64,35 @@ def toggled(cellrenderer, path, model):
 class gui:
   pango_no_underline = 0
   pango_underline_single = 1
+
+  # from: http://async.com.br/faq/pygtk/index.py?req=show&file=faq10.017.htp
+  # def dialog_response_cb(self, dialog, response_id): {{{
+  def dialog_response_cb(self, dialog, response_id):
+    dialog.hide()
+
+    self.response2 = response_id
+    self.dialog_ended_event.set()
+    return False
+  # }}}
+
+  # def dialog_run(self, dialog): {{{
+  def dialog_run(self, dialog):
+    self.response2 = None
+    if not dialog.modal:
+      dialog.set_modal(True)
+
+    self.dialog_ended_event = threading.Event()
+    self.dialog_ended_event.clear()
+
+    dialog.connect('response', self.dialog_response_cb)
+    dialog.show()
+
+    while not self.dialog_ended_event.isSet():
+      self.dialog_ended_event.wait(0.01)
+      while gtk.events_pending():
+        gtk.main_iteration(False)
+    self.dialog_ended_event.clear()
+  # }}}
 
   # def alpm_progress_bar_set_text_and_fraction(self, progress_bar, {{{
   #     text, append_text, frac):
@@ -247,8 +284,10 @@ class gui:
 
     self.response = None
     self.dialog_ended_event.clear()
-    resp = cb_conv_question_dialog.run()
-    cb_conv_question_dialog.hide()
+    #resp = cb_conv_question_dialog.run()
+    #cb_conv_question_dialog.hide()
+    self.dialog_run(cb_conv_question_dialog)
+    resp = self.response2
 
     if resp == gtk.RESPONSE_OK:
       self.response = 1
@@ -789,6 +828,7 @@ class gui:
   # def on_download_pkg_button_clicked(self, button): {{{
   def on_download_pkg_button_clicked(self, button):
     pkgs_to_download = self.get_all_selected_packages(self.liststore)
+    print pkgs_to_download
 
     if pkgs_to_download == []:
       return 
@@ -1569,18 +1609,6 @@ class gui:
     for pkg_name in targets:
       (_, pkg_ver) = self.shell.alpm_get_pkg_repo(pkg_name)
       
-      #pkg_db = self.shell.dbs_by_name[dbname]
-
-      #pkg = sync.get_package()
-      #pkg_db = pkg.get_database()
-      #pkg_db_name = pkg_db.get_tree_name()
-
-      #pkg = pkg_db.read_pkg(pkg_name)
-
-      #if dbname == pkg_db_name:
-      #  pkg_name = pkg.get_name()
-      #  pkg_ver = pkg.get_version()
-
       path = ldir + '/' + pkg_name + '-' + pkg_ver + alpm.PM_EXT_PKG
 
       try:
@@ -1610,14 +1638,17 @@ class gui:
         self.all_widgets.get_widget('pkgs_treeview')
 
     liststore = gtk.ListStore('gchararray')
-    textrenderer = gtk.CellRendererText()
 
-    namecolumn = gtk.TreeViewColumn('Name')
-    namecolumn.set_sort_column_id(0)
-    namecolumn.pack_start(textrenderer)
-    namecolumn.set_attributes(textrenderer, text=0)
+    cols = are_you_sure_treeview.get_columns()
+    if cols == []:
+      textrenderer = gtk.CellRendererText()
 
-    are_you_sure_treeview.append_column(namecolumn)
+      namecolumn = gtk.TreeViewColumn('Name')
+      namecolumn.set_sort_column_id(0)
+      namecolumn.pack_start(textrenderer)
+      namecolumn.set_attributes(textrenderer, text=0)
+
+      are_you_sure_treeview.append_column(namecolumn)
 
     are_you_sure_message_label =\
         self.all_widgets.get_widget('are_you_sure_message_label')
@@ -1633,7 +1664,7 @@ class gui:
     are_you_sure_treeview.set_model(liststore)
 
     response = pkg_are_you_sure_dialog.run()
-    pkg_are_you_sure_dialog.destroy()
+    pkg_are_you_sure_dialog.hide()
 
     if response == gtk.RESPONSE_CANCEL:
       return
@@ -1650,6 +1681,7 @@ class gui:
 
     # process targets and add them to the transaction
     for pkg_name in targets:
+      print 'RUNNING ADD_TARGET'
       ret = self.shell.alpm_transaction_add_target(pkg_name)
       if not ret:
         self.shell.alpm_transaction_release()
@@ -1658,6 +1690,7 @@ class gui:
 
     # Step 2: compute the transaction
     #try:
+    print 'RUNNING PREPARE'
     self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_prepare, {})
       #self.shell.alpm_transaction_prepare()
     #except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
@@ -1686,6 +1719,9 @@ class gui:
 
         if response == gtk.RESPONSE_OK:
           self.alpm_install_targets(targets + depmiss_names)
+        else:
+          self.shell.alpm_transaction_release()
+          self.busy_dialog.hide()
         return
       #except alpm.ConflictingDependenciesTransactionException, conflict_list:
       elif self.shell.last_exception[0] == 2:
@@ -1707,6 +1743,7 @@ class gui:
         conflicts_error_dialog.hide()
 
         self.shell.alpm_transaction_release()
+        self.busy_dialog.hide()
         return
       #except alpm.ConflictingFilesTransactionException, conflict_list:
       elif self.shell.last_exception[0] == 4:
@@ -1735,6 +1772,7 @@ class gui:
         conflicts_error_dialog.hide()
 
         self.shell.alpm_transaction_release()
+        self.busy_dialog.hide()
         return
 
     self.busy_dialog.show_all()
@@ -1956,6 +1994,7 @@ class gui:
     # Step 3: actually perform the installation
     #try:
       #self.shell.alpm_transaction_commit()
+    print 'RUNNING COMMIT'
     self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_commit, {})
 
     #except alpm.ConflictingFilesTransactionException, conflict_list:
@@ -2324,32 +2363,33 @@ class gui:
     if where_to_search != None:
       # search local groups
       if where_to_search == 'Name':
-        for grp_name, grp_packages in self.local_groups.iteritems():
-          match = regexp.match(grp_name)
-          if match:
-            if grp_packages == []:
-              break
-            iter = self.liststore.append(None, [False, grp_name, '', ''])
+        #for grp_name, grp_packages in self.local_groups.iteritems():
+        for repo, repo_list in self.groups_by_repo.iteritems():
+          for grp_name, grp_packages in repo_list:
+            match = regexp.match(grp_name)
+            if match:
+              if grp_packages == []:
+                break
+              iter = self.liststore.append(None, [False, grp_name, '', ''])
 
-            for pkg_name in grp_packages:
-              if pkg_name in self.local_pkgs or pkg_name in self.pkgs:
-                already_seen_pkgs[pkg_name] = None
-                try:
-                  version = self.pkgs[pkg_name][1]
-                except KeyError:
-                  version = '--'
-                
-                try:
-                  installed_version = self.local_pkgs[pkg_name][1]
-                except KeyError:
-                  installed_version = '--'
+              for pkg_name in grp_packages:
+                if pkg_name in self.local_pkgs or pkg_name in self.pkgs:
+                  already_seen_pkgs[pkg_name] = None
+                  try:
+                    version = self.pkgs[pkg_name][1]
+                  except KeyError:
+                    version = '--'
+                  
+                  try:
+                    installed_version = self.local_pkgs[pkg_name][1]
+                  except KeyError:
+                    installed_version = '--'
 
-                self.liststore.append(iter, [False, pkg_name, installed_version,\
-                    version])
+                  self.liststore.append(iter, [False, pkg_name, installed_version,\
+                      version])
 
       # search current, community, extra, etc...
       for repo, repo_list in self.pkgs_by_repo.iteritems():
-        #for pkg_info in repo_list:
         for name, version, description in repo_list:
           if name not in already_seen_pkgs:
             if where_to_search == 'Version':
@@ -2359,7 +2399,8 @@ class gui:
             else: # description
               match = regexp.match(description)
             if match:
-              if where_to_search == 'Name' and not found:
+              if (where_to_search == 'Name' or\
+                  where_to_search == 'Description') and not found:
                 found = True
               try:
                 installed_version = self.local_pkgs[name][1]
@@ -2698,7 +2739,7 @@ class gui:
   
   # def cleanup_cache(self, clean_by, clean_threshold): {{{
   def cleanup_cache(self, clean_by, clean_threshold):
-    cache_dir = '/var/cache/pacman/pkg'
+    cache_dir = self.shell.alpm.get_cache_dir()
     time_now = time.time()
     print 'now is: ', int(time_now)
     
@@ -2964,7 +3005,9 @@ class gui:
 
   # def populate_pkgs_by_repo(self): {{{
   def populate_pkgs_by_repo(self):
-    (self.pkgs_by_repo, self.pkgs) = self.shell.alpm_repofiles2()
+    #(self.pkgs_by_repo, self.pkgs) = self.shell.alpm_repofiles2()
+    (self.pkgs_by_repo, self.pkgs, self.groups, self.groups_by_repo) =\
+        self.shell.alpm_repofiles2()
   # }}}
 
   # def populate_pkg_lists2(self): {{{
@@ -2983,7 +3026,7 @@ class gui:
   def toggled(self, toggle_renderer, path):
     treemodelrow = self.liststore[path]
     for row in treemodelrow.iterchildren():
-      self.liststore[row.path][0] = not self.liststore[row.path][0]
+      self.liststore[row.path][0] = not self.liststore[path][0]
     self.liststore[path][0] = not self.liststore[path][0]
   # }}}
 
@@ -3157,22 +3200,6 @@ class gui:
       self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
           tmp_dict, groups)
 
-      #for v in self.pkgs_by_repo[repo]:
-      #  
-      #  name = v[0] # name
-      #  try:
-      #    # repo, version, description
-      #    #print '###: ', self.local_pkgs[name]
-      #    installed_version = self.local_pkgs[name][1]
-      #  except KeyError:
-      #    # not installed
-      #    #try:
-      #    #  self.not_installed[name]
-      #    #except KeyError:
-      #    #  self.not_installed[name] = None
-      #    installed_version = '--'
-      #  
-      #  self.liststore.append([False, v[0], installed_version, v[1]])
       # }}}
     elif repo == 'installed':
       # installed {{{
@@ -3198,10 +3225,6 @@ class gui:
       for db_name in self.dbs_by_name:
         groups.update(self.shell.alpm_get_groups(db_name))
 
-      #tmp_dict = dict([(pkg_name,(repo, pkg_ver, desc))\
-      #    for (repo, (pkg_name, pkg_ver, desc)) in\
-      #    self.pkgs_by_repo.iteritems()])
-
       tmp_dict = {}
       for (repo, l) in self.pkgs_by_repo.iteritems():
         for (pkg_name, pkg_ver, desc) in l:
@@ -3210,29 +3233,9 @@ class gui:
       self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
           tmp_dict, groups)
 
-      #for repo,v in self.pkgs_by_repo.iteritems():
-      #  for pkg in v:
-
-      #    name = pkg[0] # name
-      #    try:
-      #      installed_version = self.local_pkgs[name][1]
-      #    except KeyError:
-      #      #try:
-      #      #  self.not_installed[name]
-      #      #except KeyError:
-      #      #  self.not_installed[name] = None
-      #      installed_version = '--'
-
-      #    self.liststore.append([False, pkg[0], installed_version, pkg[1]])
       # }}}
     elif repo == 'not installed':
       # not installed {{{
-      #print 'SELF.PKGS:'
-      #for name in self.pkgs.iteritems():
-      #  print '###: ', name
-      #print 'SELF.LOCAL_PKGS:'
-      #for name in self.local_pkgs.iteritems():
-      #  print '###: ', name
 
       # TODO: cache this
       # TODO: manually installed pkgs can be collected by
@@ -3240,13 +3243,18 @@ class gui:
       #       repo 'local'. cache this
       not_installed = xor_two_dicts(self.local_pkgs, self.pkgs)
       
-      #print 'NOT_INSTALLED:'
-      #for name in not_installed.iteritems():
-      #  print '###: ', name
-      # pkg: repo, version
-      for name, v in not_installed.iteritems():
-        if v[0] != 'local':
-          self.liststore.append([False, name, '--', v[1]])
+      groups = {}
+
+      for db_name in self.dbs_by_name:
+        db_groups = self.shell.alpm_get_groups(db_name)
+        for (grp_name, grp_pkgs) in db_groups.iteritems():
+          if grp_name not in self.local_groups:
+            # group not installed
+            groups[grp_name] = grp_pkgs
+
+      self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+          not_installed, groups)
+
       # }}}
     elif repo == 'last installed':
       # TODO: last installed {{{
@@ -3287,22 +3295,14 @@ class gui:
       # }}}
     else:
       # something else {{{
-      for v in self.pkgs_by_repo[repo]:
-        
-        name = v[0] # name
-        try:
-          # repo, version, description
-          installed_version = self.local_pkgs[name][1]
-        except KeyError:
-          # not installed
-          #try:
-          #  self.not_installed[name]
-          #except KeyError:
-          #  self.not_installed[name] = None
-          installed_version = '--'
-        
-        self.liststore.append([False, v[0], installed_version, v[1]])
+      groups = self.shell.alpm_get_groups(repo)
+
+      tmp_dict = dict([(pkg_name,(repo, pkg_ver, desc))\
+          for (pkg_name, pkg_ver, desc) in self.pkgs_by_repo[repo]])
+      self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+          tmp_dict, groups)
       # }}}
+
     self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
     self.treeview.set_model(self.liststore)
   # }}}
@@ -3318,10 +3318,14 @@ class gui:
     n = len(tree_model)
     
     names = []
+    has_children = False
     for row in tree_model:
       if row[0]:
         for child_row in row.iterchildren():
+          has_children = True
           names.append(child_row[1])
+        if not has_children:
+          names.append(row[1])
 
     return names
   # }}}
