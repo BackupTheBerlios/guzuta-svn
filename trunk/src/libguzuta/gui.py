@@ -231,6 +231,7 @@ class gui:
         gtk.main_iteration(False)
       time.sleep(0.1)
     gobject.source_remove(id)
+    self.dialog_ended_event.clear()
     return self.response
   # }}}
 
@@ -281,8 +282,6 @@ class gui:
 
     self.response = None
     self.dialog_ended_event.clear()
-    #resp = cb_conv_question_dialog.run()
-    #cb_conv_question_dialog.hide()
     self.dialog_run(cb_conv_question_dialog)
     resp = self.response2
 
@@ -1717,7 +1716,6 @@ class gui:
         if response == gtk.RESPONSE_OK:
           self.alpm_install_targets(targets + depmiss_names)
         else:
-          self.shell.alpm_transaction_release()
           self.busy_dialog.hide()
         return
       #except alpm.ConflictingDependenciesTransactionException, conflict_list:
@@ -1781,7 +1779,7 @@ class gui:
       self.busy_dialog.hide()
       return
 
-    print 'PACKAGES IN THE TRANSACTION: ', packages
+    #print 'PACKAGES IN THE TRANSACTION: ', packages
     to_remove = []
     to_install = []
     # list targets and get confirmation
@@ -1863,7 +1861,7 @@ class gui:
 
     # fill to_install_treeview
     for pkg_str in to_install:
-      print 'PKG_STR: <%s> '  % pkg_str
+      #print 'PKG_STR: <%s> '  % pkg_str
       pkg_str2 = pkg_str[:pkg_str.rindex('-')]
 
       pkg_name = pkg_str2[:pkg_str2.rindex('-')]
@@ -1991,7 +1989,7 @@ class gui:
     # Step 3: actually perform the installation
     #try:
       #self.shell.alpm_transaction_commit()
-    print 'RUNNING COMMIT'
+    #print 'RUNNING COMMIT'
     self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_commit, {})
 
     #except alpm.ConflictingFilesTransactionException, conflict_list:
@@ -2048,7 +2046,7 @@ class gui:
 
     list = [syncpkg.get_package().get_name() for syncpkg in packages]
 
-    print 'packages installed: ', list
+    #print 'packages installed: ', list
 
     self.__add_pkg_info_to_local_pkgs__(list)
     self.refresh_pkgs_treeview()
