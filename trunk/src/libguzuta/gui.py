@@ -650,7 +650,7 @@ class gui:
     self.togglerenderer = gtk.CellRendererToggle()
     self.togglerenderer.set_active(True)
 
-    self.togglerenderer.connect('toggled', self.toggled)
+    self.togglerenderer.connect('toggled', self.toggled, self.liststore)
     #self.togglerenderer.connect('toggled', toggled, self.liststore)
 
     self.emptycolumn = gtk.TreeViewColumn('Selected')
@@ -1488,20 +1488,21 @@ class gui:
       togglerenderer = gtk.CellRendererToggle()
       togglerenderer.set_active(True)
 
-      togglerenderer.connect('toggled', toggled, l)
+      togglerenderer.connect('toggled', self.toggled, l)
 
-      selectedcolumn = gtk.TreeViewColumn('Update')
-      selectedcolumn.set_sort_column_id(0)
-      selectedcolumn.pack_start(togglerenderer)
-      selectedcolumn.set_attributes(togglerenderer, active=0)
-      
-      namecolumn = gtk.TreeViewColumn('Name')
-      namecolumn.set_sort_column_id(1)
-      namecolumn.pack_start(textrenderer)
-      namecolumn.set_attributes(textrenderer, text=1)
+      if fresh_updates_treeview.get_columns() == []:
+        selectedcolumn = gtk.TreeViewColumn('Update')
+        selectedcolumn.set_sort_column_id(0)
+        selectedcolumn.pack_start(togglerenderer)
+        selectedcolumn.set_attributes(togglerenderer, active=0)
+        
+        namecolumn = gtk.TreeViewColumn('Name')
+        namecolumn.set_sort_column_id(1)
+        namecolumn.pack_start(textrenderer)
+        namecolumn.set_attributes(textrenderer, text=1)
 
-      fresh_updates_treeview.append_column(selectedcolumn)
-      fresh_updates_treeview.append_column(namecolumn)
+        fresh_updates_treeview.append_column(selectedcolumn)
+        fresh_updates_treeview.append_column(namecolumn)
       # }}}
 
       if upgrades != []:
@@ -1528,8 +1529,14 @@ class gui:
           upgrades = self.get_all_selected_packages(l)
           #upgrades = [row[0] for row in l]
 
-          print 'upgrades + missed_deps: ', (upgrades + missed_deps)
-          self.alpm_install_targets(upgrades + missed_deps)
+          print 'upgrades: ', upgrades
+          print 'missed deps: ', missed_deps
+          self.shell.alpm_transaction_release()
+          self.busy_status_label.set_markup('<i>Please wait...</i>')
+          if missed_deps == None:
+            self.alpm_install_targets(upgrades)
+          else:
+            self.alpm_install_targets(upgrades + missed_deps)
 
           fresh_updates_installed = True  
         else:
@@ -1944,10 +1951,12 @@ class gui:
           alpm.set_cache_dir(ldir)
           cleanup = True
       
-      kwargs = {'files': files, 'progress_bar': self.busy_progress_bar3}
+      kwargs = {'files': files, 'progress_bar': self.busy_progress_bar3,\
+        'report_hook': self.alpm_urllib_report_hook}
       self.alpm_run_in_thread_and_wait(self.shell.alpm_download_packages,
           kwargs)
       filenames = self.shell.get_prev_return()
+      print 'DONE DOWNLOADING: ', filenames
       
       files = []
 
@@ -2338,6 +2347,8 @@ class gui:
   def on_search_clicked(self, button):
     #self.liststore = gtk.ListStore('gboolean', str, str, str)
     already_seen_pkgs = {}
+    already_seen_groups = {} # grp name => iter
+    self.treeview.set_model(None) # unsetting model to speed things up
     self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
         'gchararray')
 
@@ -2365,7 +2376,11 @@ class gui:
             if match:
               if grp_packages == []:
                 break
-              iter = self.liststore.append(None, [False, grp_name, '', ''])
+              if grp_name in already_seen_groups:
+                iter = already_seen_groups[grp_name]
+              else:
+                iter = self.liststore.append(None, [False, grp_name, '', ''])
+                already_seen_groups[grp_name] = iter
 
               for pkg_name in grp_packages:
                 if pkg_name in self.local_pkgs or pkg_name in self.pkgs:
@@ -2426,6 +2441,7 @@ class gui:
 
       self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
       self.treeview.set_model(self.liststore)
+      self.togglerenderer.connect('toggled', self.toggled, self.liststore)
     else: # this should not happen but it stays here for completeness
       no_search_selected_dialog =\
         self.all_widgets.get_widget('no_search_selected_dialog')
@@ -2908,7 +2924,8 @@ class gui:
     self.busy_window_on = True
     
     # TODO: see pacman-lib/src/pacman/sync.c:356
-    kwargs = {'files': list, 'progress_bar': self.busy_progress_bar3}
+    kwargs = {'files': list, 'progress_bar': self.busy_progress_bar3,\
+      'report_hook': self.alpm_urllib_report_hook}
     self.alpm_run_in_thread_and_wait(self.shell.alpm_download_packages, kwargs)
     filenames = self.shell.get_prev_return()
     print filenames
@@ -3017,12 +3034,12 @@ class gui:
     self.populate_pkgs_by_repo()
   # }}}
 
-  # def toggled(self, toggle_renderer, path): {{{
-  def toggled(self, toggle_renderer, path):
-    treemodelrow = self.liststore[path]
+  # def toggled(self, toggle_renderer, path, store = None): {{{
+  def toggled(self, toggle_renderer, path, store = None):
+    treemodelrow = store[path]
     for row in treemodelrow.iterchildren():
-      self.liststore[row.path][0] = not self.liststore[path][0]
-    self.liststore[path][0] = not self.liststore[path][0]
+      store[row.path][0] = not store[path][0]
+    store[path][0] = not store[path][0]
   # }}}
 
   # def __add_pkg_info_markuped_to_pkg_info_label__(self, lines, {{{
@@ -3298,6 +3315,7 @@ class gui:
           tmp_dict, groups)
       # }}}
 
+    self.togglerenderer.connect('toggled', self.toggled, self.liststore)
     self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
     self.treeview.set_model(self.liststore)
   # }}}

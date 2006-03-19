@@ -569,7 +569,7 @@ the terms of the GNU General Public License'''
         name = grp.get_name()
         package_names = grp.get_package_names()
         self.local_groups[name] = package_names
-    except RuntimeError:
+    except alpm.NoGroupsFoundException:
       return {}
     return self.local_groups
   # }}}
@@ -955,16 +955,27 @@ the terms of the GNU General Public License'''
     return self.alpm_remote_pkg_to_list(pkg)
   # }}}
 
+  # TODO: show kb/s if possible
   # def alpm_download_file(self, url, destination, report_hook = None): {{{
-  def alpm_download_file(self, url, destination, report_hook):
+  def alpm_download_file(self, url, destination, report_hook = None):
     #time.sleep(2)
     try:
       #print 'RETRIEVING: ', url
+      is_db = True
       if not report_hook:
         (filename, headers) = urllib.urlretrieve(url, destination)
       else:
         #self.retrieving = url
-        self.retrieving = url[url.rindex("/")+1:url.rindex(".db.tar.gz")]
+        print 'URL: ', url
+        try:
+          url.rindex('.db.tar.gz')
+        except ValueError:
+          is_db = False
+
+        if is_db:
+          self.retrieving = url[url.rindex("/")+1:url.rindex(".db.tar.gz")]
+        else:
+          self.retrieving = url[url.rindex("/")+1:]
         (filename, headers) = urllib.urlretrieve(url, destination, report_hook)
       #urllib.urlcleanup()
       #print 'DONE RETRIEVING'
@@ -1014,8 +1025,8 @@ the terms of the GNU General Public License'''
     return pkg_name, pkg_ver
   # }}}
 
-  # def alpm_download_packages(self, files, progress_bar): {{{
-  def alpm_download_packages(self, files, progress_bar):
+  # def alpm_download_packages(self, files, progress_bar, report_hook = None): {{{
+  def alpm_download_packages(self, files, progress_bar, report_hook = None):
     print 'DOWNLOADING: ', files
     self.prev_return = None
     ret = []
@@ -1038,15 +1049,16 @@ the terms of the GNU General Public License'''
           pass
 
       filename = self.alpm_download_package(pkg_name, pkg_ver,
-          db_name, path)
+          db_name, path, report_hook)
 
+      print 'Filename: ', filename
       if filename != None:
         ret.append(filename)
         str = '%s/%s-%s downloaded.' %\
             (db_name, pkg_name, pkg_ver)
         #gtk.gdk.threads_enter()
         progress_bar.set_text(str)
-        time.sleep(1)
+        #time.sleep(1)
         #progress_bar.pulse()
         #gtk.gdk.threads_leave()
       else:
@@ -1058,8 +1070,10 @@ the terms of the GNU General Public License'''
     return
   # }}}
 
-  # def alpm_download_package(self, package_name, version, dbname, path): {{{
-  def alpm_download_package(self, package_name, version, dbname, path):
+  # def alpm_download_package(self, package_name, version, dbname, path, {{{
+  # report_hook = None):
+  def alpm_download_package(self, package_name, version, dbname, path,
+      report_hook = None):
     #self.all[dbname].append((name, version, description))
     #self.pkgs[name] = (dbname, version, description)
 
@@ -1088,7 +1102,7 @@ the terms of the GNU General Public License'''
       url = server_record['protocol'] + '://' + server_record['server']\
           + server_record['path'] + package_name + '-' + version + '.pkg.tar.gz'
 
-      filename = self.alpm_download_file(url, destination)
+      filename = self.alpm_download_file(url, destination, report_hook)
 
       print '%s downloaded to %s' % (package_name, filename)
 
