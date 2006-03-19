@@ -79,7 +79,7 @@
 	  <child>
 	    <widget class="GtkLabel" id="label2">
 	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">&lt;big&gt;&lt;b&gt;Database Updated&lt;/b&gt;&lt;/big&gt;</property>
+	      <property name="label" translatable="yes">&lt;big&gt;&lt;b&gt;Database(s) Updated&lt;/b&gt;&lt;/big&gt;</property>
 	      <property name="use_underline">False</property>
 	      <property name="use_markup">True</property>
 	      <property name="justify">GTK_JUSTIFY_CENTER</property>
@@ -1858,6 +1858,7 @@ of this License.
 	  <child>
 	    <widget class="GtkToolButton" id="update_db">
 	      <property name="visible">True</property>
+	      <property name="tooltip" translatable="yes">Refresh the repositories' databases.</property>
 	      <property name="stock_id">gtk-refresh</property>
 	      <property name="visible_horizontal">True</property>
 	      <property name="visible_vertical">True</property>
@@ -1886,6 +1887,7 @@ of this License.
 	  <child>
 	    <widget class="GtkToolButton" id="install_pkg">
 	      <property name="visible">True</property>
+	      <property name="tooltip" translatable="yes">Install selected packages.</property>
 	      <property name="label" translatable="yes">Install</property>
 	      <property name="use_underline">True</property>
 	      <property name="stock_id">gtk-yes</property>
@@ -1902,7 +1904,7 @@ of this License.
 
 	  <child>
 	    <widget class="GtkToolButton" id="install_from_repo_button">
-	      <property name="visible">True</property>
+	      <property name="sensitive">False</property>
 	      <property name="label" translatable="yes">Install from...</property>
 	      <property name="use_underline">True</property>
 	      <property name="stock_id">gtk-yes</property>
@@ -1920,6 +1922,7 @@ of this License.
 	  <child>
 	    <widget class="GtkToolButton" id="install_pkg_from_file_button">
 	      <property name="visible">True</property>
+	      <property name="tooltip" translatable="yes">Install package from file.</property>
 	      <property name="label" translatable="yes">Install from file...</property>
 	      <property name="use_underline">True</property>
 	      <property name="stock_id">gtk-yes</property>
@@ -1937,6 +1940,7 @@ of this License.
 	  <child>
 	    <widget class="GtkToolButton" id="download_pkg_button">
 	      <property name="visible">True</property>
+	      <property name="tooltip" translatable="yes">Download selected package.</property>
 	      <property name="label" translatable="yes">Download...</property>
 	      <property name="use_underline">True</property>
 	      <property name="stock_id">gtk-go-down</property>
@@ -1954,6 +1958,7 @@ of this License.
 	  <child>
 	    <widget class="GtkToolButton" id="remove_pkg">
 	      <property name="visible">True</property>
+	      <property name="tooltip" translatable="yes">Uninstall selected packages.</property>
 	      <property name="label" translatable="yes">Uninstall</property>
 	      <property name="use_underline">True</property>
 	      <property name="stock_id">gtk-delete</property>
@@ -1984,6 +1989,7 @@ of this License.
 	  <child>
 	    <widget class="GtkToolButton" id="preferences">
 	      <property name="visible">True</property>
+	      <property name="tooltip" translatable="yes">Set preferences.</property>
 	      <property name="stock_id">gtk-preferences</property>
 	      <property name="visible_horizontal">True</property>
 	      <property name="visible_vertical">True</property>
