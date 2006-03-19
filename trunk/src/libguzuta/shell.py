@@ -741,6 +741,17 @@ the terms of the GNU General Public License'''
     return list
   # }}}
 
+  # def alpm_group_to_list(self, group): {{{
+  def alpm_group_to_list(self, group):
+    l = []
+    s = ''
+    l.append('Group:\t' + group.get_name())
+    l.append('Packages:\t')
+    for pkg_name in group.get_package_names():
+      l.append('\t' + pkg_name)
+    return l
+  # }}}
+
   # def alpm_remote_pkg_to_list(self, pkg): {{{
   def alpm_remote_pkg_to_list(self, pkg):
     name = pkg.get_name()
@@ -936,11 +947,23 @@ the terms of the GNU General Public License'''
     return self.alpm_pkg_to_list(pkg)
   # }}}
 
+  # def alpm_group_local_info(self, what = ''): {{{
+  def alpm_group_local_info(self, what = ''):
+    db = self.dbs_by_name['local']
+    try:
+      grp = db.read_group(what)
+    except alpm.NoSuchGroupException:
+      return None
+
+    return self.alpm_group_to_list(grp)
+  # }}}
+
   # def alpm_info(self, what = ''): {{{
   def alpm_info(self, what = ''):
     (repo, version, desc) = self.pkgs[what]
     db = self.dbs_by_name[repo]
 
+    pkg = None
     try:
       #pkg = db.read_pkg(what)
       pkg_cache_list = db.get_pkg_cache()
@@ -952,7 +975,25 @@ the terms of the GNU General Public License'''
     except alpm.NoSuchPackageException:
       return None
     #return self.alpm_pkg_to_string(pkg)
-    return self.alpm_remote_pkg_to_list(pkg)
+    if pkg == None:
+      return None
+    else:
+      return self.alpm_remote_pkg_to_list(pkg)
+  # }}}
+
+  # def alpm_group_info(self, what = ''): {{{
+  def alpm_group_info(self, what = ''):
+    grp = None
+
+    l = []
+    for dbname, db in self.dbs_by_name.iteritems():
+      try:
+        grp = db.read_group(what)
+      except alpm.NoSuchGroupException:
+        continue
+      else:
+        l = l + self.alpm_group_to_list(grp)
+    return l
   # }}}
 
   # TODO: show kb/s if possible

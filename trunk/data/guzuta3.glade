@@ -2248,6 +2248,8 @@ Description</property>
 				  <signal name="motion_notify_event" handler="on_information_text_motion_notify_event" last_modification_time="Wed, 31 Aug 2005 23:04:18 GMT"/>
 				  <signal name="enter_notify_event" handler="on_information_text_enter_notify_event" last_modification_time="Thu, 01 Sep 2005 00:20:47 GMT"/>
 				  <signal name="leave_notify_event" handler="on_information_text_leave_notify_event" last_modification_time="Thu, 01 Sep 2005 00:21:29 GMT"/>
+				  <signal name="visibility_notify_event" handler="on_information_text_visibility_notify_event" last_modification_time="Sun, 19 Mar 2006 02:12:39 GMT"/>
+				  <signal name="event_after" handler="on_information_text_event_after" last_modification_time="Sun, 19 Mar 2006 02:32:45 GMT"/>
 				</widget>
 			      </child>
 			    </widget>

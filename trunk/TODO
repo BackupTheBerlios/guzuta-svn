@@ -1,12 +1,12 @@
 0.0.5
 =====
 * add support for groups
-* when clicking on a group, show the group information, like when clicking on a
-  package
-
+* BUG/FEATURE: if packages that belong to a group are put in the treeview before
+  the group, they appear outside of the group. handle groups first?
 0.0.6
 =====
 
+* implement auto check for new packages AKA alarm
 * Show in a popup the dependencies of a pkg
 * Implement auto updates when minimized to systray
 * Make a click in the trayicon hide main window AND whatever popups are active

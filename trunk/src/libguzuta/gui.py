@@ -296,9 +296,6 @@ class gui:
 
   # def __init__(self): {{{
   def __init__(self):
-    # signals !!!
-    #fname = '/usr/share/guzuta/guzuta2.glade'
-    
     gtk.gdk.threads_init()
     self.th = None
     self.prev_return = None
@@ -313,9 +310,6 @@ class gui:
 
     self.cancelled = False
 
-    #print 'working in: ', self.cwd
-    
-    #fname = '/usr/share/guzuta/guzuta3.glade'
     fname = self.cwd + '/share/guzuta/guzuta3.glade'
     if os.path.exists(fname):
       self.glade_file = fname
@@ -344,10 +338,8 @@ class gui:
     'on_update_db_popup_destroy': self.on_destroy,
     'on_quit_activate': self.on_quit_activate,
     'on_update_db_clicked': self.on_update_db_clicked,
-    #'on_okbutton_clicked': self.on_okbutton_clicked,
     'on_install_pkg_clicked': self.on_install_pkg_clicked,
     'on_remove_pkg_clicked': self.on_remove_pkg_clicked,
-    #'on_okbutton2_clicked': self.on_okbutton2_clicked,
     'on_install_pkg_popup_delete_event': self.on_install_pkg_popup_delete_event,
     'on_install_pkg_popup_destroy': self.on_install_pkg_popup_destroy,
     'on_search_clicked': self.on_search_clicked,
@@ -382,19 +374,23 @@ class gui:
         self.on_download_pkg_button_clicked,
     'on_download_pkg_popup_menu_activate':\
         self.on_download_pkg_button_clicked,
-    'on_cache_menu_activate':
-      self.on_cache_menu_activate,
-    'on_view_files_popup_menu_activate':
-      self.on_view_files_popup_menu_activate,
-    'on_cancel_busy_button_clicked':
-      self.on_cancel_busy_button_clicked
+    'on_cache_menu_activate':\
+        self.on_cache_menu_activate,
+    'on_view_files_popup_menu_activate':\
+        self.on_view_files_popup_menu_activate,
+    'on_cancel_busy_button_clicked':\
+        self.on_cancel_busy_button_clicked,
+    'on_information_text_motion_notify_event':\
+        self.motion_notify_event,
+    'on_information_text_visibility_notify_event':\
+        self.visibility_notify_event,
+    'on_information_text_event_after':\
+        self.event_after
     #'on_browse_preferences_button_clicked':\
     #    self.on_browse_preferences_button_clicked,
-    #'on_information_text_enter_notify_event': self.on_hyperlink_motion,
     #'on_information_text_leave_notify_event':\
     #  self.on_mainwindow_motion_notify_event,
     #'on_mainwindow_enter_notify_event': self.on_mainwindow_enter_notify_event
-    #'on_information_text_motion_notify_event': self.on_hyperlink_motion,
     #'on_mainwindow_motion_notify_event': self.on_mainwindow_motion_notify_event,
     #'on_systray_eventbox_button_press_event':\
     #    self.on_systray_eventbox_button_press_event,
@@ -424,6 +420,9 @@ class gui:
     self.trayicon = None
     self.systray_eventbox = None
 
+    self.hovering_over_link = False
+    self.hand_cursor = gtk.gdk.Cursor(gtk.gdk.HAND2)
+    self.regular_cursor = gtk.gdk.Cursor(gtk.gdk.XTERM)
 
     self.all_widgets = gtk.glade.XML(self.glade_file)
 
@@ -468,11 +467,7 @@ class gui:
     # pid of pacman process
     self.pid = 0
 
-    #self.textview = self.all_widgets.get_widget("textview")
     self.main_window = self.all_widgets.get_widget("mainwindow")
-    #self.main_window.connect('enter_notify_event',\
-    #    self.on_mainwindow_enter_notify_event)
-    #self.open_menu_item = self.all_widgets.get_widget('open1')
     # checkbox, name, version, packager, description
     self.treeview = self.all_widgets.get_widget('treeview')
     # sortable
@@ -526,12 +521,7 @@ class gui:
       self.main_window.set_sensitive(True)
       #sys.exit(1)
 
-
-    #gtk.gdk.threads_enter()
     gtk.main()
-    #self.run_in_thread(gtk.main, {})
-    #threading.Thread(target=gtk.main, kwargs={}).start()
-    #gtk.gdk.threads_leave()
   # }}}
   
   # def run_in_thread(self, method, args_dict, wait=False): {{{
@@ -1303,6 +1293,11 @@ class gui:
     self.current_dialog_on = False
   # }}}
 
+  # def alpm_is_group(self, name): {{{
+  def alpm_is_group(self, name):
+    return name in self.local_groups or name in self.groups
+  # }}}
+
   # def on_cursor_changed(self, treeview): {{{
   def on_cursor_changed(self, treeview):
     selection = treeview.get_selection()
@@ -1327,30 +1322,42 @@ class gui:
 
       buffer = gtk.TextBuffer()
       
-      try:
-        info = self.local_pkg_info[name]
-      except KeyError:
-        info = self.shell.alpm_local_info(name)
-        #print "local info:", info
-        self.local_pkg_info[name] = info
-      
-      if info == None:
+      if not self.alpm_is_group(name):
         try:
-          remote_info = self.remote_pkg_info[name]
+          info = self.local_pkg_info[name]
         except KeyError:
-          remote_info = self.shell.alpm_info(name)
-          self.remote_pkg_info[name] = remote_info
+          info = self.shell.alpm_local_info(name)
+          #print "local info:", info
+          self.local_pkg_info[name] = info
+        
+        if info == None:
+          try:
+            remote_info = self.remote_pkg_info[name]
+          except KeyError:
+            remote_info = self.shell.alpm_info(name)
+            self.remote_pkg_info[name] = remote_info
 
-        self.__add_pkg_info_markuped_to_text_buffer__(buffer, remote_info,\
-            installed = False)
-      else:
-        self.__add_pkg_info_markuped_to_text_buffer__(buffer, info)
-      self.information_text.set_buffer(buffer)
-      #tag_list = self.information_text.get_buffer().\
-      #    get_start_iter().get_tags()
+          self.__add_pkg_info_markuped_to_text_buffer__(buffer, remote_info,\
+              installed = False)
+        else:
+          self.__add_pkg_info_markuped_to_text_buffer__(buffer, info)
+        self.information_text.set_buffer(buffer)
+        #tag_list = self.information_text.get_buffer().\
+        #    get_start_iter().get_tags()
 
-      #for tag in tag_list:
-      #  print tag.get_property('name')
+        #for tag in tag_list:
+        #  print tag.get_property('name')
+      
+      else: # group
+        installed = True
+        info = self.shell.alpm_group_local_info(name)
+        if not info:
+          installed = False
+          info = self.shell.alpm_group_info(name)
+
+        self.__add_pkg_info_markuped_to_text_buffer__(buffer, info,\
+            installed)
+        self.information_text.set_buffer(buffer)
 
     else: # treeview of repos
       repo = treemodel.get_value(iter, 0)
@@ -2622,31 +2629,97 @@ class gui:
     self.information_text.get_window(gtk.TEXT_WINDOW_TEXT).set_cursor(None)
   # }}}
   
-  # def on_hyperlink_motion(self, widget, event, data = None): {{{
-  def on_hyperlink_motion(self, widget, event, data = None):
-    #x, y, mods = self.main_window.get_pointer()
+  # from pygtk-demo {{{
+  # def set_cursor_if_appropriate(self, text_view, x, y): {{{
+  # Looks at all tags covering the position (x, y) in the text view,
+  # and if one of them is a link, change the cursor to the "hands" cursor
+  # typically used by web browsers.
+  def set_cursor_if_appropriate(self, text_view, x, y):
+    hovering = False
 
-    #x, y = self.information_text.window_to_buffer_coords(gtk.TEXT_WINDOW_TEXT, x, y)
-    #iter = self.information_text.get_iter_at_location(x, y)
-    #buffer = iter.get_buffer()
-    #tags = iter.get_tags()
-    tag_table = self.information_text.get_buffer().get_tag_table()
-    hyperlink_tag = tag_table.lookup('hyperlink')
+    buffer = text_view.get_buffer()
+    iter = text_view.get_iter_at_location(x, y)
 
-    if hyperlink_tag == None:
-      print 'hyperlink None!!'
-      return 
-    
-    hyperlink_tag.set_property('underline', self.pango_underline_single)
-    #self.information_text.get_window(gtk.TEXT_WINDOW_TEXT)\
-    #    .set_cursor(gtk.gdk.Cursor(gtk.gdk.HAND))
-    self.underlined_url = hyperlink_tag
+    tags = iter.get_tags()
+    for tag in tags:
+      page = tag.get_data("page")
+      if page != 0:
+        hovering = True
+        break
 
+    if hovering != self.hovering_over_link:
+      self.hovering_over_link = hovering
+
+    if self.hovering_over_link:
+      text_view.get_window(gtk.TEXT_WINDOW_TEXT).set_cursor(self.hand_cursor)
+    else:
+      text_view.get_window(gtk.TEXT_WINDOW_TEXT).set_cursor(self.regular_cursor)
   # }}}
 
-  # def on_hyperlink_clicked(self, tag, widget, event, iter, link): {{{
-  def on_hyperlink_clicked(self, tag, widget, event, iter, link):
-    thread.start_new_thread(os.popen, (self.browser + ' ' + link, 'r'))
+  # def motion_notify_event(self, text_view, event): {{{
+  # Update the cursor image if the pointer moved.
+  def motion_notify_event(self, text_view, event):
+    x, y = text_view.window_to_buffer_coords(gtk.TEXT_WINDOW_WIDGET,
+        int(event.x), int(event.y))
+    self.set_cursor_if_appropriate(text_view, x, y)
+    text_view.window.get_pointer()
+    return False
+  # }}}
+
+  # def visibility_notify_event(self, text_view, event): {{{
+  # Also update the cursor image if the window becomes visible
+  # (e.g. when a window covering it got iconified).
+  def visibility_notify_event(self, text_view, event):
+    wx, wy, mod = text_view.window.get_pointer()
+    bx, by = text_view.window_to_buffer_coords(gtk.TEXT_WINDOW_WIDGET, wx, wy)
+
+    self.set_cursor_if_appropriate (text_view, bx, by)
+    return False
+  # }}}
+
+  # def insert_link(self, buffer, iter, text): {{{
+  def insert_link(self, buffer, iter, text):
+    ''' Inserts a piece of text into the buffer, giving it the usual
+        appearance of a hyperlink in a web browser: blue and underlined.
+        Additionally, attaches some data on the tag, to make it recognizable
+        as a link.
+    '''
+    tag = buffer.create_tag(None,
+        foreground="blue", underline=pango.UNDERLINE_SINGLE)
+    tag.set_data("url", text)
+    buffer.insert_with_tags(iter, text, tag)
+  # }}}
+
+  # def event_after(self, text_view, event): {{{
+  # Links can also be activated by clicking.
+  def event_after(self, text_view, event):
+    if event.type != gtk.gdk.BUTTON_RELEASE:
+      return False
+    if event.button != 1:
+      return False
+    buffer = text_view.get_buffer()
+
+    # we shouldn't follow a link if the user has selected something
+    try:
+      start, end = buffer.get_selection_bounds()
+    except ValueError:
+      # If there is nothing selected, None is return
+      pass
+    else:
+      if start.get_offset() != end.get_offset():
+        return False
+
+    x, y = text_view.window_to_buffer_coords(gtk.TEXT_WINDOW_WIDGET,
+        int(event.x), int(event.y))
+    iter = text_view.get_iter_at_location(x, y)
+
+    tags = iter.get_tags()
+
+    if len(tags) == 1:
+      tag = tags[0]
+      thread.start_new_thread(os.popen, (self.browser + ' ' + tag.get_data('url'), 'r'))
+    return False
+  # }}}
   # }}}
 
   # def on_cache_menu_activate(self, menuitem): {{{
@@ -3110,12 +3183,9 @@ class gui:
       installed = True):
     iterator = text_buffer.get_iter_at_offset(0)
     table = text_buffer.get_tag_table()
-    bold_tag = table.lookup('bold')
-    hyperlink_tag = table.lookup('hyperlink')
 
-    if bold_tag == None:
-      bold_tag = text_buffer.create_tag('bold', weight=700)
-    
+    bold_tag = text_buffer.create_tag('bold', weight=700)
+
     if not installed:
       text_buffer.insert_with_tags_by_name(iterator,
           'Package not installed!\n\n', 'bold')
@@ -3132,8 +3202,7 @@ class gui:
           bold_stuff = line[:match_object.start()+1]
           normal_stuff = line[match_object.start()+1:]
 
-          text_buffer.insert_with_tags_by_name(iterator,
-              bold_stuff, 'bold')
+          text_buffer.insert_with_tags(iterator, bold_stuff, bold_tag)
         
           if bold_stuff.startswith('Size'):
             raw_size = int(normal_stuff)
@@ -3148,24 +3217,8 @@ class gui:
             text_buffer.insert(iterator, ' ' + normal_stuff +\
                 '\n')
           elif line.startswith('URL'):
-            if hyperlink_tag == None:
-              extra = normal_stuff
-              hyperlink_tag = text_buffer.create_tag('hyperlink',
-                  foreground='blue', underline = self.pango_underline_single)
-
-              def anonymous_hyperlink(tag,widget,event,iterator):
-                if event.type == gtk.gdk.BUTTON_PRESS:
-                  return self.on_hyperlink_clicked(tag,widget,event,iterator,\
-                      extra)
-
-              #textbuffer.connect('motion_notify_event', self.on_hyperlink_motion)
-              hyperlink_tag.connect('event', anonymous_hyperlink)
-
-            #text_buffer.insert_with_tags(iterator, normal_stuff + '\n',\
-            #    hyperlink_tag)
-            text_buffer.insert_with_tags_by_name(iterator, normal_stuff +\
-                '\n', 'hyperlink')
-            self.url_tags.append(hyperlink_tag)
+            self.insert_link(text_buffer, iterator, normal_stuff)
+            text_buffer.insert(iterator, '\n')
           else:
             text_buffer.insert(iterator, normal_stuff + '\n')
         else:
