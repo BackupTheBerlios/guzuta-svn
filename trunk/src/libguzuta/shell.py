@@ -1089,9 +1089,10 @@ the terms of the GNU General Public License'''
         except alpm.NoSuchPackageException:
           pass
 
-      filename = self.alpm_download_package(pkg_name, pkg_ver,
+      self.alpm_download_package(pkg_name, pkg_ver,
           db_name, path, report_hook)
 
+      filename = self.prev_return
       print 'Filename: ', filename
       if filename != None:
         ret.append(filename)

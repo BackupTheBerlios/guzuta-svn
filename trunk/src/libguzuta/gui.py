@@ -413,6 +413,7 @@ class gui:
     self.pkgs_by_repo = {}
     self.pkgs_by_repo['no repository'] = []
 
+    self.downloading_db = True
     self.url_tags = []
     self.underlined_url = False
 
@@ -550,7 +551,7 @@ class gui:
   def alpm_urllib_report_hook(self, blocks_so_far, block_size_bytes,
       total_size):
     #FIXME: maybe turn this sleep on to make things more visible
-    time.sleep(0.5)
+    #time.sleep(0.5)
     if total_size < block_size_bytes:
       total_blocks = 1
     else:
@@ -560,8 +561,12 @@ class gui:
     self.busy_progress_bar3.set_text('%.2f %%' % (division * 100))
     #self.busy_progress_bar3.set_text('%d out of %d bytes' %\
     #    ((blocks_so_far * block_size_bytes), total_size))
-    self.busy_status_label.set_markup('<i>Downloading database \'%s\'...</i>' %
-        (self.shell.retrieving))
+    if self.downloading_db:
+      self.busy_status_label.set_markup('<i>Downloading database \'%s\'...</i>' %
+          (self.shell.retrieving))
+    else:
+      self.busy_status_label.set_markup('<i>Downloading \'%s\'...</i>' %
+          (self.shell.retrieving))
     self.busy_progress_bar3.set_fraction(division)
   # }}}
 
@@ -1477,10 +1482,6 @@ class gui:
           self.on_update_db_clicked(button, True)
       # }}}
 
-      #self.shell.start_timer()
-
-      #self.try_sem_animate_progress_bar()
-
       # setup the dialog querying the user for packages to install {{{
       #fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog')
       fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog2')
@@ -1489,7 +1490,7 @@ class gui:
 
       fresh_updates_treeview =\
         self.all_widgets.get_widget('fresh_updates_treeview')
-      l = gtk.ListStore('gboolean', str)
+      l = gtk.ListStore('gboolean', 'gchararray', 'gchararray')
 
       textrenderer = gtk.CellRendererText()
       togglerenderer = gtk.CellRendererToggle()
@@ -1508,15 +1509,22 @@ class gui:
         namecolumn.pack_start(textrenderer)
         namecolumn.set_attributes(textrenderer, text=1)
 
+        repocolumn = gtk.TreeViewColumn('Repository')
+        repocolumn.set_sort_column_id(2)
+        repocolumn.pack_start(textrenderer)
+        repocolumn.set_attributes(textrenderer, text=2)
+
         fresh_updates_treeview.append_column(selectedcolumn)
         fresh_updates_treeview.append_column(namecolumn)
+        fresh_updates_treeview.append_column(repocolumn)
       # }}}
 
       if upgrades != []:
         #updates_text = 'Targets:'
         for update in upgrades:
           pkg_name = update.get_package().get_name()
-          l.append([False, pkg_name])
+          repo = self.pkgs[pkg_name][0]
+          l.append([False, pkg_name, repo])
         
         fresh_updates_treeview.set_model(l)
 
@@ -1545,6 +1553,10 @@ class gui:
           else:
             self.alpm_install_targets(upgrades + missed_deps)
 
+          updates_text = ''
+
+          for upgrade in upgrades:
+            updates_text = updates_text + ' ' + upgrade
           fresh_updates_installed = True  
         else:
           if self.init_transaction:
@@ -1593,7 +1605,8 @@ class gui:
       if self.init_transaction:
         #self.shell.alpm_transaction_release()
         self.init_transaction = False
-      self.shell.alpm_transaction_release()
+      #self.shell.alpm_transaction_release()
+      self.busy_status_label.set_markup('<i>Please wait...</i>')
     else:
       # display a warning window?? switch to root?? gksu???
       print 'not root!'
@@ -1636,9 +1649,7 @@ class gui:
     number_pkgs_to_download =\
       self.alpm_get_number_of_packages_to_download(targets)
 
-    #print 'NUMBER: ', number_pkgs_to_download
-    self.fraction_increment = 1.0 / (6 + (2 * len(targets)) +\
-        number_pkgs_to_download)
+    self.fraction_increment = 1.0 / (6 + 2 * len(targets))
     self.current_fraction = 0.0
 
     pkg_are_you_sure_dialog =\
@@ -1731,6 +1742,7 @@ class gui:
           self.alpm_install_targets(targets + depmiss_names)
         else:
           self.busy_dialog.hide()
+        print 'UnsatisfiedDependenciesTransactionException'
         return
       #except alpm.ConflictingDependenciesTransactionException, conflict_list:
       elif self.shell.last_exception[0] == 2:
@@ -1753,6 +1765,7 @@ class gui:
 
         self.shell.alpm_transaction_release()
         self.busy_dialog.hide()
+        print 'ConflictingFilesTransactionException'
         return
       #except alpm.ConflictingFilesTransactionException, conflict_list:
       elif self.shell.last_exception[0] == 4:
@@ -1782,6 +1795,7 @@ class gui:
 
         self.shell.alpm_transaction_release()
         self.busy_dialog.hide()
+        print 'ConflictingFilesTransactionException'
         return
 
     self.busy_dialog.show_all()
@@ -1815,22 +1829,15 @@ class gui:
       str = '%s-%s' % (pkgname, pkgver)
       to_install.append(str)
 
-    #self.fraction_increment = 1.0 / (6 + (2 * len(packages)) +\
-    #    number_pkgs_to_download)
     depends = []
     for spkg in packages:
       if spkg.get_type() == alpm.PM_SYNC_TYPE_DEPEND:
         depends.append(spkg.get_package().get_name())
 
-    number_pkgs_to_download_deps =\
-      self.alpm_get_number_of_packages_to_download(depends)
-
     tmp = len(targets) + len(depends)
     old_increment = self.fraction_increment
-    self.fraction_increment = 1.0 / (6 + (2 * tmp) +
-      number_pkgs_to_download + number_pkgs_to_download_deps)
+    self.fraction_increment = 1.0 / (6 + (2 * tmp))
 
-    self.current_fraction = 4 * self.fraction_increment
     self.busy_progress_bar3.set_fraction(self.current_fraction)
 
     install_remove_pkgs_dialog =\
@@ -1840,31 +1847,33 @@ class gui:
     to_remove_treeview = self.all_widgets.get_widget('to_remove_treeview')
     to_install_treeview = self.all_widgets.get_widget('to_install_treeview')
 
-    textrenderer = gtk.CellRendererText()
-    namecolumn = gtk.TreeViewColumn('Name')
-    namecolumn.set_sort_column_id(0)
-    namecolumn.pack_start(textrenderer)
-    namecolumn.set_attributes(textrenderer, text=0)
-    
-    namecolumn2 = gtk.TreeViewColumn('Name')
-    namecolumn2.set_sort_column_id(0)
-    namecolumn2.pack_start(textrenderer)
-    namecolumn2.set_attributes(textrenderer, text=0)
+    if to_remove_treeview.get_columns() == [] and\
+        to_install_treeview.get_columns() == []:
+      textrenderer = gtk.CellRendererText()
+      namecolumn = gtk.TreeViewColumn('Name')
+      namecolumn.set_sort_column_id(0)
+      namecolumn.pack_start(textrenderer)
+      namecolumn.set_attributes(textrenderer, text=0)
+      
+      namecolumn2 = gtk.TreeViewColumn('Name')
+      namecolumn2.set_sort_column_id(0)
+      namecolumn2.pack_start(textrenderer)
+      namecolumn2.set_attributes(textrenderer, text=0)
 
-    versioncolumn = gtk.TreeViewColumn('Version')
-    versioncolumn.set_sort_column_id(1)
-    versioncolumn.pack_start(textrenderer)
-    versioncolumn.set_attributes(textrenderer, text=1)
+      versioncolumn = gtk.TreeViewColumn('Version')
+      versioncolumn.set_sort_column_id(1)
+      versioncolumn.pack_start(textrenderer)
+      versioncolumn.set_attributes(textrenderer, text=1)
 
-    versioncolumn2 = gtk.TreeViewColumn('Version')
-    versioncolumn2.set_sort_column_id(1)
-    versioncolumn2.pack_start(textrenderer)
-    versioncolumn2.set_attributes(textrenderer, text=1)
+      versioncolumn2 = gtk.TreeViewColumn('Version')
+      versioncolumn2.set_sort_column_id(1)
+      versioncolumn2.pack_start(textrenderer)
+      versioncolumn2.set_attributes(textrenderer, text=1)
 
-    to_remove_treeview.append_column(namecolumn)
-    to_remove_treeview.append_column(versioncolumn)
-    to_install_treeview.append_column(namecolumn2)
-    to_install_treeview.append_column(versioncolumn2)
+      to_remove_treeview.append_column(namecolumn)
+      to_remove_treeview.append_column(versioncolumn)
+      to_install_treeview.append_column(namecolumn2)
+      to_install_treeview.append_column(versioncolumn2)
 
     to_remove_liststore = gtk.ListStore('gchararray', 'gchararray')
     to_install_liststore = gtk.ListStore('gchararray', 'gchararray')
@@ -1958,13 +1967,16 @@ class gui:
           alpm.set_cache_dir(ldir)
           cleanup = True
       
+      self.downloading_db = False
       kwargs = {'files': files, 'progress_bar': self.busy_progress_bar3,\
         'report_hook': self.alpm_urllib_report_hook}
       self.alpm_run_in_thread_and_wait(self.shell.alpm_download_packages,
           kwargs)
       filenames = self.shell.get_prev_return()
       print 'DONE DOWNLOADING: ', filenames
+      self.busy_status_label.set_markup('<i>Please wait...</i>')
       
+      self.downloading_db = True
       files = []
 
     # check integrity of the files
@@ -2034,6 +2046,7 @@ class gui:
         conflicts_error_dialog.hide()
         self.busy_dialog.hide()
 
+        print 'RELEASE 1'
         self.shell.alpm_transaction_release()
 
         if cleanup:
@@ -2054,6 +2067,7 @@ class gui:
         conflicts_error_dialog.hide()
         self.busy_dialog.hide()
 
+        print 'RELEASE 2'
         self.shell.alpm_transaction_release()
         if cleanup:
           for f in files:
@@ -2068,6 +2082,7 @@ class gui:
     self.refresh_pkgs_treeview()
     self.busy_dialog.hide()
 
+    print 'RELEASE 3'
     self.shell.alpm_transaction_release()
     if cleanup:
       for f in files:
@@ -2390,20 +2405,24 @@ class gui:
                 already_seen_groups[grp_name] = iter
 
               for pkg_name in grp_packages:
-                if pkg_name in self.local_pkgs or pkg_name in self.pkgs:
-                  already_seen_pkgs[pkg_name] = None
-                  try:
-                    version = self.pkgs[pkg_name][1]
-                  except KeyError:
-                    version = '--'
-                  
-                  try:
-                    installed_version = self.local_pkgs[pkg_name][1]
-                  except KeyError:
-                    installed_version = '--'
+                #if pkg_name in self.local_pkgs or pkg_name in self.pkgs:
+                already_seen_pkgs[pkg_name] = None
+                try:
+                  version = self.pkgs[pkg_name][1]
+                except KeyError:
+                  version = '--'
+                
+                try:
+                  installed_version = self.local_pkgs[pkg_name][1]
+                except KeyError:
+                  installed_version = '--'
 
-                  self.liststore.append(iter, [False, pkg_name, installed_version,\
-                      version])
+                # put it in the group
+                self.liststore.append(iter, [False, pkg_name, installed_version,\
+                    version])
+                # and outside the group
+                self.liststore.append(None, [False, pkg_name, installed_version,\
+                    version])
 
       # search current, community, extra, etc...
       for repo, repo_list in self.pkgs_by_repo.iteritems():
@@ -2717,7 +2736,9 @@ class gui:
 
     if len(tags) == 1:
       tag = tags[0]
-      thread.start_new_thread(os.popen, (self.browser + ' ' + tag.get_data('url'), 'r'))
+      url = tag.get_data('url')
+      if url:
+        thread.start_new_thread(os.popen, (self.browser + ' ' + url, 'r'))
     return False
   # }}}
   # }}}
@@ -3230,7 +3251,8 @@ class gui:
     new_liststore = gtk.ListStore('gboolean', str, str, str)
     
     new_liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
-    self.liststore.remove(iter_to_remove)
+    if iter_to_remove:
+      self.liststore.remove(iter_to_remove)
 
     for row in self.liststore:
       name = row[1]
@@ -3404,6 +3426,8 @@ class gui:
     treemodel_pkgs, iter_pkgs = selection_pkgs.get_selected()
 
     if not iter:
+      #print '-----------> ', iter_pkgs
+      #if iter_pkgs:
       self.__refresh_pkgs_treeview__(iter_pkgs)
     else:
       repo = treemodel.get_value(iter, 0)
