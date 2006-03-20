@@ -529,7 +529,10 @@ the terms of the GNU General Public License'''
           description = pkg.get_description()
 
           self.all[dbname].append((name, version, description))
-          self.pkgs[name] = (dbname, version, description)
+          if name not in self.pkgs:
+            self.pkgs[name] = {}
+          self.pkgs[name][dbname] = (dbname, version, description)
+          #self.pkgs[name] = (dbname, version, description)
 
         # get groups
         try:
@@ -544,13 +547,16 @@ the terms of the GNU General Public License'''
           pass
 
 
-      #else: # 'local'
-      #  for pkg in db.get_package_iterator():
-      #    name = pkg.get_name()
-      #    version = pkg.get_version()
-      #    description = pkg.get_description()
+      else: # 'local'
+        for pkg in db.get_package_iterator():
+          name = pkg.get_name()
+          version = pkg.get_version()
+          description = pkg.get_description()
 
-      #    self.pkgs_in_local.append((name, version, description))
+          #self.pkgs_in_local.append((name, version, description))
+          if name not in self.pkgs:
+            self.pkgs[name] = {}
+          self.pkgs[name]['local'] = ('local', version, description)
     return (self.all, self.pkgs, self.groups, self.groups_by_repo)
   # }}}
 
@@ -958,9 +964,19 @@ the terms of the GNU General Public License'''
     return self.alpm_group_to_list(grp)
   # }}}
 
-  # def alpm_info(self, what = ''): {{{
-  def alpm_info(self, what = ''):
-    (repo, version, desc) = self.pkgs[what]
+  # def alpm_info(self, what = '', repo_name = None): {{{
+  def alpm_info(self, what = '', repo_name = None):
+    if not repo_name:
+      tuple = self.pkgs[what]['local']
+    else:
+      if repo_name == 'not installed' or repo_name == 'installed' or\
+          repo_name == 'all':
+            tuple = self.pkgs[what][self.pkgs[what].keys()[0]]
+      else:
+        tuple = self.pkgs[what][repo_name]
+
+    #(repo, version, desc) = self.pkgs[what]
+    (repo, version, desc) = tuple
     db = self.dbs_by_name[repo]
 
     pkg = None
@@ -1026,9 +1042,12 @@ the terms of the GNU General Public License'''
     return filename
   # }}}
 
-  # def alpm_get_package_files(self, pkg_name): {{{
-  def alpm_get_package_files(self, pkg_name):
-    db_name = self.alpm_get_pkg_dbname(pkg_name)
+  # def alpm_get_package_files(self, pkg_name, repo_name = None): {{{
+  def alpm_get_package_files(self, pkg_name, repo_name = None):
+    if not repo_name:
+      db_name = self.alpm_get_pkg_dbname(pkg_name, 'local')
+    else:
+      db_name = self.alpm_get_pkg_dbname(pkg_name, repo_name)
 
     db = self.dbs_by_name['local']
 
@@ -1040,17 +1059,17 @@ the terms of the GNU General Public License'''
     return pkg.get_files()
   # }}}
 
-  # def alpm_get_pkg_dbname(self, pkg_name): {{{
-  def alpm_get_pkg_dbname(self, pkg_name):
+  # def alpm_get_pkg_dbname(self, pkg_name, repo_name): {{{
+  def alpm_get_pkg_dbname(self, pkg_name, repo_name):
     try:
-      self.pkgs[pkg_name][0]
+      self.pkgs[pkg_name][repo_name][0]
     except KeyError:
       return self.local_pkgs[pkg_name][0]
   # }}}
 
-  # def alpm_get_pkg_version(self, pkg_name): {{{
-  def alpm_get_pkg_version(self, pkg_name):
-    return self.pkgs[pkg_name][1]
+  # def alpm_get_pkg_version(self, pkg_name, repo_name): {{{
+  def alpm_get_pkg_version(self, pkg_name, repo_name):
+    return self.pkgs[pkg_name][repo_name][1]
   # }}}
 
   # def alpm_pkg_name_version_from_path(self, path): {{{

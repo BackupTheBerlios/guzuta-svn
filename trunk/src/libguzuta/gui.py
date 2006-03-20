@@ -310,6 +310,8 @@ class gui:
 
     self.cancelled = False
 
+    self.toggle_handler_id = None
+
     fname = self.cwd + '/share/guzuta/guzuta3.glade'
     if os.path.exists(fname):
       self.glade_file = fname
@@ -585,8 +587,23 @@ class gui:
     return None
   # }}}
 
-  # def alpm_fill_treestore_with_pkgs_and_grps(self, treestore, pkgs, groups): {{{
-  def alpm_fill_treestore_with_pkgs_and_grps(self, treestore, pkgs, groups):
+  # def alpm_get_highest_version_of_pkg(self, dict): {{{
+  def alpm_get_highest_version_of_pkg(self, dict):
+    v = None
+    for _, (_, version, _) in dict.iteritems():
+      if v == None:
+        v = version
+      else:
+        if version > v:
+          v = version
+
+    return v
+  # }}}
+
+  # def alpm_fill_treestore_with_pkgs_and_grps(self, treestore, pkgs, {{{
+  # groups, repo_name = None):
+  def alpm_fill_treestore_with_pkgs_and_grps(self, treestore, pkgs, groups,
+      repo_name = None):
     already_visited_pkgs = {}
     already_visited_grps = {}
 
@@ -599,7 +616,7 @@ class gui:
           already_visited_grps[grp_name] = None
           pkg_names = groups[grp_name]
 
-          iter = self.liststore.append(None, [False, grp_name, '', ''])
+          iter = treestore.append(None, [False, grp_name, '', ''])
 
           for pkg_name in pkg_names:
             already_visited_pkgs[pkg_name] = None
@@ -611,12 +628,22 @@ class gui:
 
             #available version
             try:
-              available_version = self.pkgs[pkg_name][1]
+              if repo_name:
+                #if repo_name == 'installed' or repo_name == 'not installed' or\
+                #    repo_name == 'all':
+                #  available_version =\
+                #    self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
+                #else:
+                #  available_version = self.pkgs[pkg_name][repo_name][1]
+                available_version =\
+                    self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
+              else:
+                available_version = self.pkgs[pkg_name]['local'][1]
             except KeyError:
               # pkg was installed separately
               available_version = '--'
               
-            self.liststore.append(iter, [False, pkg_name, local_version, available_version])
+            treestore.append(iter, [False, pkg_name, local_version, available_version])
       else: # package
         if k not in already_visited_pkgs:
           try:
@@ -626,12 +653,22 @@ class gui:
           
           #available version
           try:
-            available_version = self.pkgs[k][1]
+            if repo_name:
+              #if repo_name == 'installed' or repo_name == 'not installed' or\
+              #    repo_name == 'all':
+              #  available_version =\
+              #    self.alpm_get_highest_version_of_pkg(self.pkgs[k])
+              #else:
+              #  available_version = self.pkgs[k][repo_name][1]
+              available_version =\
+                self.alpm_get_highest_version_of_pkg(self.pkgs[k])
+            else:
+              available_version = self.pkgs[k]['local'][1]
           except KeyError:
             # pkg was installed separately
             available_version = '--'
             
-          self.liststore.append(None, [False, k, local_version, available_version])
+          treestore.append(None, [False, k, local_version, available_version])
   # }}}
 
   # def __setup_pkg_treeview__(self): {{{
@@ -645,7 +682,17 @@ class gui:
     self.togglerenderer = gtk.CellRendererToggle()
     self.togglerenderer.set_active(True)
 
-    self.togglerenderer.connect('toggled', self.toggled, self.liststore)
+    if self.toggle_handler_id:
+      if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
+        self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+          self.toggled, self.liststore)
+      else:
+        self.togglerenderer.disconnect(self.toggle_handler_id)
+        self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+          self.toggled, self.liststore)
+    else:
+      self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+          self.toggled, self.liststore)
     #self.togglerenderer.connect('toggled', toggled, self.liststore)
 
     self.emptycolumn = gtk.TreeViewColumn('Selected')
@@ -735,7 +782,7 @@ class gui:
     self.local_groups = self.shell.alpm_get_groups('local')
 
     self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-        self.local_pkgs, self.local_groups)
+        self.local_pkgs, self.local_groups, 'all')
     self.treeview.set_model(self.liststore)
   # }}}
   
@@ -1339,7 +1386,15 @@ class gui:
           try:
             remote_info = self.remote_pkg_info[name]
           except KeyError:
-            remote_info = self.shell.alpm_info(name)
+            selection_repos = self.treeview_repos.get_selection()
+            treemodel_repos, iter_repos = selection_repos.get_selected()
+
+            if iter_repos:
+              repo_name = treemodel_repos.get_value(iter_repos, 0).lower()
+              remote_info = self.shell.alpm_info(name, repo_name)
+            else:
+              remote_info = self.shell.alpm_info(name)
+
             self.remote_pkg_info[name] = remote_info
 
           self.__add_pkg_info_markuped_to_text_buffer__(buffer, remote_info,\
@@ -1496,6 +1551,8 @@ class gui:
       togglerenderer = gtk.CellRendererToggle()
       togglerenderer.set_active(True)
 
+      #if self.toggle_handler_id and\
+      #    not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
       togglerenderer.connect('toggled', self.toggled, l)
 
       if fresh_updates_treeview.get_columns() == []:
@@ -1523,7 +1580,7 @@ class gui:
         #updates_text = 'Targets:'
         for update in upgrades:
           pkg_name = update.get_package().get_name()
-          repo = self.pkgs[pkg_name][0]
+          repo = update.get_package().get_database().get_tree_name()
           l.append([False, pkg_name, repo])
         
         fresh_updates_treeview.set_model(l)
@@ -1702,7 +1759,6 @@ class gui:
 
     # process targets and add them to the transaction
     for pkg_name in targets:
-      print 'RUNNING ADD_TARGET'
       ret = self.shell.alpm_transaction_add_target(pkg_name)
       if not ret:
         self.shell.alpm_transaction_release()
@@ -1711,7 +1767,6 @@ class gui:
 
     # Step 2: compute the transaction
     #try:
-    print 'RUNNING PREPARE'
     self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_prepare, {})
       #self.shell.alpm_transaction_prepare()
     #except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
@@ -1742,7 +1797,6 @@ class gui:
           self.alpm_install_targets(targets + depmiss_names)
         else:
           self.busy_dialog.hide()
-        print 'UnsatisfiedDependenciesTransactionException'
         return
       #except alpm.ConflictingDependenciesTransactionException, conflict_list:
       elif self.shell.last_exception[0] == 2:
@@ -1765,7 +1819,6 @@ class gui:
 
         self.shell.alpm_transaction_release()
         self.busy_dialog.hide()
-        print 'ConflictingFilesTransactionException'
         return
       #except alpm.ConflictingFilesTransactionException, conflict_list:
       elif self.shell.last_exception[0] == 4:
@@ -1795,7 +1848,6 @@ class gui:
 
         self.shell.alpm_transaction_release()
         self.busy_dialog.hide()
-        print 'ConflictingFilesTransactionException'
         return
 
     self.busy_dialog.show_all()
@@ -2467,7 +2519,18 @@ class gui:
 
       self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
       self.treeview.set_model(self.liststore)
-      self.togglerenderer.connect('toggled', self.toggled, self.liststore)
+      if self.toggle_handler_id:
+        if not self.togglerenderer.handler_is_connected(\
+            self.toggle_handler_id):
+          self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+              self.toggled, self.liststore)
+        else:
+          self.togglerenderer.disconnect(self.toggle_handler_id)
+          self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+            self.toggled, self.liststore)
+      else:
+        self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+            self.toggled, self.liststore)
     else: # this should not happen but it stays here for completeness
       no_search_selected_dialog =\
         self.all_widgets.get_widget('no_search_selected_dialog')
@@ -2604,7 +2667,15 @@ class gui:
     #self.try_sem()
     
     #exit_status, text = self.shell.get_prev_return()
-    lines = self.shell.alpm_get_package_files(name)
+    selection_repos = self.treeview_repos.get_selection()
+    treemodel_repos, iter_repos = selection_repos.get_selected()
+
+    if iter_repos:
+      repo_name = treemodel_repos.get_value(iter_repos, 0).lower()
+      lines = self.shell.alpm_get_package_files(name, repo_name)
+    else:
+      lines = self.shell.alpm_get_package_files(name)
+
     #if exit_status:
     #  return
     text = ''
@@ -3274,9 +3345,20 @@ class gui:
   def __fill_treeview_with_pkgs_from_repo__(self, repo):
     self.treeview.set_model(None) # unsetting model to speed things up
 
-    #self.liststore = gtk.ListStore('gboolean', str, str, str)
     self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
         'gchararray')
+
+    if self.toggle_handler_id:
+      if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
+        self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+          self.toggled, self.liststore)
+      else:
+        self.togglerenderer.disconnect(self.toggle_handler_id)
+        self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+          self.toggled, self.liststore)
+    else:
+      self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+          self.toggled, self.liststore)
 
     if repo == 'current' or repo == 'extra' or repo == 'community':
       # current, extra, community {{{
@@ -3285,7 +3367,7 @@ class gui:
       tmp_dict = dict([(pkg_name,(repo, pkg_ver, desc))\
           for (pkg_name, pkg_ver, desc) in self.pkgs_by_repo[repo]])
       self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          tmp_dict, groups)
+          tmp_dict, groups, repo)
 
       # }}}
     elif repo == 'installed':
@@ -3293,7 +3375,7 @@ class gui:
       #self.local_groups = self.shell.alpm_get_groups('local')
 
       self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          self.local_pkgs, self.local_groups)
+          self.local_pkgs, self.local_groups, repo)
       #for name, v in self.local_pkgs.iteritems():
       #  #available version
       #  try:
@@ -3318,7 +3400,7 @@ class gui:
           tmp_dict[pkg_name] = (repo, pkg_ver, desc)
 
       self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          tmp_dict, groups)
+          tmp_dict, groups, repo)
 
       # }}}
     elif repo == 'not installed':
@@ -3340,7 +3422,7 @@ class gui:
             groups[grp_name] = grp_pkgs
 
       self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          not_installed, groups)
+          not_installed, groups, repo)
 
       # }}}
     elif repo == 'last installed':
@@ -3387,10 +3469,9 @@ class gui:
       tmp_dict = dict([(pkg_name,(repo, pkg_ver, desc))\
           for (pkg_name, pkg_ver, desc) in self.pkgs_by_repo[repo]])
       self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          tmp_dict, groups)
+          tmp_dict, groups, repo)
       # }}}
 
-    self.togglerenderer.connect('toggled', self.toggled, self.liststore)
     self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
     self.treeview.set_model(self.liststore)
   # }}}
