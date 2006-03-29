@@ -1,8 +1,8 @@
 0.0.5
 =====
 * add support for groups
-* BUG/FEATURE: if packages that belong to a group are put in the treeview before
-  the group, they appear outside of the group. handle groups first?
+* add repository and description information to the pkgs treeview
+
 0.0.6
 =====
 

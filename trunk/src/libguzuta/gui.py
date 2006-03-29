@@ -311,6 +311,7 @@ class gui:
     self.cancelled = False
 
     self.toggle_handler_id = None
+    self.toggle_handler_id2 = None
 
     fname = self.cwd + '/share/guzuta/guzuta3.glade'
     if os.path.exists(fname):
@@ -784,6 +785,58 @@ class gui:
     self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
         self.local_pkgs, self.local_groups, 'all')
     self.treeview.set_model(self.liststore)
+  # }}}
+  
+  # def __setup_pkg_treeview_no_fill__(self): {{{
+  def __setup_pkg_treeview_no_fill__(self):
+    # checked, name, version, description 
+    #self.liststore = gtk.ListStore('gboolean', str, str, str)
+    self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
+        'gchararray')
+
+    self.textrenderer = gtk.CellRendererText()
+    self.togglerenderer = gtk.CellRendererToggle()
+    self.togglerenderer.set_active(True)
+
+    if self.toggle_handler_id:
+      if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
+        self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+          self.toggled, self.liststore)
+      else:
+        self.togglerenderer.disconnect(self.toggle_handler_id)
+        self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+          self.toggled, self.liststore)
+    else:
+      self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+          self.toggled, self.liststore)
+
+    for column in self.treeview.get_columns():
+      self.treeview.remove_column(column)
+
+    self.emptycolumn = gtk.TreeViewColumn('Selected')
+    self.emptycolumn.set_sort_column_id(0)
+    self.emptycolumn.pack_start(self.togglerenderer)
+    self.emptycolumn.set_attributes(self.togglerenderer, active=0)
+    
+    self.namecolumn = gtk.TreeViewColumn('Name')
+    self.namecolumn.set_sort_column_id(1)
+    self.namecolumn.pack_start(self.textrenderer)
+    self.namecolumn.set_attributes(self.textrenderer, text=1)
+    
+    self.installedversioncolumn = gtk.TreeViewColumn('Installed')
+    self.installedversioncolumn.set_sort_column_id(2)
+    self.installedversioncolumn.pack_start(self.textrenderer)
+    self.installedversioncolumn.set_attributes(self.textrenderer, text=2)
+    
+    self.availableversioncolumn = gtk.TreeViewColumn('Available')
+    self.availableversioncolumn.set_sort_column_id(3)
+    self.availableversioncolumn.pack_start(self.textrenderer)
+    self.availableversioncolumn.set_attributes(self.textrenderer, text=3)
+    
+    self.treeview.append_column(self.emptycolumn)
+    self.treeview.append_column(self.namecolumn)
+    self.treeview.append_column(self.installedversioncolumn)
+    self.treeview.append_column(self.availableversioncolumn)
   # }}}
   
   # def __setup_repo_treeview__(self): {{{
@@ -1393,6 +1446,7 @@ class gui:
               repo_name = treemodel_repos.get_value(iter_repos, 0).lower()
               remote_info = self.shell.alpm_info(name, repo_name)
             else:
+              # FIXME: what about if 'name' isn't installed????
               remote_info = self.shell.alpm_info(name)
 
             self.remote_pkg_info[name] = remote_info
@@ -2419,12 +2473,67 @@ class gui:
 
   # def on_search_clicked(self, button): {{{
   def on_search_clicked(self, button):
+    # TODO: this is buggy: packages appear two times and with repositories
+    # wrong. SORT THIS OUT!
     #self.liststore = gtk.ListStore('gboolean', str, str, str)
     already_seen_pkgs = {}
     already_seen_groups = {} # grp name => iter
     self.treeview.set_model(None) # unsetting model to speed things up
-    self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
-        'gchararray')
+    # selected, name, installed version, available version, repository
+    lstore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
+        'gchararray', 'gchararray')
+
+    # setup the treeview for 4 columns {{{
+    textrenderer = gtk.CellRendererText()
+    togglerenderer = gtk.CellRendererToggle()
+    togglerenderer.set_active(True)
+
+    for col in self.treeview.get_columns():
+      self.treeview.remove_column(col)
+
+    if self.toggle_handler_id2:
+      if not self.togglerenderer.handler_is_connected(self.toggle_handler_id2):
+        self.toggle_handler_id2 = togglerenderer.connect('toggled',\
+          self.toggled, lstore)
+      else:
+        self.togglerenderer.disconnect(self.toggle_handler_id2)
+        self.toggle_handler_id2 = togglerenderer.connect('toggled',\
+          self.toggled, lstore)
+    else:
+      self.toggle_handler_id2 = togglerenderer.connect('toggled',\
+          self.toggled, lstore)
+
+    emptycolumn = gtk.TreeViewColumn('Selected')
+    emptycolumn.set_sort_column_id(0)
+    emptycolumn.pack_start(self.togglerenderer)
+    emptycolumn.set_attributes(self.togglerenderer, active=0)
+    
+    repositorycolumn = gtk.TreeViewColumn('Repository')
+    repositorycolumn.set_sort_column_id(4)
+    repositorycolumn.pack_start(textrenderer)
+    repositorycolumn.set_attributes(textrenderer, text=4)
+    
+    namecolumn = gtk.TreeViewColumn('Name')
+    namecolumn.set_sort_column_id(1)
+    namecolumn.pack_start(textrenderer)
+    namecolumn.set_attributes(textrenderer, text=1)
+    
+    availableversioncolumn = gtk.TreeViewColumn('Available')
+    availableversioncolumn.set_sort_column_id(3)
+    availableversioncolumn.pack_start(textrenderer)
+    availableversioncolumn.set_attributes(textrenderer, text=3)
+    
+    installedversioncolumn = gtk.TreeViewColumn('Installed')
+    installedversioncolumn.set_sort_column_id(2)
+    installedversioncolumn.pack_start(textrenderer)
+    installedversioncolumn.set_attributes(textrenderer, text=2)
+
+    self.treeview.append_column(emptycolumn)
+    self.treeview.append_column(namecolumn)
+    self.treeview.append_column(installedversioncolumn)
+    self.treeview.append_column(availableversioncolumn)
+    self.treeview.append_column(repositorycolumn)
+    # }}}
 
     try:
       regexp = re.compile(self.search_entry.get_text())
@@ -2453,11 +2562,10 @@ class gui:
               if grp_name in already_seen_groups:
                 iter = already_seen_groups[grp_name]
               else:
-                iter = self.liststore.append(None, [False, grp_name, '', ''])
+                iter = lstore.append(None, [False, grp_name, '', '', repo])
                 already_seen_groups[grp_name] = iter
 
               for pkg_name in grp_packages:
-                #if pkg_name in self.local_pkgs or pkg_name in self.pkgs:
                 already_seen_pkgs[pkg_name] = None
                 try:
                   version = self.pkgs[pkg_name][1]
@@ -2470,23 +2578,23 @@ class gui:
                   installed_version = '--'
 
                 # put it in the group
-                self.liststore.append(iter, [False, pkg_name, installed_version,\
-                    version])
+                lstore.append(iter, [False, pkg_name, installed_version,\
+                    version, repo])
                 # and outside the group
-                self.liststore.append(None, [False, pkg_name, installed_version,\
-                    version])
+                lstore.append(None, [False, pkg_name, installed_version,\
+                    version, repo])
 
       # search current, community, extra, etc...
       for repo, repo_list in self.pkgs_by_repo.iteritems():
         for name, version, description in repo_list:
-          if name not in already_seen_pkgs:
-            if where_to_search == 'Version':
-              match = regexp.match(version)
-            elif where_to_search == 'Name':
-              match = regexp.match(name)
-            else: # description
-              match = regexp.match(description)
-            if match:
+          if where_to_search == 'Version':
+            match = regexp.match(version)
+          elif where_to_search == 'Name':
+            match = regexp.match(name)
+          else: # description
+            match = regexp.match(description)
+          if match:
+            if name not in already_seen_pkgs:
               if (where_to_search == 'Name' or\
                   where_to_search == 'Description') and not found:
                 found = True
@@ -2494,7 +2602,8 @@ class gui:
                 installed_version = self.local_pkgs[name][1]
               except KeyError:
                 installed_version = '--'
-              self.liststore.append(None, [False, name, installed_version, version])
+              lstore.append(None, [False, name, installed_version, version,\
+                  repo])
           
       if not found:
         # search 'local'
@@ -2515,22 +2624,24 @@ class gui:
                 installed_version = self.local_pkgs[name][1]
               except KeyError:
                 installed_version = '--'
-              self.liststore.append(None, [False, name, installed_version, version])
+              lstore.append(None, [False, name, installed_version, version,\
+                  'local'])
 
-      self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
-      self.treeview.set_model(self.liststore)
-      if self.toggle_handler_id:
-        if not self.togglerenderer.handler_is_connected(\
-            self.toggle_handler_id):
-          self.toggle_handler_id = self.togglerenderer.connect('toggled',\
-              self.toggled, self.liststore)
-        else:
-          self.togglerenderer.disconnect(self.toggle_handler_id)
-          self.toggle_handler_id = self.togglerenderer.connect('toggled',\
-            self.toggled, self.liststore)
-      else:
-        self.toggle_handler_id = self.togglerenderer.connect('toggled',\
-            self.toggled, self.liststore)
+      lstore.set_sort_column_id(1, gtk.SORT_ASCENDING)
+      self.treeview.set_model(lstore)
+
+      #if self.toggle_handler_id:
+      #  if not self.togglerenderer.handler_is_connected(\
+      #      self.toggle_handler_id):
+      #    self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+      #        self.toggled, lstore)
+      #  else:
+      #    self.togglerenderer.disconnect(self.toggle_handler_id)
+      #    self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+      #      self.toggled, lstore)
+      #else:
+      #  self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+      #      self.toggled, lstore)
     else: # this should not happen but it stays here for completeness
       no_search_selected_dialog =\
         self.all_widgets.get_widget('no_search_selected_dialog')
@@ -3319,6 +3430,8 @@ class gui:
 
   # def __refresh_pkgs_treeview__(self, iter_to_remove): {{{
   def __refresh_pkgs_treeview__(self, iter_to_remove):
+    self.__setup_pkg_treeview_no_fill__()
+
     new_liststore = gtk.ListStore('gboolean', str, str, str)
     
     new_liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
@@ -3344,6 +3457,7 @@ class gui:
   # def __fill_treeview_with_pkgs_from_repo__(self, repo): {{{
   def __fill_treeview_with_pkgs_from_repo__(self, repo):
     self.treeview.set_model(None) # unsetting model to speed things up
+    self.__setup_pkg_treeview_no_fill__()
 
     self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
         'gchararray')
