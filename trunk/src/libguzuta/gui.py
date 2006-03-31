@@ -591,12 +591,12 @@ class gui:
   # def alpm_get_highest_version_of_pkg(self, dict): {{{
   def alpm_get_highest_version_of_pkg(self, dict):
     v = None
-    for _, (_, version, _) in dict.iteritems():
+    for _, (repo, version, _) in dict.iteritems():
       if v == None:
-        v = version
+        v = repo,version
       else:
         if version > v:
-          v = version
+          v = repo,version
 
     return v
   # }}}
@@ -617,7 +617,11 @@ class gui:
           already_visited_grps[grp_name] = None
           pkg_names = groups[grp_name]
 
-          iter = treestore.append(None, [False, grp_name, '', ''])
+          if repo_name:
+            iter = treestore.append(None, [False, grp_name, '', '', repo_name])
+          else:
+            iter = treestore.append(None, [False, grp_name, '', '',\
+                groups[grp_name][0]])
 
           for pkg_name in pkg_names:
             already_visited_pkgs[pkg_name] = None
@@ -636,15 +640,25 @@ class gui:
                 #    self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
                 #else:
                 #  available_version = self.pkgs[pkg_name][repo_name][1]
-                available_version =\
-                    self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
+                #available_version =\
+                #    self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
+                available_version = self.pkgs[pkg_name][repo_name][1]
               else:
-                available_version = self.pkgs[pkg_name]['local'][1]
+                #available_version = self.pkgs[pkg_name]['local'][1]
+                repo_name, available_version =\
+                  self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
             except KeyError:
               # pkg was installed separately
               available_version = '--'
               
-            treestore.append(iter, [False, pkg_name, local_version, available_version])
+            if repo_name:
+              treestore.append(iter, [False, pkg_name, local_version,
+                  available_version, repo_name])
+            else:
+              for repo2 in self.pkgs[pkg_name].keys():
+                if repo2 != 'local':
+                  treestore.append(iter, [False, pkg_name, local_version,
+                      available_version, repo2])
       else: # package
         if k not in already_visited_pkgs:
           try:
@@ -661,78 +675,93 @@ class gui:
               #    self.alpm_get_highest_version_of_pkg(self.pkgs[k])
               #else:
               #  available_version = self.pkgs[k][repo_name][1]
+              #available_version =\
+              #  self.alpm_get_highest_version_of_pkg(self.pkgs[k])
               available_version =\
-                self.alpm_get_highest_version_of_pkg(self.pkgs[k])
+                  self.pkgs[k][repo_name][1]
             else:
-              available_version = self.pkgs[k]['local'][1]
+              #available_version = self.pkgs[k]['local'][1]
+              pkg_repo, available_version =\
+                  self.alpm_get_highest_version_of_pkg(self.pkgs[k])
           except KeyError:
             # pkg was installed separately
             available_version = '--'
             
-          treestore.append(None, [False, k, local_version, available_version])
+          pkg_name = k
+          if repo_name:
+            treestore.append(None, [False, pkg_name, local_version,\
+                available_version, repo_name])
+          else:
+            for repo2 in self.pkgs[pkg_name].keys():
+              if repo2 != 'local':
+                treestore.append(None, [False, pkg_name, local_version,\
+                    available_version, repo2])
+          #treestore.append(None, [False, k, local_version, available_version])
   # }}}
 
   # def __setup_pkg_treeview__(self): {{{
   def __setup_pkg_treeview__(self):
     # checked, name, version, description 
     #self.liststore = gtk.ListStore('gboolean', str, str, str)
-    self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
-        'gchararray')
+    #self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
+    #    'gchararray')
+    #self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
+    #    'gchararray', 'gchararray')
 
-    self.textrenderer = gtk.CellRendererText()
-    self.togglerenderer = gtk.CellRendererToggle()
-    self.togglerenderer.set_active(True)
+    #self.textrenderer = gtk.CellRendererText()
+    #self.togglerenderer = gtk.CellRendererToggle()
+    #self.togglerenderer.set_active(True)
 
-    if self.toggle_handler_id:
-      if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
-        self.toggle_handler_id = self.togglerenderer.connect('toggled',\
-          self.toggled, self.liststore)
-      else:
-        self.togglerenderer.disconnect(self.toggle_handler_id)
-        self.toggle_handler_id = self.togglerenderer.connect('toggled',\
-          self.toggled, self.liststore)
-    else:
-      self.toggle_handler_id = self.togglerenderer.connect('toggled',\
-          self.toggled, self.liststore)
-    #self.togglerenderer.connect('toggled', toggled, self.liststore)
+    #if self.toggle_handler_id:
+    #  if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
+    #    self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+    #      self.toggled, self.liststore)
+    #  else:
+    #    self.togglerenderer.disconnect(self.toggle_handler_id)
+    #    self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+    #      self.toggled, self.liststore)
+    #else:
+    #  self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+    #      self.toggled, self.liststore)
+    ##self.togglerenderer.connect('toggled', toggled, self.liststore)
 
-    self.emptycolumn = gtk.TreeViewColumn('Selected')
-    self.emptycolumn.set_sort_column_id(0)
-    self.emptycolumn.pack_start(self.togglerenderer)
-    self.emptycolumn.set_attributes(self.togglerenderer, active=0)
-    
-    #self.repositorycolumn = gtk.TreeViewColumn('Repository')
-    #self.repositorycolumn.set_sort_column_id(1)
-    #self.repositorycolumn.pack_start(self.textrenderer)
-    #self.repositorycolumn.set_attributes(self.textrenderer, text=1)
-    
-    self.namecolumn = gtk.TreeViewColumn('Name')
-    self.namecolumn.set_sort_column_id(1)
-    self.namecolumn.pack_start(self.textrenderer)
-    self.namecolumn.set_attributes(self.textrenderer, text=1)
-    
-    self.installedversioncolumn = gtk.TreeViewColumn('Installed')
-    self.installedversioncolumn.set_sort_column_id(2)
-    self.installedversioncolumn.pack_start(self.textrenderer)
-    self.installedversioncolumn.set_attributes(self.textrenderer, text=2)
-    
-    self.availableversioncolumn = gtk.TreeViewColumn('Available')
-    self.availableversioncolumn.set_sort_column_id(3)
-    self.availableversioncolumn.pack_start(self.textrenderer)
-    self.availableversioncolumn.set_attributes(self.textrenderer, text=3)
-    
-    #self.packagercolumn = gtk.TreeViewColumn('Packager')
-    #self.packagercolumn.set_sort_column_id(5)
-    #self.packagercolumn.pack_start(self.textrenderer)
-    #self.packagercolumn.set_attributes(self.textrenderer, text=5)
+    #self.emptycolumn = gtk.TreeViewColumn('Selected')
+    #self.emptycolumn.set_sort_column_id(0)
+    #self.emptycolumn.pack_start(self.togglerenderer)
+    #self.emptycolumn.set_attributes(self.togglerenderer, active=0)
+    #
+    ##self.repositorycolumn = gtk.TreeViewColumn('Repository')
+    ##self.repositorycolumn.set_sort_column_id(1)
+    ##self.repositorycolumn.pack_start(self.textrenderer)
+    ##self.repositorycolumn.set_attributes(self.textrenderer, text=1)
+    #
+    #self.namecolumn = gtk.TreeViewColumn('Name')
+    #self.namecolumn.set_sort_column_id(1)
+    #self.namecolumn.pack_start(self.textrenderer)
+    #self.namecolumn.set_attributes(self.textrenderer, text=1)
+    #
+    #self.installedversioncolumn = gtk.TreeViewColumn('Installed')
+    #self.installedversioncolumn.set_sort_column_id(2)
+    #self.installedversioncolumn.pack_start(self.textrenderer)
+    #self.installedversioncolumn.set_attributes(self.textrenderer, text=2)
+    #
+    #self.availableversioncolumn = gtk.TreeViewColumn('Available')
+    #self.availableversioncolumn.set_sort_column_id(3)
+    #self.availableversioncolumn.pack_start(self.textrenderer)
+    #self.availableversioncolumn.set_attributes(self.textrenderer, text=3)
+    #
+    ##self.packagercolumn = gtk.TreeViewColumn('Packager')
+    ##self.packagercolumn.set_sort_column_id(5)
+    ##self.packagercolumn.pack_start(self.textrenderer)
+    ##self.packagercolumn.set_attributes(self.textrenderer, text=5)
 
-    self.treeview.append_column(self.emptycolumn)
-    #self.treeview.append_column(self.repositorycolumn)
-    self.treeview.append_column(self.namecolumn)
-    self.treeview.append_column(self.installedversioncolumn)
-    self.treeview.append_column(self.availableversioncolumn)
+    #self.treeview.append_column(self.emptycolumn)
+    ##self.treeview.append_column(self.repositorycolumn)
+    #self.treeview.append_column(self.namecolumn)
+    #self.treeview.append_column(self.installedversioncolumn)
+    #self.treeview.append_column(self.availableversioncolumn)
 
-    #self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
+    ##self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
     # BACKUP {{{
     #already_visited = {}
@@ -780,10 +809,11 @@ class gui:
     #      self.liststore.append(None, [False, k, v[1], available_version])
     # }}}
 
+    self.__setup_pkg_treeview_no_fill__()
     self.local_groups = self.shell.alpm_get_groups('local')
 
     self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-        self.local_pkgs, self.local_groups, 'all')
+        self.local_pkgs, self.local_groups)
     self.treeview.set_model(self.liststore)
   # }}}
   
@@ -792,7 +822,7 @@ class gui:
     # checked, name, version, description 
     #self.liststore = gtk.ListStore('gboolean', str, str, str)
     self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
-        'gchararray')
+        'gchararray', 'gchararray')
 
     self.textrenderer = gtk.CellRendererText()
     self.togglerenderer = gtk.CellRendererToggle()
@@ -832,11 +862,18 @@ class gui:
     self.availableversioncolumn.set_sort_column_id(3)
     self.availableversioncolumn.pack_start(self.textrenderer)
     self.availableversioncolumn.set_attributes(self.textrenderer, text=3)
+
+    self.repositorycolumn = gtk.TreeViewColumn('Repository')
+    self.repositorycolumn.set_sort_column_id(4)
+    self.repositorycolumn.pack_start(self.textrenderer)
+    self.repositorycolumn.set_attributes(self.textrenderer, text=4)
     
     self.treeview.append_column(self.emptycolumn)
     self.treeview.append_column(self.namecolumn)
     self.treeview.append_column(self.installedversioncolumn)
     self.treeview.append_column(self.availableversioncolumn)
+    self.treeview.append_column(self.repositorycolumn)
+
   # }}}
   
   # def __setup_repo_treeview__(self): {{{
@@ -2473,8 +2510,6 @@ class gui:
 
   # def on_search_clicked(self, button): {{{
   def on_search_clicked(self, button):
-    # TODO: this is buggy: packages appear two times and with repositories
-    # wrong. SORT THIS OUT!
     #self.liststore = gtk.ListStore('gboolean', str, str, str)
     already_seen_pkgs = {}
     already_seen_groups = {} # grp name => iter
@@ -2581,8 +2616,8 @@ class gui:
                 lstore.append(iter, [False, pkg_name, installed_version,\
                     version, repo])
                 # and outside the group
-                lstore.append(None, [False, pkg_name, installed_version,\
-                    version, repo])
+                #lstore.append(None, [False, pkg_name, installed_version,\
+                #    version, repo])
 
       # search current, community, extra, etc...
       for repo, repo_list in self.pkgs_by_repo.iteritems():
@@ -3430,28 +3465,32 @@ class gui:
 
   # def __refresh_pkgs_treeview__(self, iter_to_remove): {{{
   def __refresh_pkgs_treeview__(self, iter_to_remove):
-    self.__setup_pkg_treeview_no_fill__()
+    self.__setup_pkg_treeview__()
+    #self.__setup_pkg_treeview_no_fill__()
 
-    new_liststore = gtk.ListStore('gboolean', str, str, str)
-    
-    new_liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
-    if iter_to_remove:
-      self.liststore.remove(iter_to_remove)
+    ##new_liststore = gtk.ListStore('gboolean', str, str, str)
+    #new_liststore = gtk.TreeStore('gboolean', str, str, str, str)
+    #
+    #new_liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
+    #if iter_to_remove:
+    #  self.liststore.remove(iter_to_remove)
 
-    for row in self.liststore:
-      name = row[1]
-      try:
-        installed_version = self.local_pkgs[name][1]
-      except KeyError:
-        installed_version = '--'
-      try:
-        available_version = self.pkgs[name][1]
-      except KeyError:
-        available_version = '--'
-      
-      new_liststore.append([False, name, installed_version, available_version])
-    self.liststore = new_liststore
-    self.treeview.set_model(self.liststore)
+    #for row in self.liststore:
+    #  name = row[1]
+    #  repo = row[5]
+    #  try:
+    #    installed_version = self.local_pkgs[name][1]
+    #  except KeyError:
+    #    installed_version = '--'
+    #  try:
+    #    available_version = self.pkgs[name][1]
+    #  except KeyError:
+    #    available_version = '--'
+    #  
+    #  new_liststore.append(None, [False, name, installed_version, available_version,
+    #      repo])
+    #self.liststore = new_liststore
+    #self.treeview.set_model(self.liststore)
   # }}}
 
   # def __fill_treeview_with_pkgs_from_repo__(self, repo): {{{
@@ -3459,8 +3498,10 @@ class gui:
     self.treeview.set_model(None) # unsetting model to speed things up
     self.__setup_pkg_treeview_no_fill__()
 
+    #self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
+    #    'gchararray')
     self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
-        'gchararray')
+        'gchararray', 'gchararray')
 
     if self.toggle_handler_id:
       if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
@@ -3489,7 +3530,7 @@ class gui:
       #self.local_groups = self.shell.alpm_get_groups('local')
 
       self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          self.local_pkgs, self.local_groups, repo)
+          self.local_pkgs, self.local_groups)
       #for name, v in self.local_pkgs.iteritems():
       #  #available version
       #  try:
@@ -3514,7 +3555,7 @@ class gui:
           tmp_dict[pkg_name] = (repo, pkg_ver, desc)
 
       self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          tmp_dict, groups, repo)
+          tmp_dict, groups)
 
       # }}}
     elif repo == 'not installed':
@@ -3536,7 +3577,7 @@ class gui:
             groups[grp_name] = grp_pkgs
 
       self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          not_installed, groups, repo)
+          not_installed, groups)
 
       # }}}
     elif repo == 'last installed':
