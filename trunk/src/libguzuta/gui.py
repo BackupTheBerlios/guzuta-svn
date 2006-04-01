@@ -591,14 +591,23 @@ class gui:
   # def alpm_get_highest_version_of_pkg(self, dict): {{{
   def alpm_get_highest_version_of_pkg(self, dict):
     v = None
-    for _, (repo, version, _) in dict.iteritems():
-      if v == None:
-        v = repo,version
-      else:
-        if version > v:
-          v = repo,version
+    print dict
+    print len(dict)
+    length = len(dict)
+    if length == 1:
+      repo = dict.keys()[0]
+      return (repo, dict[repo][1])
+    else:
+      for _, (repo, version, _) in dict.iteritems():
+        print 'repo %s, version %s' % (repo, version)
+        if repo != 'local':
+          if v == None:
+            v = repo,version
+          else:
+            if version > v:
+              v = repo,version
 
-    return v
+      return v
   # }}}
 
   # def alpm_fill_treestore_with_pkgs_and_grps(self, treestore, pkgs, {{{
@@ -645,8 +654,11 @@ class gui:
                 available_version = self.pkgs[pkg_name][repo_name][1]
               else:
                 #available_version = self.pkgs[pkg_name]['local'][1]
-                repo_name, available_version =\
+                pkg_repo, available_version =\
                   self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
+                print 'pkg %s pkg_repo %s' % (pkg_name, pkg_repo)
+                if pkg_repo == 'local':
+                  available_version = '--'
             except KeyError:
               # pkg was installed separately
               available_version = '--'
@@ -683,6 +695,9 @@ class gui:
               #available_version = self.pkgs[k]['local'][1]
               pkg_repo, available_version =\
                   self.alpm_get_highest_version_of_pkg(self.pkgs[k])
+              print 'pkg %s pkg_repo %s' % (k, pkg_repo)
+              if pkg_repo == 'local':
+                available_version = '--'
           except KeyError:
             # pkg was installed separately
             available_version = '--'
