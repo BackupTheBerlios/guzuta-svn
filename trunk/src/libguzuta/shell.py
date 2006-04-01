@@ -129,24 +129,13 @@ class shell:
         if section != "options":
           found = False
           
-          #for pmc in pmc_syncs:
-          #  print "treename: <%s> section: <%s>" % (pmc["treename"], section)
-          #  if pmc["treename"] == section:
-          #    found = True
-          #    sync = pmc
-          #    break
-          #print "VOU PROCURAR POR: ", section.upper()
           (found, sync_temp) = self.__find_pmc__(pmc_syncs, section)
 
           if not found:
-            # start a new sync record
-            #print "starting a new sync record"
             sync["treename"] = section
             sync["servers"] = []
-            #print "pmc_syncs antes: ", pmc_syncs
             pmc_syncs.append(sync)
             sync = {}
-            #print "pmc_syncs depois: ", pmc_syncs
           else:
             sync = sync_temp
 
@@ -325,8 +314,6 @@ class shell:
 
     self.__parseconfig__(a, config["CONFIGFILE"], pmc_syncs, config)
 
-    #for pmc in pmc_syncs:
-    #  print "PMC: ", pmc
     try:
       config["DBPATH"]
     except KeyError:
@@ -352,8 +339,6 @@ class shell:
 
   # def __init__(self, command_line, lock, debug, interactive = False): {{{
   def __init__(self, command_line, lock, debug, interactive = False):
-    #self.pacman = pacman(self)
-    #self.pacman = pacman()
     self.yesno = False
     self.last_exception = None
 
@@ -373,9 +358,6 @@ class shell:
 
     self.timer = threading.Timer(1.0, self.handle_timer)
     
-    #if interactive == True:
-    #  self.pacman.set_pipeit(True)
-    
     self.uid = posix.getuid()
     # pid of pacman process
     self.pid = 0
@@ -390,13 +372,6 @@ class shell:
     self.prev_return = None
     self.REASON_EXPLICIT = 0
 
-    #self.timer.start()
-    
-    #self.opt_names = 'h:j:k:'
-    #self.long_opt_names = ''
-
-    #self.opts , self.long_opts = getopt.getopt(command_line, self.opt_names,
-    #    self.long_opt_names)
   # }}}
 
   # def release(self): {{{
@@ -469,18 +444,13 @@ the terms of the GNU General Public License'''
         print "could not register ", sync["treename"]
         sys.exit(1)
     self.dbs_by_name["local"] = self.alpm.register_db("local")
-    #self.db_names.append('local')
   # }}}
 
   # def __alpm_close_dbs__(self): {{{
   def __alpm_close_dbs__(self):
-    #self.dbs_by_name = {}
-    #self.db_names = []
-
     for sync in self.pmc_syncs:
       try:
         sync["db"].unregister()
-        #del dbs_by_name[sync["treename"]]
       except KeyError:
         pass
     self.dbs_by_name["local"].unregister()
@@ -503,19 +473,15 @@ the terms of the GNU General Public License'''
 
   # def alpm_get_package_iterator(self, treename): {{{
   def alpm_get_package_iterator(self, treename):
-    #return self.alpm.get_pkg_cache()
     return self.dbs_by_name[treename].get_package_iterator()
   # }}}
   
   # def alpm_repofiles2(self): {{{
   def alpm_repofiles2(self):
-    # all[repo].append((name, version, description))
-    # pkgs[name] = (repo, version, description)
     self.all = {}
     self.pkgs = {}
     self.groups = {}
     self.groups_by_repo = {}
-    #self.pkgs_in_local = []
 
     for dbname, db in self.dbs_by_name.iteritems():
       if dbname != "local":
@@ -532,7 +498,6 @@ the terms of the GNU General Public License'''
           if name not in self.pkgs:
             self.pkgs[name] = {}
           self.pkgs[name][dbname] = (dbname, version, description)
-          #self.pkgs[name] = (dbname, version, description)
 
         # get groups
         try:
@@ -553,7 +518,6 @@ the terms of the GNU General Public License'''
           version = pkg.get_version()
           description = pkg.get_description()
 
-          #self.pkgs_in_local.append((name, version, description))
           if name not in self.pkgs:
             self.pkgs[name] = {}
           self.pkgs[name]['local'] = ('local', version, description)
@@ -584,7 +548,6 @@ the terms of the GNU General Public License'''
   def alpm_local_search(self, what = ''):
     self.local_pkgs = {}
 
-    #for dbname, db in self.dbs_by_name.iteritems():
     dbname = 'local'
     db = self.dbs_by_name[dbname]
     for pkg in db.get_package_iterator():
@@ -949,7 +912,6 @@ the terms of the GNU General Public License'''
       pkg = db.read_pkg(what)
     except alpm.NoSuchPackageException:
       return None
-    #return self.alpm_pkg_to_string(pkg)
     return self.alpm_pkg_to_list(pkg)
   # }}}
 
@@ -967,10 +929,6 @@ the terms of the GNU General Public License'''
   # def alpm_info(self, what = '', repo_name = None): {{{
   def alpm_info(self, what = '', repo_name = None):
     if not repo_name:
-      print what
-      print self.pkgs[what]
-      print '=========================================================='
-      print self.pkgs[what]['local']
       tuple = self.pkgs[what]['local']
     else:
       if repo_name == 'not installed' or repo_name == 'installed' or\
@@ -979,13 +937,11 @@ the terms of the GNU General Public License'''
       else:
         tuple = self.pkgs[what][repo_name]
 
-    #(repo, version, desc) = self.pkgs[what]
     (repo, version, desc) = tuple
     db = self.dbs_by_name[repo]
 
     pkg = None
     try:
-      #pkg = db.read_pkg(what)
       pkg_cache_list = db.get_pkg_cache()
 
       for pkg_c in pkg_cache_list:
@@ -994,7 +950,6 @@ the terms of the GNU General Public License'''
           break
     except alpm.NoSuchPackageException:
       return None
-    #return self.alpm_pkg_to_string(pkg)
     if pkg == None:
       return None
     else:
@@ -1021,12 +976,10 @@ the terms of the GNU General Public License'''
   def alpm_download_file(self, url, destination, report_hook = None):
     #time.sleep(2)
     try:
-      #print 'RETRIEVING: ', url
       is_db = True
       if not report_hook:
         (filename, headers) = urllib.urlretrieve(url, destination)
       else:
-        #self.retrieving = url
         print 'URL: ', url
         try:
           url.rindex('.db.tar.gz')
@@ -1038,8 +991,6 @@ the terms of the GNU General Public License'''
         else:
           self.retrieving = url[url.rindex("/")+1:]
         (filename, headers) = urllib.urlretrieve(url, destination, report_hook)
-      #urllib.urlcleanup()
-      #print 'DONE RETRIEVING'
     except IOError:
       filename = None
 
@@ -1095,10 +1046,8 @@ the terms of the GNU General Public License'''
     self.prev_return = None
     ret = []
     
-    #for pkg_name in pkg_names:
     for path in files:
       print 'PATH: ', path
-    #for sync,path in zip(sync_packages, files):
       pkg_name, pkg_ver = self.alpm_pkg_name_version_from_path(path)
 
       db_name = ''
@@ -1121,11 +1070,7 @@ the terms of the GNU General Public License'''
         ret.append(filename)
         str = '%s/%s-%s downloaded.' %\
             (db_name, pkg_name, pkg_ver)
-        #gtk.gdk.threads_enter()
         progress_bar.set_text(str)
-        #time.sleep(1)
-        #progress_bar.pulse()
-        #gtk.gdk.threads_leave()
       else:
         self.prev_return = None
         self.th_ended_event.set()
@@ -1139,14 +1084,6 @@ the terms of the GNU General Public License'''
   # report_hook = None):
   def alpm_download_package(self, package_name, version, dbname, path,
       report_hook = None):
-    #self.all[dbname].append((name, version, description))
-    #self.pkgs[name] = (dbname, version, description)
-
-    #dbname = self.pkgs[package_name][0]
-    #dbname = self.alpm_get_pkg_dbname(package_name)
-    #version = self.pkgs[package_name][1]
-    #version = self.alpm_get_pkg_version(package_name)
-    
     pmc = None
     for pmc_record in self.pmc_syncs:
       if pmc_record['treename'] == dbname:
@@ -1158,9 +1095,6 @@ the terms of the GNU General Public License'''
         self.config['CACHEDIR']
       except KeyError:
         self.config['CACHEDIR'] = 'var/cache/pacman'
-
-      #destination = self.config['ROOT'] + self.config['CACHEDIR'] + '/pkg/'\
-      #    + package_name + '-' + version + '.pkg.tar.gz'
 
       destination = path
 
@@ -1214,14 +1148,11 @@ the terms of the GNU General Public License'''
           try:
             print db.update(destination)
           except alpm.DatabaseException, instance:
-            #print instance
             self.th_ended_event.set()
             raise alpm.DatabaseException, instance
           try:
             pass
-            #os.remove(destination)
           except OSError, instance:
-            #print '%s is a directory?' % destination
             self.th_ended_event.set()
             raise OSError, instance
           break
@@ -1246,7 +1177,6 @@ the terms of the GNU General Public License'''
     missed_deps = []
     packages = []
 
-    #self.alpm_transaction_init()
     self.alpm_transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0, trans_cb_ev,\
         trans_cb_conv)
 
@@ -1288,7 +1218,6 @@ the terms of the GNU General Public License'''
   def alpm_transaction_prepare(self):
     try:
       self.trans.prepare()
-    #except Exception:
     except alpm.UnsatisfiedDependenciesTransactionException, inst:
       self.last_exception = (1, inst)
       self.th_ended_event.set()
@@ -1330,7 +1259,6 @@ the terms of the GNU General Public License'''
     self.prev_return = None
     error = ''
     if path_list == [] or None:
-      #return (None, None)
       self.prev_return = (None, None)
       return
     
@@ -1342,12 +1270,6 @@ the terms of the GNU General Public License'''
 
     try:
       self.alpm_transaction_prepare()
-    #except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
-    #  raise
-    #except alpm.ConflictingDependenciesTransactionException, conflict_list:
-    #  raise
-    #except alpm.ConflictingFilesTransactionException, conflict_list:
-    #  raise
     except Exception:
       raise
 
