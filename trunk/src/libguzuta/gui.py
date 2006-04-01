@@ -590,16 +590,13 @@ class gui:
 
   # def alpm_get_highest_version_of_pkg(self, dict): {{{
   def alpm_get_highest_version_of_pkg(self, dict):
-    v = None
-    print dict
-    print len(dict)
     length = len(dict)
     if length == 1:
       repo = dict.keys()[0]
       return (repo, dict[repo][1])
     else:
+      v = None
       for _, (repo, version, _) in dict.iteritems():
-        print 'repo %s, version %s' % (repo, version)
         if repo != 'local':
           if v == None:
             v = repo,version
@@ -610,10 +607,11 @@ class gui:
       return v
   # }}}
 
-  # def alpm_fill_treestore_with_pkgs_and_grps(self, treestore, pkgs, {{{
-  # groups, repo_name = None):
-  def alpm_fill_treestore_with_pkgs_and_grps(self, treestore, pkgs, groups,
+  # def alpm_fill_treestore_with_pkgs_and_grps(self, treeview, treestore, {{{
+  # pkgs, groups, repo_name = None):
+  def alpm_fill_treestore_with_pkgs_and_grps(self, treeview, treestore, pkgs, groups,
       repo_name = None):
+    treeview.set_model(None)
     already_visited_pkgs = {}
     already_visited_grps = {}
 
@@ -641,36 +639,24 @@ class gui:
               local_version = '--'
 
             #available version
-            try:
-              if repo_name:
-                #if repo_name == 'installed' or repo_name == 'not installed' or\
-                #    repo_name == 'all':
-                #  available_version =\
-                #    self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
-                #else:
-                #  available_version = self.pkgs[pkg_name][repo_name][1]
-                #available_version =\
-                #    self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
-                available_version = self.pkgs[pkg_name][repo_name][1]
-              else:
-                #available_version = self.pkgs[pkg_name]['local'][1]
-                pkg_repo, available_version =\
-                  self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
-                print 'pkg %s pkg_repo %s' % (pkg_name, pkg_repo)
-                if pkg_repo == 'local':
-                  available_version = '--'
-            except KeyError:
-              # pkg was installed separately
-              available_version = '--'
+            if repo_name:
+              available_version = self.pkgs[pkg_name][repo_name][1]
+            else:
+              pkg_repo, available_version =\
+                self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
+              if pkg_repo == 'local':
+                available_version = '--'
               
             if repo_name:
               treestore.append(iter, [False, pkg_name, local_version,
                   available_version, repo_name])
+              yield True
             else:
               for repo2 in self.pkgs[pkg_name].keys():
                 if repo2 != 'local':
                   treestore.append(iter, [False, pkg_name, local_version,
                       available_version, repo2])
+              yield True
       else: # package
         if k not in already_visited_pkgs:
           try:
@@ -679,39 +665,28 @@ class gui:
             local_version = '--'
           
           #available version
-          try:
-            if repo_name:
-              #if repo_name == 'installed' or repo_name == 'not installed' or\
-              #    repo_name == 'all':
-              #  available_version =\
-              #    self.alpm_get_highest_version_of_pkg(self.pkgs[k])
-              #else:
-              #  available_version = self.pkgs[k][repo_name][1]
-              #available_version =\
-              #  self.alpm_get_highest_version_of_pkg(self.pkgs[k])
-              available_version =\
-                  self.pkgs[k][repo_name][1]
-            else:
-              #available_version = self.pkgs[k]['local'][1]
-              pkg_repo, available_version =\
-                  self.alpm_get_highest_version_of_pkg(self.pkgs[k])
-              print 'pkg %s pkg_repo %s' % (k, pkg_repo)
-              if pkg_repo == 'local':
-                available_version = '--'
-          except KeyError:
-            # pkg was installed separately
-            available_version = '--'
-            
+          if repo_name:
+            available_version =\
+                self.pkgs[k][repo_name][1]
+          else:
+            pkg_repo, available_version =\
+                self.alpm_get_highest_version_of_pkg(self.pkgs[k])
+            if pkg_repo == 'local':
+              available_version = '--'
+
           pkg_name = k
           if repo_name:
             treestore.append(None, [False, pkg_name, local_version,\
                 available_version, repo_name])
+            yield True
           else:
             for repo2 in self.pkgs[pkg_name].keys():
               if repo2 != 'local':
                 treestore.append(None, [False, pkg_name, local_version,\
                     available_version, repo2])
-          #treestore.append(None, [False, k, local_version, available_version])
+              yield True
+    treeview.set_model(treestore)
+    yield False
   # }}}
 
   # def __setup_pkg_treeview__(self): {{{
@@ -827,8 +802,11 @@ class gui:
     self.__setup_pkg_treeview_no_fill__()
     self.local_groups = self.shell.alpm_get_groups('local')
 
-    self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-        self.local_pkgs, self.local_groups)
+    gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
+        self.treeview, self.liststore, self.local_pkgs, self.local_groups\
+        ).next)
+    #self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+    #    self.local_pkgs, self.local_groups)
     self.treeview.set_model(self.liststore)
   # }}}
   
@@ -2617,10 +2595,13 @@ class gui:
 
               for pkg_name in grp_packages:
                 already_seen_pkgs[pkg_name] = None
-                try:
-                  version = self.pkgs[pkg_name][1]
-                except KeyError:
-                  version = '--'
+                pkg_repo, available_version =\
+                    self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
+
+                #try:
+                #  available_version = self.pkgs[pkg_name][1]
+                #except KeyError:
+                # available_version = '--'
                 
                 try:
                   installed_version = self.local_pkgs[pkg_name][1]
@@ -2629,10 +2610,10 @@ class gui:
 
                 # put it in the group
                 lstore.append(iter, [False, pkg_name, installed_version,\
-                    version, repo])
+                    available_version, pkg_repo])
                 # and outside the group
                 #lstore.append(None, [False, pkg_name, installed_version,\
-                #    version, repo])
+                #    available_version, repo])
 
       # search current, community, extra, etc...
       for repo, repo_list in self.pkgs_by_repo.iteritems():
@@ -3536,16 +3517,21 @@ class gui:
 
       tmp_dict = dict([(pkg_name,(repo, pkg_ver, desc))\
           for (pkg_name, pkg_ver, desc) in self.pkgs_by_repo[repo]])
-      self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          tmp_dict, groups, repo)
+
+      gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
+        self.treeview, self.liststore, tmp_dict, groups, repo).next)
+      #self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+      #    tmp_dict, groups, repo)
 
       # }}}
     elif repo == 'installed':
       # installed {{{
       #self.local_groups = self.shell.alpm_get_groups('local')
 
-      self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          self.local_pkgs, self.local_groups)
+      gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
+          self.treeview, self.liststore, self.local_pkgs, self.local_groups).next)
+      #self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+      #    self.local_pkgs, self.local_groups)
       #for name, v in self.local_pkgs.iteritems():
       #  #available version
       #  try:
@@ -3569,8 +3555,10 @@ class gui:
         for (pkg_name, pkg_ver, desc) in l:
           tmp_dict[pkg_name] = (repo, pkg_ver, desc)
 
-      self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          tmp_dict, groups)
+      gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
+          self.treeview, self.liststore, tmp_dict, groups).next)
+      #self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+      #    tmp_dict, groups)
 
       # }}}
     elif repo == 'not installed':
@@ -3591,8 +3579,10 @@ class gui:
             # group not installed
             groups[grp_name] = grp_pkgs
 
-      self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          not_installed, groups)
+      gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
+          self.treeview, self.liststore, not_installed, groups).next)
+      #self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+      #    not_installed, groups)
 
       # }}}
     elif repo == 'last installed':
@@ -3638,8 +3628,11 @@ class gui:
 
       tmp_dict = dict([(pkg_name,(repo, pkg_ver, desc))\
           for (pkg_name, pkg_ver, desc) in self.pkgs_by_repo[repo]])
-      self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-          tmp_dict, groups, repo)
+
+      gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
+          self.treeview, self.liststore, tmp_dict, groups, repo).next)
+      #self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+      #    tmp_dict, groups, repo)
       # }}}
 
     self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
