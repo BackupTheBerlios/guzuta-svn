@@ -644,7 +644,7 @@ class gui:
     gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
         self.treeview, self.liststore, self.local_pkgs, self.local_groups\
         ).next)
-    #self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
+    #self.alpm_fill_treestore_with_pkgs_and_grps(self.treeview, self.liststore,\
     #    self.local_pkgs, self.local_groups)
     self.treeview.set_model(self.liststore)
   # }}}
@@ -1552,6 +1552,7 @@ class gui:
   def alpm_install_targets(self, targets, repo = None):
     # TODO: check if there's something searched for or a repo selected, and
     # update the pkg_treeview accordingly
+    self.busy_status_label = self.all_widgets.get_widget('busy_status_label')
     number_pkgs_to_download =\
       self.alpm_get_number_of_packages_to_download(targets)
 
@@ -1561,12 +1562,13 @@ class gui:
     pkg_are_you_sure_dialog =\
       self.all_widgets.get_widget('pkg_are_you_sure_dialog2')
 
-    are_you_sure_treeview =\
+    self.are_you_sure_treeview =\
         self.all_widgets.get_widget('pkgs_treeview')
 
     liststore = gtk.ListStore('gchararray')
 
-    cols = are_you_sure_treeview.get_columns()
+    print self.are_you_sure_treeview
+    cols = self.are_you_sure_treeview.get_columns()
     if cols == []:
       textrenderer = gtk.CellRendererText()
 
@@ -1575,7 +1577,7 @@ class gui:
       namecolumn.pack_start(textrenderer)
       namecolumn.set_attributes(textrenderer, text=0)
 
-      are_you_sure_treeview.append_column(namecolumn)
+      self.are_you_sure_treeview.append_column(namecolumn)
 
     are_you_sure_message_label =\
         self.all_widgets.get_widget('are_you_sure_message_label')
@@ -1588,7 +1590,7 @@ class gui:
 
     liststore.set_sort_column_id(0, gtk.SORT_ASCENDING)
 
-    are_you_sure_treeview.set_model(liststore)
+    self.are_you_sure_treeview.set_model(liststore)
 
     response = pkg_are_you_sure_dialog.run()
     pkg_are_you_sure_dialog.hide()
@@ -1617,8 +1619,6 @@ class gui:
     # Step 2: compute the transaction
     #try:
     self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_prepare, {})
-      #self.shell.alpm_transaction_prepare()
-    #except alpm.UnsatisfiedDependenciesTransactionException, depmiss_list:
     if self.shell.last_exception:
       if self.shell.last_exception[0] == 1:
         # alpm.UnsatisfiedDependenciesTransactionException
@@ -1647,7 +1647,6 @@ class gui:
         else:
           self.busy_dialog.hide()
         return
-      #except alpm.ConflictingDependenciesTransactionException, conflict_list:
       elif self.shell.last_exception[0] == 2:
         # alpm.ConflictingFilesTransactionException
         conflict_list = self.shell.last_exception[1]
@@ -1669,7 +1668,6 @@ class gui:
         self.shell.alpm_transaction_release()
         self.busy_dialog.hide()
         return
-      #except alpm.ConflictingFilesTransactionException, conflict_list:
       elif self.shell.last_exception[0] == 4:
         # alpm.ConflictingFilesTransactionException
         conflict_list = self.shell.last_exception[1]
@@ -2012,18 +2010,20 @@ class gui:
     pkg_are_you_sure_dialog =\
       self.all_widgets.get_widget('pkg_are_you_sure_dialog2')
 
-    are_you_sure_treeview =\
+    self.are_you_sure_treeview =\
         self.all_widgets.get_widget('pkgs_treeview')
 
     liststore = gtk.ListStore('gchararray')
     textrenderer = gtk.CellRendererText()
 
-    namecolumn = gtk.TreeViewColumn('Name')
-    namecolumn.set_sort_column_id(0)
-    namecolumn.pack_start(textrenderer)
-    namecolumn.set_attributes(textrenderer, text=0)
+    cols = self.are_you_sure_treeview.get_columns()
+    if cols == []:
+      namecolumn = gtk.TreeViewColumn('Name')
+      namecolumn.set_sort_column_id(0)
+      namecolumn.pack_start(textrenderer)
+      namecolumn.set_attributes(textrenderer, text=0)
 
-    are_you_sure_treeview.append_column(namecolumn)
+      self.are_you_sure_treeview.append_column(namecolumn)
 
     are_you_sure_message_label =\
         self.all_widgets.get_widget('are_you_sure_message_label')
@@ -2036,7 +2036,7 @@ class gui:
 
     liststore.set_sort_column_id(0, gtk.SORT_ASCENDING)
 
-    are_you_sure_treeview.set_model(liststore)
+    self.are_you_sure_treeview.set_model(liststore)
 
     self.current_dialog_on = True
     response = pkg_are_you_sure_dialog.run()
@@ -2629,8 +2629,10 @@ class gui:
 
   # def on_cache_menu_activate(self, menuitem): {{{
   def on_cache_menu_activate(self, menuitem):
+    # TODO: cache this to use in the 'Cleanup' button
     cache_dialog = self.all_widgets.get_widget('cache_dialog2')
     self.current_dialog = cache_dialog
+    time_now = time.time()
 
     cache_treeview = self.all_widgets.get_widget('cache_treeview2')
 
@@ -2662,10 +2664,23 @@ class gui:
 
     self.already_seen = {}
     self.pkg_versions = {}
+    to_clean = []
+    to_clean_names = []
     
+    cache_combobox = self.all_widgets.get_widget('cache_combobox')
+    clean_by = cache_combobox.get_active_text()
+    cache_spinbutton = self.all_widgets.get_widget('cache_spinbutton')
+    clean_threshold = cache_spinbutton.get_value_as_int()
+
+    cache_dir = self.shell.alpm.get_cache_dir()
+    dir = os.path.join('/', cache_dir)
+
     for package in cache_pkgs:
       # strip '.pkg.tar.gz'
-      index = package.index('.pkg.tar.gz')
+      try:
+        index = package.index('.pkg.tar.gz')
+      except ValueError:
+        continue
       tmp = package[:index]
       pkg_name, pkg_version = self.split_pkg_name(tmp)
       
@@ -2678,10 +2693,47 @@ class gui:
         cache_liststore.append(iter, [pkg_name, pkg_version])
         self.already_seen[pkg_name] = iter
 
+      appended = False
       try:
         self.pkg_versions[pkg_name].append(pkg_version)
+        appended = True
       except KeyError:
         self.pkg_versions[pkg_name] = [pkg_version]
+
+      if appended:
+        # building the to_clean list {{{
+        if not os.path.isdir(os.path.join(dir, pkg_name)):
+          path = os.path.join(dir, package)
+
+          if clean_by == 'Days':
+            mtime = os.stat(path).st_mtime
+            clean_secs = clean_threshold * 24 * 60 * 60
+            if time_now - mtime >= clean_secs:
+              length = len(self.pkg_versions[pkg_name])
+              if length > 1:
+                # more than one version
+                if self.pkg_versions[pkg_name][length-1] != pkg_version:
+                  del self.pkg_versions[pkg_name][0]
+                  to_clean.append(path)
+                  to_clean.append(pkg_name)
+                else:
+                  print 'trying to clean the last version: ',\
+                    ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
+              else:
+                print 'there is only one version in cache: ',\
+                  ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
+          else:
+            # cleanup by version
+            length = len(self.pkg_versions[pkg_name])
+
+            if length > clean_threshold:
+              count = 0
+              while count < clean_threshold:
+                del self.pkg_versions[pkg_name][0]
+                count += 1
+              to_clean.append(path)
+              to_clean.append(pkg_name)
+        # }}}
 
     cache_treeview.set_model(cache_liststore)
 
@@ -2690,11 +2742,10 @@ class gui:
 
     if response == gtk.RESPONSE_YES:
       # cleanup cache
-      cache_combobox = self.all_widgets.get_widget('cache_combobox')
-      clean_by = cache_combobox.get_active_text()
-      cache_spinbutton = self.all_widgets.get_widget('cache_spinbutton')
-      clean_threshold = cache_spinbutton.get_value_as_int()
-      self.cleanup_cache(clean_by, clean_threshold)
+      #self.alpm_run_in_thread_and_wait(self.cleanup_cache,\
+      #    {'clean_by': clean_by, 'clean_threshold': clean_threshold\
+      #     'to_clean': to_clean, 'to_clean_names': to_clean_names})
+      self.cleanup_cache(clean_by, clean_threshold, to_clean, to_clean_names)
     else:
       pass
     cache_dialog.hide()
@@ -2718,25 +2769,29 @@ class gui:
   # }}}
   # }}}
   
-  # def cleanup_cache(self, clean_by, clean_threshold): {{{
-  def cleanup_cache(self, clean_by, clean_threshold):
+  # def alpm_get_pkgs_to_clean(self, clean_by, clean_threshold): {{{
+  def alpm_get_pkgs_to_clean(self, clean_by, clean_threshold):
     cache_dir = self.shell.alpm.get_cache_dir()
     time_now = time.time()
-    print 'now is: ', int(time_now)
-    
+
     already_cleaned = {}
-    cleaned = []
-    for package in sorted(os.listdir(cache_dir)):
-      index = package.index('.pkg.tar.gz')
+    to_clean = []
+
+    dir = os.path.join('/', cache_dir)
+
+    for package in sorted(os.listdir(dir)):
+      try:
+        index = package.index('.pkg.tar.gz')
+      except ValueError:
+        continue
+
       tmp = package[:index]
       pkg_name, pkg_version = self.split_pkg_name(tmp)
 
       if not os.path.isdir(os.path.join(cache_dir, package)):
-        # do the cleanup
-        path = os.path.join(cache_dir, package)
+        path = os.path.join(dir, package)
 
         if clean_by == 'Days':
-          # cleanup by days {{{
           mtime = os.stat(path).st_mtime
           clean_secs = clean_threshold * 24 * 60 * 60
           if time_now - mtime >= clean_secs:
@@ -2744,36 +2799,160 @@ class gui:
             if length > 1:
               # more than one version
               if self.pkg_versions[pkg_name][length-1] != pkg_version:
-                # not trying to clean the last version
-                #print 'removing: ', path
                 del self.pkg_versions[pkg_name][0]
-                cleaned.add(path)
-                os.remove(path)
+                to_clean.append(path)
               else:
                 print 'trying to clean the last version: ',\
-                  ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
+                    ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
             else:
               print 'there is only one version in cache: ',\
                   ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
-          # }}}
         else:
-          # cleanup by version {{{
+          # cleanup by version
           length = len(self.pkg_versions[pkg_name])
+
           if length > clean_threshold:
-            #print 'removing: ', path
-            i = 0
-            while i < clean_threshold:
+            count = 0
+            while count < clean_threshold:
               del self.pkg_versions[pkg_name][0]
-              i = i + 1
-            cleaned.add(path)
-            os.remove(path)
-          else:
-            #print 'there are only ', length
-            #print 'versions in cache: ',\
-            #    ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
-            pass
-          # }}}
-    print 'pkgs cleaned: ', cleaned
+              count += 1
+            to_clean.append(path)
+    return to_clean
+  # }}}
+
+  # def cleanup_cache(self, clean_by, clean_threshold, to_clean, to_clean_names): {{{
+  def cleanup_cache(self, clean_by, clean_threshold, to_clean, to_clean_names):
+    # TODO: add an else branch that shows a dialog saying no packages were
+    # removed
+    if len(to_clean) > 0:
+      generic_treeview_dialog =\
+        self.all_widgets.get_widget('generic_treeview_dialog')
+      generic_treeview_label =\
+        self.all_widgets.get_widget('generic_treeview_label')
+      generic_treeview_treeview =\
+        self.all_widgets.get_widget('generic_treeview_treeview')
+
+      lstore = gtk.TreeStore('gchararray')
+
+      if generic_treeview_treeview.get_columns() == []:
+        textrenderer = gtk.CellRendererText()
+
+        namecolumn = gtk.TreeViewColumn('Name')
+        namecolumn.set_sort_column_id(0)
+        namecolumn.set_attributes(textrenderer, text=0)
+
+        generic_treeview_treeview.append_column(namecolumn)
+
+      for pkg_name in to_clean_names:
+        lstore.append([pkg_name])
+
+      response = generic_treeview_dialog.run()
+      generic_treeview_dialog.hide()
+
+      if response == gtk.RESPONSE_OK:
+        self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+
+        self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+        self.busy_progress_bar3.set_fraction(0.0)
+        self.busy_status_label = self.all_widgets.get_widget('busy_status_label')
+        self.busy_status_label.set_markup('<i>Please wait...</i>')
+
+        # old {{{
+        #cache_dir = self.shell.alpm.get_cache_dir()
+        #time_now = time.time()
+        #print 'now is: ', int(time_now)
+        #
+        #already_cleaned = {}
+        #cleaned = []
+        #dir = os.path.join('/', cache_dir)
+
+        #for package in sorted(os.listdir(dir)):
+        #  #print 'package: ', package
+        #  try:
+        #    index = package.index('.pkg.tar.gz')
+        #  except ValueError:
+        #    continue
+        #  tmp = package[:index]
+        #  pkg_name, pkg_version = self.split_pkg_name(tmp)
+
+        #  if not os.path.isdir(os.path.join(cache_dir, package)):
+        #    # do the cleanup
+        #    path = os.path.join(dir, package)
+
+        #    if clean_by == 'Days':
+        #      # cleanup by days {{{
+        #      mtime = os.stat(path).st_mtime
+        #      clean_secs = clean_threshold * 24 * 60 * 60
+        #      if time_now - mtime >= clean_secs:
+        #        length = len(self.pkg_versions[pkg_name])
+        #        if length > 1:
+        #          # more than one version
+        #          if self.pkg_versions[pkg_name][length-1] != pkg_version:
+        #            # not trying to clean the last version
+        #            #print 'removing: ', path
+        #            del self.pkg_versions[pkg_name][0]
+        #            cleaned.append(path)
+        #            os.remove(path)
+        #            #print 'cleaned: %s\n' % path
+        #          else:
+        #            print 'trying to clean the last version: ',\
+        #              ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
+        #        else:
+        #          print 'there is only one version in cache: ',\
+        #              ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
+        #      # }}}
+        #    else:
+        #      # cleanup by version {{{
+        #      length = len(self.pkg_versions[pkg_name])
+        #      if length > clean_threshold:
+        #        #print 'removing: ', path
+        #        count = 0
+        #        while count < clean_threshold:
+        #          del self.pkg_versions[pkg_name][0]
+        #          count = count + 1
+        #        cleaned.append(path)
+        #        os.remove(path)
+        #        #print 'cleaned: %s\n' % path
+        #      else:
+        #        #print 'there are only ', length
+        #        #print 'versions in cache: ',\
+        #        #    ((pkg_name, pkg_version), self.pkg_versions[pkg_name])
+        #        pass
+        #      # }}}
+        ##print 'pkgs cleaned: ', cleaned
+        # }}}
+
+        #to_clean = self.alpm_get_pkgs_to_clean(clean_by, clean_threshold)
+
+        self.busy_dialog.show_now()
+        print 'to_clean: ', to_clean
+        l = len(to_clean)
+        if l == 0:
+          return
+        count = 0
+        fraction_increment = 1.0 / l
+        fraction = 0.0
+        for path in to_clean:
+          time.sleep(0.5)
+          count += 1
+          fraction += fraction_increment
+          self.busy_progress_bar3.set_fraction(fraction)
+          self.busy_progress_bar3.set_text('%d out of %d files removed' % (count, l))
+          self.busy_status_label.set_markup('<i>Removing %s ...</i>' % path)
+          os.remove(path)
+        self.busy_dialog.hide()
+
+    else:
+      nothing_to_clean_dialog =\
+        self.all_widgets.get_widget('nothing_to_clean_dialog')
+      nothing_to_clean_label =\
+        self.all_widgets.get_widget('nothing_to_clean_label')
+
+      nothing_to_clean_label.set_markup(\
+        '<b>There were no packages in the cache to clean.</b>')
+      nothing_to_clean_dialog.run()
+      nothing_to_clean_dialog.hide()
+    return
   # }}}
 
   # def split_pkg_name(self, pkg_name): {{{
@@ -3139,8 +3318,8 @@ class gui:
 
       gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
         self.treeview, self.liststore, tmp_dict, groups, repo).next)
-      #self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-      #    tmp_dict, groups, repo)
+      #self.alpm_fill_treestore_with_pkgs_and_grps(self.treeview,\
+      #    self.liststore, tmp_dict, groups, repo)
 
       # }}}
     elif repo == 'installed':
@@ -3149,8 +3328,8 @@ class gui:
 
       gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
           self.treeview, self.liststore, self.local_pkgs, self.local_groups).next)
-      #self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-      #    self.local_pkgs, self.local_groups)
+      #self.alpm_fill_treestore_with_pkgs_and_grps(self.treeview,\
+      #    self.liststore, self.local_pkgs, self.local_groups)
       # }}}
     elif repo == 'all':
       # all {{{
@@ -3167,8 +3346,8 @@ class gui:
 
       gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
           self.treeview, self.liststore, tmp_dict, groups).next)
-      #self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-      #    tmp_dict, groups)
+      #self.alpm_fill_treestore_with_pkgs_and_grps(self.treeview,\
+      #    self.liststore, tmp_dict, groups)
 
       # }}}
     elif repo == 'not installed':
@@ -3191,8 +3370,8 @@ class gui:
 
       gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
           self.treeview, self.liststore, not_installed, groups).next)
-      #self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-      #    not_installed, groups)
+      #self.alpm_fill_treestore_with_pkgs_and_grps(self.treeview,\
+      #    self.liststore, not_installed, groups)
 
       # }}}
     elif repo == 'last installed':
@@ -3241,8 +3420,8 @@ class gui:
 
       gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
           self.treeview, self.liststore, tmp_dict, groups, repo).next)
-      #self.alpm_fill_treestore_with_pkgs_and_grps(self.liststore,\
-      #    tmp_dict, groups, repo)
+      #self.alpm_fill_treestore_with_pkgs_and_grps(self.treeview,\
+      #    self.liststore, tmp_dict, groups, repo)
       # }}}
 
     self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)

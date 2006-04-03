@@ -929,7 +929,11 @@ the terms of the GNU General Public License'''
   # def alpm_info(self, what = '', repo_name = None): {{{
   def alpm_info(self, what = '', repo_name = None):
     if not repo_name:
-      tuple = self.pkgs[what]['local']
+      print self.pkgs[what]
+      try:
+        tuple = self.pkgs[what]['local']
+      except KeyError:
+        tuple = self.pkgs[what][self.pkgs[what].keys()[0]]
     else:
       if repo_name == 'not installed' or repo_name == 'installed' or\
           repo_name == 'all':
