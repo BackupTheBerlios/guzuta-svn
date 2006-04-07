@@ -1191,8 +1191,13 @@ the terms of the GNU General Public License'''
       upgrades = self.trans.get_syncpackages()
       missed_deps = self.trans.prepare()
     except alpm.TransactionException, inst:
+      self.last_exception = (1, inst)
       self.th_ended_event.set()
-      raise alpm.TransactionException, inst
+      #raise alpm.TransactionException, inst
+    except alpm.UnsatisfiedDependenciesTransactionException, inst:
+      self.last_exception = (2, inst)
+      self.th_ended_event.set()
+      #raise alpm.UnsatisfiedDependenciesTransactionException, inst
 
     self.prev_return = (upgrades, missed_deps)
     self.th_ended_event.set()

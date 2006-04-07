@@ -1,11 +1,17 @@
 0.0.5
 =====
+* checklist:
+  => install a package - X
+  => remove a package - X
+  => install a group -
+  => remove a group -
 * add support for groups
 * add repository and description information to the pkgs treeview
 
 0.0.6
 =====
 
+* make a splash screen showing work being done when starting up
 * implement auto check for new packages AKA alarm
 * Show in a popup the dependencies of a pkg
 * Implement auto updates when minimized to systray

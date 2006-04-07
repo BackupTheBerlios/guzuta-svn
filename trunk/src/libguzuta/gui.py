@@ -1376,18 +1376,29 @@ class gui:
             {'report_hook': self.alpm_urllib_report_hook})
 
         self.alpm_run_in_thread_and_wait(self.shell.alpm_update_databases, {})
-        (upgrades, missed_deps) = self.shell.get_prev_return()
-        #print "GUI: upgrades: ", upgrades
-        #print "GUI: missed_deps: ", missed_deps
-        self.busy_dialog.hide()
+        if self.shell.last_exception[0]:
+          # TODO: present a nice dialog
+          if self.shell.last_exception[0] == 1:
+            print self.shell.last_exception[1]
+            self.busy_dialog.hide()
+            return
+          elif self.shell.last_exception[0] == 2:
+            print self.shell.last_exception[1]
+            self.busy_dialog.hide()
+            return
+        else:
+          (upgrades, missed_deps) = self.shell.get_prev_return()
+          #print "GUI: upgrades: ", upgrades
+          #print "GUI: missed_deps: ", missed_deps
+          self.busy_dialog.hide()
 
-        self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
-        self.current_dialog = self.update_db_popup
-        self.current_dialog_on = True
-        response = self.update_db_popup.run()
+          self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
+          self.current_dialog = self.update_db_popup
+          self.current_dialog_on = True
+          response = self.update_db_popup.run()
 
-        self.update_db_popup.hide()
-        self.current_dialog_on = False
+          self.update_db_popup.hide()
+          self.current_dialog_on = False
       # }}}
 
       # check if pacman is in the upgrades and install it {{{
@@ -2273,17 +2284,28 @@ class gui:
     if where_to_search != None:
       # search local groups
       if where_to_search == 'Name':
-        for repo, repo_list in self.groups_by_repo.iteritems():
+        for grp_repo_name, repo_list in self.groups_by_repo.iteritems():
           for grp_name, grp_packages in repo_list:
             match = regexp.match(grp_name)
             if match:
               if grp_packages == []:
                 break
-              if grp_name in already_seen_groups:
-                iter = already_seen_groups[grp_name]
+
+              found = False
+              try:
+                iter, repo_name = already_seen_groups[grp_name]
+              except KeyError:
+                pass
               else:
-                iter = self.liststore.append(None, [False, grp_name, '', '', repo])
-                already_seen_groups[grp_name] = iter
+                if repo_name == grp_repo_name:
+                  found = True
+
+              #if grp_name in already_seen_groups:
+              if found:
+                iter, repo_name = already_seen_groups[grp_name]
+              else:
+                iter = self.liststore.append(None, [False, grp_name, '', '', grp_repo_name])
+                already_seen_groups[grp_name] = (iter, grp_repo_name)
 
               for pkg_name in grp_packages:
                 already_seen_pkgs[pkg_name] = None
@@ -2348,19 +2370,14 @@ class gui:
       self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
       if self.toggle_handler_id:
-        print 'toggle_handler_id exists'
         if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
-          print 'not connected, connecting'
           self.toggle_handler_id = togglerenderer.connect('toggled',\
             self.toggled, self.liststore)
         else:
-          print 'connected, disconnecting'
           self.togglerenderer.disconnect(self.toggle_handler_id)
-          print 'connecting'
           self.toggle_handler_id = togglerenderer.connect('toggled',\
             self.toggled, self.liststore)
       else:
-        print 'not exists, connecting'
         self.toggle_handler_id = togglerenderer.connect('toggled',\
             self.toggled, self.liststore)
       self.treeview.set_model(self.liststore)
