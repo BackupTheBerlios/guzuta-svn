@@ -574,8 +574,13 @@ class gui:
           if repo_name:
             iter = treestore.append(None, [False, grp_name, '', '', repo_name])
           else:
+            try:
+              repo2 = self.groups[grp_name][0]
+            except KeyError:
+              repo2 = 'local'
+
             iter = treestore.append(None, [False, grp_name, '', '',\
-                groups[grp_name][0]])
+                repo2])
 
           for pkg_name in pkg_names:
             already_visited_pkgs[pkg_name] = None
@@ -599,10 +604,18 @@ class gui:
                   available_version, repo_name])
               yield True
             else:
-              for repo2 in self.pkgs[pkg_name].keys():
-                if repo2 != 'local':
-                  treestore.append(iter, [False, pkg_name, local_version,
-                      available_version, repo2])
+              l = len(self.pkgs[pkg_name].keys())
+
+              if l > 1:
+                for repo2 in self.pkgs[pkg_name].keys():
+                  if repo2 != 'local':
+                    treestore.append(iter, [False, pkg_name, local_version,
+                        available_version, repo2])
+                    local_info = (iter, [False, pkg_name, local_version,
+                        available_version, repo2])
+              else:
+                treestore.append(iter, [False, pkg_name, local_version,
+                    available_version, repo2])
               yield True
       else: # package
         if k not in already_visited_pkgs:
@@ -726,6 +739,7 @@ class gui:
     self.treestore_repos.append(iter0, ['All'])
     self.treestore_repos.append(iter0, ['Installed'])
     self.treestore_repos.append(iter0, ['Not Installed'])
+    self.treestore_repos.append(iter0, ['Groups'])
     #self.treestore_repos.append(iter0, ['Explicitly Installed'])
     #self.treestore_repos.append(iter0, ['Last Installed'])
     #self.treestore_repos.append(iter0, ['Last Uninstalled'])
@@ -3338,6 +3352,17 @@ class gui:
       #self.alpm_fill_treestore_with_pkgs_and_grps(self.treeview,\
       #    self.liststore, tmp_dict, groups, repo)
 
+      # }}}
+    elif repo == 'groups':
+      # groups {{{
+      groups = {}
+
+      for db_name in self.dbs_by_name:
+        grp = self.shell.alpm_get_groups(db_name)
+        groups.update(grp)
+
+      gobject.idle_add(self.alpm_fill_treestore_with_pkgs_and_grps(\
+        self.treeview, self.liststore, {}, groups).next)
       # }}}
     elif repo == 'installed':
       # installed {{{

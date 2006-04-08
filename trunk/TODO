@@ -5,6 +5,8 @@
   => remove a package - X
   => install a group -
   => remove a group -
+* add a 'Groups' to the pseudo repos that when clicked shows all the groups with
+  their packages.
 * add support for groups
 * add repository and description information to the pkgs treeview
 
