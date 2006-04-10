@@ -489,6 +489,11 @@ the terms of the GNU General Public License'''
         self.groups_by_repo[dbname] = []
 
         # get packages
+        try:
+          iter = db.get_package_iterator()
+        except RuntimeError, inst:
+          raise RuntimeError, inst
+
         for pkg in db.get_package_iterator():
           name = pkg.get_name()
           version = pkg.get_version()

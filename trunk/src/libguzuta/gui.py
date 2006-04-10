@@ -116,22 +116,22 @@ class gui:
     
     elif event == alpm.PM_TRANS_EVT_CHECKDEPS_DONE:
       print 'done.'
-      text = 'done.'
+      text = 'done'
       append_text = True
     
     elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_DONE:
       print 'done.'
-      text = 'done.'
+      text = 'done'
       append_text = True
     
     elif event == alpm.PM_TRANS_EVT_RESOLVEDEPS_DONE:
       print 'done.'
-      text = 'done.'
+      text = 'done'
       append_text = True
     
     elif event == alpm.PM_TRANS_EVT_INTERCONFLICTS_DONE:
       print 'done.'
-      text = 'done.'
+      text = 'done'
       append_text = True
     
     elif event == alpm.PM_TRANS_EVT_ADD_START:
@@ -140,7 +140,7 @@ class gui:
     
     elif event == alpm.PM_TRANS_EVT_ADD_DONE:
       print 'done.'
-      text = 'done.'
+      text = 'done'
       append_text = True
 
     elif event == alpm.PM_TRANS_EVT_REMOVE_START:
@@ -149,7 +149,7 @@ class gui:
     
     elif event == alpm.PM_TRANS_EVT_REMOVE_DONE:
       print 'done.'
-      text = 'done.'
+      text = 'done'
       append_text = True
     
     elif event == alpm.PM_TRANS_EVT_UPGRADE_START:
@@ -158,7 +158,7 @@ class gui:
     
     elif event == alpm.PM_TRANS_EVT_UPGRADE_DONE:
       print 'done.'
-      text = 'done.'
+      text = 'done'
       append_text = True
 
     self.current_fraction = self.current_fraction + self.fraction_increment
@@ -1577,6 +1577,7 @@ class gui:
   def alpm_install_targets(self, targets, repo = None):
     # TODO: check if there's something searched for or a repo selected, and
     # update the pkg_treeview accordingly
+    print 'installing %s targets' % len(targets)
     self.busy_status_label = self.all_widgets.get_widget('busy_status_label')
     number_pkgs_to_download =\
       self.alpm_get_number_of_packages_to_download(targets)
@@ -1590,6 +1591,9 @@ class gui:
     self.are_you_sure_treeview =\
         self.all_widgets.get_widget('pkgs_treeview')
 
+    if not self.are_you_sure_treeview:
+      print 'self.are_you_sure_treeview == None????'
+      return
     liststore = gtk.ListStore('gchararray')
 
     print self.are_you_sure_treeview
@@ -2029,6 +2033,7 @@ class gui:
   def alpm_remove_targets(self, targets):
     # TODO: check if there's something searched for or a repo selected, and
     # update the pkg_treeview accordingly
+    print 'removing %d packages' % len(targets)
     self.fraction_increment = (1.0 / (2 + 2 * len(targets)))
     self.current_fraction = 0.0
 
@@ -2284,8 +2289,14 @@ class gui:
     self.treeview.append_column(repositorycolumn)
     # }}}
 
+    regexp_text = self.search_entry.get_text()
+    if regexp_text[0] == '*':
+      regexp_text = '.' + regexp_text
+    if regexp_text[len(regexp_text) - 1] == '*':
+      regexp_text += '.'
+    #print 'REGEXP_TEXT <\'%s\'>' % regexp_text
     try:
-      regexp = re.compile(self.search_entry.get_text())
+      regexp = re.compile(regexp_text)
     except sre_constants.error:
       pass
     search_combobox = self.all_widgets.get_widget('search_combobox')
@@ -3191,8 +3202,12 @@ class gui:
 
   # def populate_pkgs_by_repo(self): {{{
   def populate_pkgs_by_repo(self):
-    (self.pkgs_by_repo, self.pkgs, self.groups, self.groups_by_repo) =\
-        self.shell.alpm_repofiles2()
+    try:
+      (self.pkgs_by_repo, self.pkgs, self.groups, self.groups_by_repo) =\
+          self.shell.alpm_repofiles2()
+    except RuntimeError, inst:
+      print inst
+      return
   # }}}
 
   # def populate_pkg_lists2(self): {{{
@@ -3483,12 +3498,12 @@ class gui:
     names = []
     has_children = False
     for row in tree_model:
-      if row[0]:
-        for child_row in row.iterchildren():
+      for child_row in row.iterchildren():
+        if child_row[0]:
           has_children = True
           names.append(child_row[1])
-        if not has_children:
-          names.append(row[1])
+      if not has_children and row[0]:
+        names.append(row[1])
 
     return names
   # }}}
