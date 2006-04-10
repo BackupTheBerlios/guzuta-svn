@@ -81,6 +81,7 @@ class gui:
     else:
       t = text
     progress_bar.set_text(t)
+    print 'setting fraction ', frac
     progress_bar.set_fraction(frac)
     gtk.gdk.threads_leave()
     return False
@@ -409,7 +410,7 @@ class gui:
     guzuta_debug = alpm.PM_LOG_WARNING | alpm.PM_LOG_FLOW1 | alpm.PM_LOG_FLOW2\
         | alpm.PM_LOG_DEBUG | alpm.PM_LOG_ERROR | alpm.PM_LOG_FUNCTION
     #guzuta_debug = 0xFF
-    guzuta_debug = alpm.PM_LOG_WARNING | alpm.PM_LOG_ERROR
+    #guzuta_debug = alpm.PM_LOG_WARNING | alpm.PM_LOG_ERROR
     self.shell = shell(command_line = None, lock = self.lock,\
         debug = guzuta_debug,
         interactive = True)
@@ -1391,15 +1392,18 @@ class gui:
             {'report_hook': self.alpm_urllib_report_hook})
 
         self.alpm_run_in_thread_and_wait(self.shell.alpm_update_databases, {})
-        if self.shell.last_exception[0]:
+
+        if self.shell.last_exception and self.shell.last_exception[0]:
           # TODO: present a nice dialog
           if self.shell.last_exception[0] == 1:
             print self.shell.last_exception[1]
             self.busy_dialog.hide()
+            self.shell.alpm_transaction_release()
             return
           elif self.shell.last_exception[0] == 2:
             print self.shell.last_exception[1]
             self.busy_dialog.hide()
+            self.shell.alpm_transaction_release()
             return
         else:
           (upgrades, missed_deps) = self.shell.get_prev_return()
@@ -1414,6 +1418,7 @@ class gui:
 
           self.update_db_popup.hide()
           self.current_dialog_on = False
+          self.shell.alpm_transaction_release()
       # }}}
 
       # check if pacman is in the upgrades and install it {{{
@@ -1762,6 +1767,8 @@ class gui:
     tmp = len(targets) + len(depends)
     old_increment = self.fraction_increment
     self.fraction_increment = 1.0 / (6 + (2 * tmp))
+    self.current_fraction = self.current_fraction - ((tmp - len(targets)) *
+        self.fraction_increment)
 
     self.busy_progress_bar3.set_fraction(self.current_fraction)
 
@@ -2139,6 +2146,8 @@ class gui:
       t = self.shell.alpm_transaction_get_sync_packages()
 
       self.fraction_increment = 1.0 / (2 + 2 * len(t))
+      self.current_fraction = self.current_fraction - ((len(t) - len(targets)) *
+          self.fraction_increment)
       
       # Step 3: actually perform the removal
       self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_commit, {})
