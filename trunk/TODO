@@ -1,10 +1,5 @@
 0.0.5
 =====
-* checklist:
-  => install a package - X
-  => remove a package - X
-  => install a group -
-  => remove a group -
 * add repository and description information to the pkgs treeview
 
 0.0.6

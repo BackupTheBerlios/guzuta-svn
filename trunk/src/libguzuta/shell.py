@@ -1140,6 +1140,11 @@ the terms of the GNU General Public License'''
       self.trans = self.alpm.transaction_init(type, flags, cb_event)
   # }}}
 
+  # def alpm_transaction_get_targets(self): {{{
+  def alpm_transaction_get_targets(self):
+    return self.trans.get_targets()
+  # }}}
+
   # def alpm_refresh_dbs(self, report_hook = None): {{{
   def alpm_refresh_dbs(self, report_hook = None):
     for pmc in self.pmc_syncs:

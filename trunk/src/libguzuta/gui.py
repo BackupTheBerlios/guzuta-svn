@@ -409,6 +409,7 @@ class gui:
     guzuta_debug = alpm.PM_LOG_WARNING | alpm.PM_LOG_FLOW1 | alpm.PM_LOG_FLOW2\
         | alpm.PM_LOG_DEBUG | alpm.PM_LOG_ERROR | alpm.PM_LOG_FUNCTION
     #guzuta_debug = 0xFF
+    guzuta_debug = alpm.PM_LOG_WARNING | alpm.PM_LOG_ERROR
     self.shell = shell(command_line = None, lock = self.lock,\
         debug = guzuta_debug,
         interactive = True)
@@ -1577,11 +1578,11 @@ class gui:
   def alpm_install_targets(self, targets, repo = None):
     # TODO: check if there's something searched for or a repo selected, and
     # update the pkg_treeview accordingly
-    print 'installing %s targets' % len(targets)
     self.busy_status_label = self.all_widgets.get_widget('busy_status_label')
     number_pkgs_to_download =\
       self.alpm_get_number_of_packages_to_download(targets)
 
+    # TODO: figure this out, for good
     self.fraction_increment = 1.0 / (6 + 2 * len(targets))
     self.current_fraction = 0.0
 
@@ -1591,12 +1592,8 @@ class gui:
     self.are_you_sure_treeview =\
         self.all_widgets.get_widget('pkgs_treeview')
 
-    if not self.are_you_sure_treeview:
-      print 'self.are_you_sure_treeview == None????'
-      return
     liststore = gtk.ListStore('gchararray')
 
-    print self.are_you_sure_treeview
     cols = self.are_you_sure_treeview.get_columns()
     if cols == []:
       textrenderer = gtk.CellRendererText()
@@ -2033,7 +2030,7 @@ class gui:
   def alpm_remove_targets(self, targets):
     # TODO: check if there's something searched for or a repo selected, and
     # update the pkg_treeview accordingly
-    print 'removing %d packages' % len(targets)
+    # TODO: figure this out, for good
     self.fraction_increment = (1.0 / (2 + 2 * len(targets)))
     self.current_fraction = 0.0
 
@@ -2070,7 +2067,7 @@ class gui:
 
     self.current_dialog_on = True
     response = pkg_are_you_sure_dialog.run()
-    pkg_are_you_sure_dialog.destroy()
+    pkg_are_you_sure_dialog.hide()
     
     self.current_dialog_on = False
 
@@ -2138,6 +2135,11 @@ class gui:
           self.shell.last_exception = None
           return
 
+      #t = self.shell.alpm_transaction_get_targets()
+      t = self.shell.alpm_transaction_get_sync_packages()
+
+      self.fraction_increment = 1.0 / (2 + 2 * len(t))
+      
       # Step 3: actually perform the removal
       self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_commit, {})
       if self.shell.last_exception:
@@ -2294,7 +2296,6 @@ class gui:
       regexp_text = '.' + regexp_text
     if regexp_text[len(regexp_text) - 1] == '*':
       regexp_text += '.'
-    #print 'REGEXP_TEXT <\'%s\'>' % regexp_text
     try:
       regexp = re.compile(regexp_text)
     except sre_constants.error:
