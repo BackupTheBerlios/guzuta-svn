@@ -1198,8 +1198,6 @@ the terms of the GNU General Public License'''
       # TODO: run this in thread and display the busy_dialog &
       # busy_progress_bar3
       self.trans.sysupgrade()
-      upgrades = self.trans.get_syncpackages()
-      missed_deps = self.trans.prepare()
     except alpm.TransactionException, inst:
       self.last_exception = (1, inst)
       self.th_ended_event.set()
@@ -1208,9 +1206,12 @@ the terms of the GNU General Public License'''
       self.last_exception = (2, inst)
       self.th_ended_event.set()
       #raise alpm.UnsatisfiedDependenciesTransactionException, inst
+    else:
+      upgrades = self.trans.get_syncpackages()
+      missed_deps = self.trans.prepare()
+      self.prev_return = (upgrades, missed_deps)
+      self.th_ended_event.set()
 
-    self.prev_return = (upgrades, missed_deps)
-    self.th_ended_event.set()
     return
   # }}}
 

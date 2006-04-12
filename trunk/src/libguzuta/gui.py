@@ -1372,6 +1372,7 @@ class gui:
 
   # def on_update_db_clicked(self, button, skip_update_db = False): {{{
   def on_update_db_clicked(self, button, skip_update_db = False):
+    self.upgrades = None
     if button == self.update_db:
       self.init_transaction = False
 
@@ -1407,8 +1408,9 @@ class gui:
             return
         else:
           (upgrades, missed_deps) = self.shell.get_prev_return()
-          #print "GUI: upgrades: ", upgrades
-          #print "GUI: missed_deps: ", missed_deps
+          print "GUI: upgrades: ", upgrades
+          print "GUI: missed_deps: ", missed_deps
+          self.upgrades = upgrades
           self.busy_dialog.hide()
 
           self.update_db_popup = self.all_widgets.get_widget('update_db_popup')
@@ -1418,7 +1420,7 @@ class gui:
 
           self.update_db_popup.hide()
           self.current_dialog_on = False
-          self.shell.alpm_transaction_release()
+          #self.shell.alpm_transaction_release()
       # }}}
 
       # check if pacman is in the upgrades and install it {{{
@@ -1497,8 +1499,6 @@ class gui:
 
           upgrades = self.get_all_selected_packages(l)
 
-          print 'upgrades: ', upgrades
-          print 'missed deps: ', missed_deps
           self.shell.alpm_transaction_release()
           self.busy_status_label.set_markup('<i>Please wait...</i>')
           if missed_deps == None:
