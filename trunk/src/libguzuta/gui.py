@@ -81,7 +81,7 @@ class gui:
     else:
       t = text
     progress_bar.set_text(t)
-    print 'setting fraction ', frac
+    #print 'setting fraction ', frac
     progress_bar.set_fraction(frac)
     gtk.gdk.threads_leave()
     return False
@@ -247,6 +247,8 @@ class gui:
     gtk.gdk.threads_init()
     self.th = None
     self.prev_return = None
+
+    self.column_selected = False
 
     self.dialog_ended_event = threading.Event()
     self.dialog_ended_event.clear()
@@ -477,6 +479,15 @@ class gui:
     gtk.main()
   # }}}
   
+  # def on_treeview_column_clicked(self, treeviewcolumn, liststore): {{{
+  def on_treeview_column_clicked(self, treeviewcolumn, store):
+    self.column_selected = not self.column_selected
+    
+    for row in store:
+      store[row.path][0] = self.column_selected
+    return True
+  # }}}
+
   # def run_in_thread(self, method, args_dict, wait=False): {{{
   def run_in_thread(self, method, args_dict, wait=False):
     self.th = threading.Thread(target=method, kwargs=args_dict)
@@ -664,10 +675,11 @@ class gui:
     self.treeview.set_model(self.liststore)
   # }}}
   
-  # def __setup_pkg_treeview_no_fill__(self): {{{
-  def __setup_pkg_treeview_no_fill__(self):
-    self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
-        'gchararray', 'gchararray')
+  # def __setup_pkg_treeview_no_fill__(self, store = None): {{{
+  def __setup_pkg_treeview_no_fill__(self, store = None):
+    if not store:
+      self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
+          'gchararray', 'gchararray')
 
     self.textrenderer = gtk.CellRendererText()
     self.togglerenderer = gtk.CellRendererToggle()
@@ -692,6 +704,9 @@ class gui:
     #self.emptycolumn.set_sort_column_id(0)
     self.emptycolumn.pack_start(self.togglerenderer)
     self.emptycolumn.set_attributes(self.togglerenderer, active=0)
+    self.emptycolumn.set_clickable(True)
+    self.emptycolumn.connect('clicked', self.on_treeview_column_clicked,\
+        self.liststore)
     
     self.namecolumn = gtk.TreeViewColumn('Name')
     self.namecolumn.set_sort_column_id(1)
@@ -2284,6 +2299,8 @@ class gui:
     #emptycolumn.set_sort_column_id(0)
     emptycolumn.pack_start(togglerenderer)
     emptycolumn.set_attributes(togglerenderer, active=0)
+    emptycolumn.set_clickable(True)
+    emptycolumn.connect('clicked', self.on_treeview_column_clicked, self.liststore)
     
     repositorycolumn = gtk.TreeViewColumn('Repository')
     repositorycolumn.set_sort_column_id(4)
@@ -3359,11 +3376,22 @@ class gui:
 
   # def __fill_treeview_with_pkgs_from_repo__(self, repo): {{{
   def __fill_treeview_with_pkgs_from_repo__(self, repo):
-    self.treeview.set_model(None) # unsetting model to speed things up
-    self.__setup_pkg_treeview_no_fill__()
+    #print self.treeview.get_model()
 
+    # unselect the previous store
+    store = self.treeview.get_model()
+
+    for row in store:
+      for child_row in row.iterchildren():
+        store[child_row.path][0] = False
+      store[row.path][0] = False
+      
+    self.column_selected = False
+    self.treeview.set_model(None) # unsetting model to speed things up
     self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
         'gchararray', 'gchararray')
+
+    self.__setup_pkg_treeview_no_fill__(self.liststore)
 
     if self.toggle_handler_id:
       if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
