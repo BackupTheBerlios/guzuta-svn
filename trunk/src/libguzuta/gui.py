@@ -688,8 +688,8 @@ class gui:
     for column in self.treeview.get_columns():
       self.treeview.remove_column(column)
 
-    self.emptycolumn = gtk.TreeViewColumn('Selected')
-    self.emptycolumn.set_sort_column_id(0)
+    self.emptycolumn = gtk.TreeViewColumn('')
+    #self.emptycolumn.set_sort_column_id(0)
     self.emptycolumn.pack_start(self.togglerenderer)
     self.emptycolumn.set_attributes(self.togglerenderer, active=0)
     
@@ -1493,6 +1493,7 @@ class gui:
         
         fresh_updates_installed = False
         
+        print '============> GFDGDGFDGFD: ', (response == gtk.RESPONSE_OK)
         if response == gtk.RESPONSE_OK:
           if self.init_transaction:
             self.init_transaction = False
@@ -1502,16 +1503,20 @@ class gui:
           self.shell.alpm_transaction_release()
           self.busy_status_label.set_markup('<i>Please wait...</i>')
           if missed_deps == None:
-            self.alpm_install_targets(upgrades)
+            ret = self.alpm_install_targets(upgrades)
           else:
-            self.alpm_install_targets(upgrades + missed_deps)
+            ret = self.alpm_install_targets(upgrades + missed_deps)
 
-          updates_text = ''
+          if ret:
+            updates_text = ''
 
-          for upgrade in upgrades:
-            updates_text = updates_text + ' ' + upgrade
-          fresh_updates_installed = True  
+            for upgrade in upgrades:
+              updates_text = updates_text + ' ' + upgrade
+            fresh_updates_installed = True  
+          else:
+            return
         else:
+          print '============> else!!!'
           if self.init_transaction:
             self.shell.alpm_transaction_release()
             self.init_transaction = False
@@ -1522,7 +1527,7 @@ class gui:
         for pkg_name in updates:
           info = self.shell.alpm_info(pkg_name)
           self.remote_pkg_info[pkg_name] = info
-        
+        print '===========> estou aqui'
         if fresh_updates_installed:
           self.__add_pkg_info_to_local_pkgs__(updates)
           
@@ -1627,7 +1632,7 @@ class gui:
     pkg_are_you_sure_dialog.hide()
 
     if response == gtk.RESPONSE_CANCEL:
-      return
+      return False
 
     self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
     self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
@@ -1645,7 +1650,7 @@ class gui:
       if not ret:
         self.shell.alpm_transaction_release()
         self.busy_dialog.hide()
-        return
+        return False
 
     # Step 2: compute the transaction
     #try:
@@ -1698,7 +1703,7 @@ class gui:
 
         self.shell.alpm_transaction_release()
         self.busy_dialog.hide()
-        return
+        return False
       elif self.shell.last_exception[0] == 4:
         # alpm.ConflictingFilesTransactionException
         conflict_list = self.shell.last_exception[1]
@@ -1726,7 +1731,7 @@ class gui:
 
         self.shell.alpm_transaction_release()
         self.busy_dialog.hide()
-        return
+        return False
 
     self.busy_dialog.show_all()
     packages = self.shell.alpm_transaction_get_sync_packages()
@@ -1831,7 +1836,7 @@ class gui:
 
     if response == gtk.RESPONSE_CANCEL:
       self.busy_dialog.hide()
-      return
+      return False
 
     # group sync records by repository and download
     root_dir = self.shell.alpm.get_root()
@@ -1984,7 +1989,7 @@ class gui:
         if cleanup:
           for f in files:
             os.unlink(f)
-        return
+        return False
       #except RuntimeError, inst:
       elif self.shell.last_exception[0] == 3:
         # RuntimeError
@@ -2004,7 +2009,7 @@ class gui:
         if cleanup:
           for f in files:
             os.unlink(f)
-        return
+        return False
 
     list = [syncpkg.get_package().get_name() for syncpkg in packages]
 
@@ -2019,7 +2024,7 @@ class gui:
     if cleanup:
       for f in files:
         os.unlink(f)
-    return
+    return True
   # }}}
 
   # def on_install_pkg_clicked(self, button): {{{
@@ -2268,8 +2273,8 @@ class gui:
     for col in self.treeview.get_columns():
       self.treeview.remove_column(col)
 
-    emptycolumn = gtk.TreeViewColumn('Selected')
-    emptycolumn.set_sort_column_id(0)
+    emptycolumn = gtk.TreeViewColumn('')
+    #emptycolumn.set_sort_column_id(0)
     emptycolumn.pack_start(togglerenderer)
     emptycolumn.set_attributes(togglerenderer, active=0)
     

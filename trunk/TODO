@@ -1,10 +1,13 @@
 0.0.5
 =====
-* add repository and description information to the pkgs treeview
+* add package name and a little description (N chars) like in the Add dialog in the gnome panel
+  (with pango markup), instead of a column with description
+* add repository information to the pkgs treeview
 
 0.0.6
 =====
-
+* add icons and stuff to pkg lists and something like that (this is done with
+  two cellrenderers per column)
 * make a splash screen showing work being done when starting up
 * implement auto check for new packages AKA alarm
 * Show in a popup the dependencies of a pkg
