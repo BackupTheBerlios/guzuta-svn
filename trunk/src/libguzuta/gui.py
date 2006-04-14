@@ -1380,8 +1380,16 @@ class gui:
       self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
       self.busy_status_label = self.all_widgets.get_widget('busy_status_label')
       self.busy_progress_bar3.set_text('')
-      self.busy_progress_bar3.set_fraction(0.0)
+      self.current_fraction = 0.0
+      self.fraction_increment = 1 / (1.0 + (2.0 * 2.0))
+      #self.busy_progress_bar3.set_fraction(0.0)
       self.busy_dialog.show_now()
+
+      self.current_fraction = self.current_fraction + self.fraction_increment
+      print 'frac: ', self.current_fraction
+      gobject.idle_add(self.alpm_progress_bar_set_text_and_fraction,\
+          self.busy_progress_bar3, 'Downloading databases...',\
+          False, self.current_fraction)
 
       # update the databases {{{
       if not skip_update_db:
@@ -1392,7 +1400,9 @@ class gui:
         self.alpm_run_in_thread_and_wait(self.shell.alpm_refresh_dbs,
             {'report_hook': self.alpm_urllib_report_hook})
 
-        self.alpm_run_in_thread_and_wait(self.shell.alpm_update_databases, {})
+        self.alpm_run_in_thread_and_wait(self.shell.alpm_update_databases,\
+            {'flags': 0, 'cb_ev': self.gui_trans_cb_ev,\
+            'cb_conv': self.gui_trans_cb_conv})
 
         if self.shell.last_exception and self.shell.last_exception[0]:
           # TODO: present a nice dialog
@@ -1493,7 +1503,6 @@ class gui:
         
         fresh_updates_installed = False
         
-        print '============> GFDGDGFDGFD: ', (response == gtk.RESPONSE_OK)
         if response == gtk.RESPONSE_OK:
           if self.init_transaction:
             self.init_transaction = False
@@ -1516,7 +1525,6 @@ class gui:
           else:
             return
         else:
-          print '============> else!!!'
           if self.init_transaction:
             self.shell.alpm_transaction_release()
             self.init_transaction = False
@@ -1527,7 +1535,6 @@ class gui:
         for pkg_name in updates:
           info = self.shell.alpm_info(pkg_name)
           self.remote_pkg_info[pkg_name] = info
-        print '===========> estou aqui'
         if fresh_updates_installed:
           self.__add_pkg_info_to_local_pkgs__(updates)
           

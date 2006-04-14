@@ -1182,8 +1182,8 @@ the terms of the GNU General Public License'''
       raise Exception, inst
   # }}}
 
-  # def alpm_update_databases(self): {{{
-  def alpm_update_databases(self):
+  # def alpm_update_databases(self, flags, cb_ev, cb_conv): {{{
+  def alpm_update_databases(self, flags, cb_ev, cb_conv):
     self.prev_return = None
     root = self.alpm.get_root()
     dbpath = self.alpm.get_db_path()
@@ -1191,8 +1191,7 @@ the terms of the GNU General Public License'''
     missed_deps = []
     packages = []
 
-    self.alpm_transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0, trans_cb_ev,\
-        trans_cb_conv)
+    self.alpm_transaction_init(alpm.PM_TRANS_TYPE_SYNC, flags, cb_ev, cb_conv)
 
     try:
       # TODO: run this in thread and display the busy_dialog &
@@ -1274,8 +1273,8 @@ the terms of the GNU General Public License'''
     return self.trans.get_syncpackages()
   # }}}
 
-  # def alpm_install_pkg_from_files(self, path_list): {{{
-  def alpm_install_pkg_from_files(self, path_list):
+  # def alpm_install_pkg_from_files(self, path_list, cb_ev, cb_conv): {{{
+  def alpm_install_pkg_from_files(self, path_list, cb_ev, cb_conv):
     self.prev_return = None
     error = ''
     if path_list == [] or None:
@@ -1283,7 +1282,7 @@ the terms of the GNU General Public License'''
       return
     
     self.alpm_transaction_init(alpm.PM_TRANS_TYPE_UPGRADE,\
-        alpm.PM_TRANS_FLAG_RECURSE, trans_cb_ev, trans_cb_conv)
+        alpm.PM_TRANS_FLAG_RECURSE, cb_ev, cb_conv)
 
     for path in path_list:
       self.alpm_transaction_add_target(path)
