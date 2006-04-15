@@ -1415,6 +1415,7 @@ class gui:
         self.alpm_run_in_thread_and_wait(self.shell.alpm_refresh_dbs,
             {'report_hook': self.alpm_urllib_report_hook})
 
+        self.busy_status_label.set_markup('<i>Please wait...</i>')
         self.alpm_run_in_thread_and_wait(self.shell.alpm_update_databases,\
             {'flags': 0, 'cb_ev': self.gui_trans_cb_ev,\
             'cb_conv': self.gui_trans_cb_conv})
@@ -1468,13 +1469,17 @@ class gui:
       # }}}
 
       # setup the dialog querying the user for packages to install {{{
-      fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog2')
+      #fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog2')
+      fresh_updates_dialog = self.all_widgets.get_widget('fresh_updates_dialog3')
       self.current_dialog = fresh_updates_dialog
       fresh_updates_label = self.all_widgets.get_widget('fresh_updates_label')
 
+      #fresh_updates_treeview =\
+      #  self.all_widgets.get_widget('fresh_updates_treeview')
       fresh_updates_treeview =\
-        self.all_widgets.get_widget('fresh_updates_treeview')
-      l = gtk.ListStore('gboolean', 'gchararray', 'gchararray')
+        self.all_widgets.get_widget('fresh_updates_treeview2')
+      #l = gtk.ListStore('gboolean', 'gchararray', 'gchararray')
+      l = gtk.ListStore('gboolean', 'gchararray')
 
       textrenderer = gtk.CellRendererText()
       togglerenderer = gtk.CellRendererToggle()
@@ -1483,31 +1488,47 @@ class gui:
       togglerenderer.connect('toggled', self.toggled, l)
 
       if fresh_updates_treeview.get_columns() == []:
-        selectedcolumn = gtk.TreeViewColumn('Update')
-        selectedcolumn.set_sort_column_id(0)
+        selectedcolumn = gtk.TreeViewColumn('')
+        #selectedcolumn.set_sort_column_id(0)
         selectedcolumn.pack_start(togglerenderer)
         selectedcolumn.set_attributes(togglerenderer, active=0)
         
-        namecolumn = gtk.TreeViewColumn('Name')
-        namecolumn.set_sort_column_id(1)
-        namecolumn.pack_start(textrenderer)
-        namecolumn.set_attributes(textrenderer, text=1)
+        namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=1)
+        #namecolumn.set_sort_column_id(1)
+        #namecolumn.pack_start(textrenderer)
+        #namecolumn.set_attributes(textrenderer, text=1)
 
-        repocolumn = gtk.TreeViewColumn('Repository')
-        repocolumn.set_sort_column_id(2)
-        repocolumn.pack_start(textrenderer)
-        repocolumn.set_attributes(textrenderer, text=2)
+        #repocolumn = gtk.TreeViewColumn('Repository')
+        ##repocolumn.set_sort_column_id(2)
+        #repocolumn.pack_start(textrenderer)
+        #repocolumn.set_attributes(textrenderer, text=2)
 
         fresh_updates_treeview.append_column(selectedcolumn)
         fresh_updates_treeview.append_column(namecolumn)
-        fresh_updates_treeview.append_column(repocolumn)
+        #fresh_updates_treeview.append_column(repocolumn)
       # }}}
 
       if upgrades != []:
+        import cgi
         for update in upgrades:
-          pkg_name = update.get_package().get_name()
-          repo = update.get_package().get_database().get_tree_name()
-          l.append([False, pkg_name, repo])
+          pkg = update.get_package()
+          pkg_name = cgi.escape(pkg.get_name())
+          pkg_ver = cgi.escape(pkg.get_version())
+          pkg_desc = pkg.get_description()
+
+          if len(pkg_desc) > 40:
+            pkg_desc = pkg_desc[:40]
+            pkg_desc+= '...'
+          pkg_desc = cgi.escape(pkg_desc)
+          repo = pkg.get_database().get_tree_name()
+
+          #print 'name \'%s\' ver \'%s\' \'%s\'' % (pkg_name, pkg_ver, pkg_desc)
+          text = '<big><b>%s</b> - %s - <i>%s</i></big>\n<i>%s</i>' % (pkg_name, pkg_ver,\
+              repo, pkg_desc)
+          #text = cgi.escape(text)
+          #print 'appending \'%s\'' % text
+          #l.append([False, text, repo])
+          l.append([False, text])
         
         fresh_updates_treeview.set_model(l)
 
@@ -1713,12 +1734,12 @@ class gui:
         conflicts_error_label =\
           self.all_widgets.get_widget('conflicts_error_label')
 
-        str = ''
+        string = ''
         for conflict in conflict_list.args[0]:
-          str = str + ('%s: conflicts with %s' % (conflict.get_target(),
+          string = string + ('%s: conflicts with %s' % (conflict.get_target(),
             conflict.get_name()))
 
-        conflicts_error_label.set_text(str)
+        conflicts_error_label.set_text(string)
 
         conflicts_error_dialog.run()
         conflicts_error_dialog.hide()
@@ -1735,19 +1756,19 @@ class gui:
         conflicts_error_label =\
           self.all_widgets.get_widget('conflicts_error_label')
 
-        str = ''
+        string = ''
         for conflict in conflict_list.args[0]:
           conf_type = conflict.get_type()
 
           if conf_type == alpm.PM_CONFLICT_TYPE_TARGET:
-            str = str + '%s exists in \"%s\" (target) and \" %s\" (target)\n' %\
+            string = string + '%s exists in \"%s\" (target) and \" %s\" (target)\n' %\
                 (conflict.get_file(), conflict.get_target(),
                     conflict.get_conflict_target())
           elif conf_type == alpm.PM_CONFLICT_TYPE_FILE:
-            str = str + '%s: %s exists in filesystem\n' % (conflict.get_target(),
+            string = string + '%s: %s exists in filesystem\n' % (conflict.get_target(),
                 conflict.get_file())
 
-        conflicts_error_label.set_text(str)
+        conflicts_error_label.set_text(string)
         conflicts_error_dialog.run()
         conflicts_error_dialog.hide()
 
@@ -1783,8 +1804,8 @@ class gui:
 
       pkgname = pkg.get_name()
       pkgver = pkg.get_version()
-      str = '%s-%s' % (pkgname, pkgver)
-      to_install.append(str)
+      string = '%s-%s' % (pkgname, pkgver)
+      to_install.append(string)
 
     depends = []
     for spkg in packages:
@@ -1800,58 +1821,94 @@ class gui:
     self.busy_progress_bar3.set_fraction(self.current_fraction)
 
     install_remove_pkgs_dialog =\
-      self.all_widgets.get_widget('install_remove_pkgs_dialog')
-    #to_remove_label = self.all_widgets.get_widget('to_remove_label')
-    #to_install_label = self.all_widgets.get_widget('to_install_label')
-    to_remove_treeview = self.all_widgets.get_widget('to_remove_treeview')
-    to_install_treeview = self.all_widgets.get_widget('to_install_treeview')
+      self.all_widgets.get_widget('install_remove_pkgs_dialog2')
 
-    if to_remove_treeview.get_columns() == [] and\
-        to_install_treeview.get_columns() == []:
+    install_remove_treeview =\
+      self.all_widgets.get_widget('install_remove_treeview2')
+
+    if install_remove_treeview.get_columns() == []:
       textrenderer = gtk.CellRendererText()
-      namecolumn = gtk.TreeViewColumn('Name')
-      namecolumn.set_sort_column_id(0)
-      namecolumn.pack_start(textrenderer)
-      namecolumn.set_attributes(textrenderer, text=0)
-      
-      namecolumn2 = gtk.TreeViewColumn('Name')
-      namecolumn2.set_sort_column_id(0)
-      namecolumn2.pack_start(textrenderer)
-      namecolumn2.set_attributes(textrenderer, text=0)
+      namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=0)
 
-      versioncolumn = gtk.TreeViewColumn('Version')
-      versioncolumn.set_sort_column_id(1)
-      versioncolumn.pack_start(textrenderer)
-      versioncolumn.set_attributes(textrenderer, text=1)
-
-      versioncolumn2 = gtk.TreeViewColumn('Version')
-      versioncolumn2.set_sort_column_id(1)
-      versioncolumn2.pack_start(textrenderer)
-      versioncolumn2.set_attributes(textrenderer, text=1)
-
-      to_remove_treeview.append_column(namecolumn)
-      to_remove_treeview.append_column(versioncolumn)
-      to_install_treeview.append_column(namecolumn2)
-      to_install_treeview.append_column(versioncolumn2)
-
-    to_remove_liststore = gtk.ListStore('gchararray', 'gchararray')
-    to_install_liststore = gtk.ListStore('gchararray', 'gchararray')
-
-    # fill to_remove_treeview
+      install_remove_treeview.append_column(namecolumn)
+    store = gtk.ListStore(str)
+    
+    import cgi
+    store.append(['<big><b>Remove</b></big>'])
     for (pkg_name, pkg_ver) in to_remove:
-      to_remove_liststore.append([pkg_name, pkg_ver])
+      text = '<b>%s</b>\n%s' % (pkg_name, pkg_ver)
+      text = cgi.escape(text)
+      store.append([text])
 
-    # fill to_install_treeview
+    store.append(['<big><b>Install</b></big>'])
     for pkg_str in to_install:
-      #print 'PKG_STR: <%s> '  % pkg_str
       pkg_str2 = pkg_str[:pkg_str.rindex('-')]
 
       pkg_name = pkg_str2[:pkg_str2.rindex('-')]
       pkg_ver = pkg_str[pkg_str[:pkg_str.rindex('-')].rindex('-')+1:]
-      to_install_liststore.append([pkg_name, pkg_ver])
 
-    to_remove_treeview.set_model(to_remove_liststore)
-    to_install_treeview.set_model(to_install_liststore)
+      text = '<b>%s</b>\n%s' % (pkg_name, pkg_ver)
+      text = cgi.escape(text)
+      store.append([text])
+
+    install_remove_treeview.set_model(store)
+
+    # BACKUP {{{
+    #install_remove_pkgs_dialog =\
+    #  self.all_widgets.get_widget('install_remove_pkgs_dialog')
+    #to_remove_label = self.all_widgets.get_widget('to_remove_label')
+    #to_install_label = self.all_widgets.get_widget('to_install_label')
+
+    #to_remove_treeview = self.all_widgets.get_widget('to_remove_treeview')
+    #to_install_treeview = self.all_widgets.get_widget('to_install_treeview')
+
+    #if to_remove_treeview.get_columns() == [] and\
+    #    to_install_treeview.get_columns() == []:
+    #  textrenderer = gtk.CellRendererText()
+    #  namecolumn = gtk.TreeViewColumn('Name')
+    #  namecolumn.set_sort_column_id(0)
+    #  namecolumn.pack_start(textrenderer)
+    #  namecolumn.set_attributes(textrenderer, text=0)
+    #  
+    #  namecolumn2 = gtk.TreeViewColumn('Name')
+    #  namecolumn2.set_sort_column_id(0)
+    #  namecolumn2.pack_start(textrenderer)
+    #  namecolumn2.set_attributes(textrenderer, text=0)
+
+    #  versioncolumn = gtk.TreeViewColumn('Version')
+    #  versioncolumn.set_sort_column_id(1)
+    #  versioncolumn.pack_start(textrenderer)
+    #  versioncolumn.set_attributes(textrenderer, text=1)
+
+    #  versioncolumn2 = gtk.TreeViewColumn('Version')
+    #  versioncolumn2.set_sort_column_id(1)
+    #  versioncolumn2.pack_start(textrenderer)
+    #  versioncolumn2.set_attributes(textrenderer, text=1)
+
+    #  to_remove_treeview.append_column(namecolumn)
+    #  to_remove_treeview.append_column(versioncolumn)
+    #  to_install_treeview.append_column(namecolumn2)
+    #  to_install_treeview.append_column(versioncolumn2)
+
+    #to_remove_liststore = gtk.ListStore('gchararray', 'gchararray')
+    #to_install_liststore = gtk.ListStore('gchararray', 'gchararray')
+
+    ## fill to_remove_treeview
+    #for (pkg_name, pkg_ver) in to_remove:
+    #  to_remove_liststore.append([pkg_name, pkg_ver])
+
+    ## fill to_install_treeview
+    #for pkg_str in to_install:
+    #  #print 'PKG_STR: <%s> '  % pkg_str
+    #  pkg_str2 = pkg_str[:pkg_str.rindex('-')]
+
+    #  pkg_name = pkg_str2[:pkg_str2.rindex('-')]
+    #  pkg_ver = pkg_str[pkg_str[:pkg_str.rindex('-')].rindex('-')+1:]
+    #  to_install_liststore.append([pkg_name, pkg_ver])
+
+    #to_remove_treeview.set_model(to_remove_liststore)
+    #to_install_treeview.set_model(to_install_liststore)
+    # }}}
 
     response = install_remove_pkgs_dialog.run()
     install_remove_pkgs_dialog.hide()
@@ -1946,18 +2003,18 @@ class gui:
     conflicts_error_label =\
       self.all_widgets.get_widget('conflicts_error_label')
 
-    str = ''
+    string = ''
     for sync in packages:
       pkg = sync.get_package()
       try:
         pkg.check_md5sum()
       except alpm.PackageCorruptedException:
         #print 'archive %s is corrupted' % pkg.get_name()
-        str = str + ('archive %s is corrupted\n' % pkg.get_name())
+        string = string + ('archive %s is corrupted\n' % pkg.get_name())
 
         bail = True
       except Exception, inst:
-        str = str + ('could not get checksum for package %s (%s)\n'\
+        string = string + ('could not get checksum for package %s (%s)\n'\
             % (pkg.get_name(), inst))
         
         bail = True
@@ -1989,18 +2046,18 @@ class gui:
         conflicts_error_label =\
           self.all_widgets.get_widget('conflicts_error_label')
 
-        str = ''
+        string = ''
         for conflict in conflict_list.args[0]:
           conf_type = conflict.get_type()
           if conf_type == alpm.PM_CONFLICT_TYPE_TARGET:
-            str = str + ("%s exists in \"%s\" (target) and \"%s\" (target)\n" %\
+            string = string + ("%s exists in \"%s\" (target) and \"%s\" (target)\n" %\
                 (conflict.get_file(), conflict.get_target(),\
                     conflict.get_conflict_target()))
           elif conf_type == alpm.PM_CONFLICT_TYPE_FILE:
-            str = str + ("%s: %s exists in filesystem\n"\
+            string = string + ("%s: %s exists in filesystem\n"\
                 % (conflict.get_target(), conflict.get_conflict_target()))
 
-        conflicts_error_label.set_text(str)
+        conflicts_error_label.set_text(string)
         conflicts_error_dialog.run()
         conflicts_error_dialog.hide()
         self.busy_dialog.hide()
@@ -2136,13 +2193,13 @@ class gui:
           conflicts_error_label =\
             self.all_widgets.get_widget('conflicts_error_label')
 
-          str = ''
+          string = ''
           for depmiss in depmiss_list.args[0]:
-            #str = str + self.alpm_depmiss_to_str(depmiss) + '\n'
-            str = str + ('%s is required by %s' % (depmiss.get_target(),
+            #string = string + self.alpm_depmiss_to_str(depmiss) + '\n'
+            string = string + ('%s is required by %s' % (depmiss.get_target(),
               depmiss.get_name()))
           
-          conflicts_error_label.set_text(str)
+          conflicts_error_label.set_text(string)
           conflicts_error_dialog.run()
           conflicts_error_dialog.hide()
           
@@ -2158,9 +2215,9 @@ class gui:
           conflicts_error_label =\
             self.all_widgets.get_widget('conflicts_error_label')
 
-          str = inst.args[0]
+          string = inst.args[0]
 
-          conflicts_error_label.set_text(str)
+          conflicts_error_label.set_text(string)
           conflicts_error_dialog.run()
           conflicts_error_dialog.hide()
           
@@ -2186,9 +2243,9 @@ class gui:
           conflicts_error_label =\
             self.all_widgets.get_widget('conflicts_error_label')
 
-          str = inst.args[0]
+          string = inst.args[0]
 
-          conflicts_error_label.set_text(str)
+          conflicts_error_label.set_text(string)
           conflicts_error_dialog.run()
           conflicts_error_dialog.hide()
           
@@ -3376,8 +3433,6 @@ class gui:
 
   # def __fill_treeview_with_pkgs_from_repo__(self, repo): {{{
   def __fill_treeview_with_pkgs_from_repo__(self, repo):
-    #print self.treeview.get_model()
-
     # unselect the previous store
     store = self.treeview.get_model()
 
