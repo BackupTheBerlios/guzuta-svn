@@ -590,7 +590,7 @@ class gui:
           pkg_names = groups[grp_name]
 
           if repo_name:
-            text = '<b>%s</b>\n<i>group</i>' % grp_name
+            text = '<b>%s</b>\n<small><i>group</i></small>' % grp_name
             iter = treestore.append(None, [grp_name, False, text, '', '',\
                 repo_name])
           else:
@@ -599,7 +599,7 @@ class gui:
             except KeyError:
               repo2 = 'local'
 
-            text = '<b>%s</b>\n<i>group</i>' % grp_name
+            text = '<b>%s</b>\n<small><i>group</i></small>' % grp_name
             iter = treestore.append(None, [grp_name, False, text, '', '',\
                 repo2])
 
@@ -725,14 +725,14 @@ class gui:
     if self.toggle_handler_id:
       if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
         self.toggle_handler_id = self.togglerenderer.connect('toggled',\
-          self.toggled, self.liststore)
+          self.toggled, self.liststore, 1)
       else:
         self.togglerenderer.disconnect(self.toggle_handler_id)
         self.toggle_handler_id = self.togglerenderer.connect('toggled',\
-          self.toggled, self.liststore)
+          self.toggled, self.liststore, 1)
     else:
       self.toggle_handler_id = self.togglerenderer.connect('toggled',\
-          self.toggled, self.liststore)
+          self.toggled, self.liststore, 1)
 
     for column in self.treeview.get_columns():
       self.treeview.remove_column(column)
@@ -775,34 +775,39 @@ class gui:
   
   # def __setup_repo_treeview__(self): {{{
   def __setup_repo_treeview__(self):
-    self.treestore_repos = gtk.TreeStore(str)
+    self.treestore_repos = gtk.TreeStore(str, str)
 
     self.textrenderer_repos = gtk.CellRendererText()
     self.textrenderer_repos.set_property('weight', 400)
 
-    self.repocolumn = gtk.TreeViewColumn('Repositories')
-    self.repocolumn.set_sort_column_id(1)
-    self.repocolumn.pack_start(self.textrenderer_repos)
-    self.repocolumn.set_attributes(self.textrenderer_repos, text=0)
+    self.repocolumn = gtk.TreeViewColumn('Repositories',\
+        self.textrenderer_repos, markup = 1)
+    #self.repocolumn.set_sort_column_id(1)
+    #self.repocolumn.pack_start(self.textrenderer_repos)
+    #self.repocolumn.set_attributes(self.textrenderer_repos, text=0)
     
     self.treeview_repos.append_column(self.repocolumn)
     
-    self.treestore_repos.set_sort_column_id(0, gtk.SORT_ASCENDING)
+    #self.treestore_repos.set_sort_column_id(0, gtk.SORT_ASCENDING)
 
-    iter0 = self.treestore_repos.append(None, ['Pseudo Repos'])
-    self.treestore_repos.append(iter0, ['All'])
-    self.treestore_repos.append(iter0, ['Installed'])
-    self.treestore_repos.append(iter0, ['Not Installed'])
-    self.treestore_repos.append(iter0, ['Groups'])
+    iter0 = self.treestore_repos.append(None,\
+        ['Pseudo Repos', '<i>Pseudo Repos</i>'])
+    self.treestore_repos.append(iter0, ['All', 'All'])
+    self.treestore_repos.append(iter0, ['Installed', 'Installed'])
+    self.treestore_repos.append(iter0, ['Not Installed',\
+        'Not Installed'])
+    self.treestore_repos.append(iter0, ['Groups', 'Groups'])
     #self.treestore_repos.append(iter0, ['Explicitly Installed'])
     #self.treestore_repos.append(iter0, ['Last Installed'])
     #self.treestore_repos.append(iter0, ['Last Uninstalled'])
 
-    iter1 = self.treestore_repos.append(None, ['Repos'])
+    iter1 = self.treestore_repos.append(None,\
+        ['Repos', '<i>Repos</i>'])
     
     for repo in self.db_names:
       repo = repo.capitalize()
-      self.treestore_repos.append(iter1, [repo])
+      repo_text = '%s' % repo
+      self.treestore_repos.append(iter1, [repo, repo_text])
 
     self.treeview_repos.set_model(self.treestore_repos)
     self.treeview_repos.expand_all()
@@ -853,7 +858,7 @@ class gui:
   # signal handlers {{{
   # def on_download_pkg_button_clicked(self, button): {{{
   def on_download_pkg_button_clicked(self, button):
-    pkgs_to_download = self.get_all_selected_packages(self.liststore)
+    pkgs_to_download = self.get_all_selected_packages(self.liststore, 1, 0)
     print pkgs_to_download
 
     if pkgs_to_download == []:
@@ -1301,9 +1306,7 @@ class gui:
   def on_cursor_changed(self, treeview):
     bool_col = 0
     name_col = 1
-    if treeview == self.treeview:
-      bool_col = 1
-      name_col = 0
+
     selection = treeview.get_selection()
     treemodel, iter = selection.get_selected()
     info = ''
@@ -1311,6 +1314,9 @@ class gui:
       return 
 
     if treeview == self.treeview:
+      bool_col = 1
+      name_col = 0
+
       (tuple, column) = treeview.get_cursor()
 
       if not column:
@@ -2159,7 +2165,7 @@ class gui:
 
   # def on_install_pkg_clicked(self, button): {{{
   def on_install_pkg_clicked(self, button):
-    pkgs_to_install = self.get_all_selected_packages(self.liststore)
+    pkgs_to_install = self.get_all_selected_packages(self.liststore, 1, 0)
 
     if pkgs_to_install == []:
       return 
@@ -2334,7 +2340,7 @@ class gui:
 
   # def on_remove_pkg_clicked(self, button): {{{
   def on_remove_pkg_clicked(self, button):
-    pkgs_to_remove = self.get_all_selected_packages(self.liststore)
+    pkgs_to_remove = self.get_all_selected_packages(self.liststore, 1, 0)
 
     if pkgs_to_remove == []:
       return 
@@ -2370,7 +2376,7 @@ class gui:
     if response == gtk.RESPONSE_OK:
       repo_to_use = repo_choice_combobox.get_active_text()
       
-      pkgs_to_install = self.get_all_selected_packages(self.liststore)
+      pkgs_to_install = self.get_all_selected_packages(self.liststore, 1, 0)
 
       if pkgs_to_install == []:
         return 
@@ -2391,6 +2397,11 @@ class gui:
     import cgi
     already_seen_pkgs = {}
     already_seen_groups = {} # grp name => iter
+
+    regexp_text = self.search_entry.get_text()
+    if regexp_text == '':
+      return
+
     self.treeview.set_model(None) # unsetting model to speed things up
     # selected, name, installed version, available version, repository
     self.liststore = gtk.TreeStore('gchararray', 'gboolean', 'gchararray',\
@@ -2439,7 +2450,6 @@ class gui:
     self.treeview.append_column(repositorycolumn)
     # }}}
 
-    regexp_text = self.search_entry.get_text()
     if regexp_text[0] == '*':
       regexp_text = '.' + regexp_text
     if regexp_text[len(regexp_text) - 1] == '*':
@@ -2478,7 +2488,7 @@ class gui:
               if found:
                 iter, repo_name = already_seen_groups[grp_name]
               else:
-                text = '<b>%s</b>\n<i>group</i>' % grp_name
+                text = '<b>%s</b>\n<small><i>group</i></small>' % grp_name
                 iter = self.liststore.append(None, [grp_name, False, text, '',\
                     '', grp_repo_name])
                 already_seen_groups[grp_name] = (iter, grp_repo_name)
@@ -2498,7 +2508,10 @@ class gui:
                 #    available_version, pkg_repo])
                 pkg_name = cgi.escape(pkg_name)
                 desc = cgi.escape(desc)
-                text = '<b>%s</b>\n<i>%s</i>' % (pkg_name, desc)
+                if len(desc) > 40:
+                  desc = desc[:40]
+                  desc += ' ...'
+                text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
                 self.liststore.append(iter, [pkg_name, False, text,\
                     installed_version, available_version, pkg_repo])
                 # and outside the group
@@ -2524,7 +2537,10 @@ class gui:
               except KeyError:
                 installed_version = '--'
               description = cgi.escape(description)
-              text = '<b>%s</b>\n<i>%s</i>' % (name, description)
+              if len(description) > 40:
+                description = description[:40]
+                description += ' ...'
+              text = '<b>%s</b>\n<small><i>%s</i></small>' % (name, description)
               self.liststore.append(None, [name, False, text,\
                   installed_version, version, repo])
           
@@ -2547,23 +2563,25 @@ class gui:
                 installed_version = self.local_pkgs[name][1]
               except KeyError:
                 installed_version = '--'
-              text = '<b>%s</b>\n<i>%s</i>' % (pkg_name, desc)
+              description = cgi.escape(description)
+              if len(description) > 40:
+                description = description[:40]
+                description += ' ...'
+              text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, description)
               self.liststore.append(None, [pkg_name, False, text,\
                   installed_version, version, 'local'])
-
-      self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
       if self.toggle_handler_id:
         if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
           self.toggle_handler_id = togglerenderer.connect('toggled',\
-            self.toggled, self.liststore)
+            self.toggled, self.liststore, 1)
         else:
           self.togglerenderer.disconnect(self.toggle_handler_id)
           self.toggle_handler_id = togglerenderer.connect('toggled',\
-            self.toggled, self.liststore)
+            self.toggled, self.liststore, 1)
       else:
         self.toggle_handler_id = togglerenderer.connect('toggled',\
-            self.toggled, self.liststore)
+            self.toggled, self.liststore, 1)
       self.treeview.set_model(self.liststore)
 
     else: # this should not happen but it stays here for completeness
@@ -3511,17 +3529,17 @@ class gui:
 
     self.__setup_pkg_treeview_no_fill__(self.liststore)
 
-    if self.toggle_handler_id:
-      if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
-        self.toggle_handler_id = self.togglerenderer.connect('toggled',\
-          self.toggled, self.liststore)
-      else:
-        self.togglerenderer.disconnect(self.toggle_handler_id)
-        self.toggle_handler_id = self.togglerenderer.connect('toggled',\
-          self.toggled, self.liststore)
-    else:
-      self.toggle_handler_id = self.togglerenderer.connect('toggled',\
-          self.toggled, self.liststore)
+    #if self.toggle_handler_id:
+    #  if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
+    #    self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+    #      self.toggled, self.liststore, 1)
+    #  else:
+    #    self.togglerenderer.disconnect(self.toggle_handler_id)
+    #    self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+    #      self.toggled, self.liststore, 1)
+    #else:
+    #  self.toggle_handler_id = self.togglerenderer.connect('toggled',\
+    #      self.toggled, self.liststore, 1)
 
     if repo == 'current' or repo == 'extra' or repo == 'community':
       # current, extra, community {{{
@@ -3649,7 +3667,6 @@ class gui:
       #    self.liststore, tmp_dict, groups, repo)
       # }}}
 
-    self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
     self.treeview.set_model(self.liststore)
   # }}}
 
