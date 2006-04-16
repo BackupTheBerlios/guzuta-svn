@@ -479,12 +479,13 @@ class gui:
     gtk.main()
   # }}}
   
-  # def on_treeview_column_clicked(self, treeviewcolumn, liststore): {{{
-  def on_treeview_column_clicked(self, treeviewcolumn, store):
+  # def on_treeview_column_clicked(self, treeviewcolumn, liststore, {{{
+  #     col):
+  def on_treeview_column_clicked(self, treeviewcolumn, store, col):
     self.column_selected = not self.column_selected
     
     for row in store:
-      store[row.path][0] = self.column_selected
+      store[row.path][col] = self.column_selected
     return True
   # }}}
 
@@ -706,7 +707,7 @@ class gui:
     self.emptycolumn.set_attributes(self.togglerenderer, active=0)
     self.emptycolumn.set_clickable(True)
     self.emptycolumn.connect('clicked', self.on_treeview_column_clicked,\
-        self.liststore)
+        self.liststore, 0)
     
     self.namecolumn = gtk.TreeViewColumn('Name')
     self.namecolumn.set_sort_column_id(1)
@@ -1479,7 +1480,7 @@ class gui:
       fresh_updates_treeview =\
         self.all_widgets.get_widget('fresh_updates_treeview2')
       #l = gtk.ListStore('gboolean', 'gchararray', 'gchararray')
-      l = gtk.ListStore('gboolean', 'gchararray')
+      l = gtk.ListStore('gchararray', 'gboolean', 'gchararray')
 
       textrenderer = gtk.CellRendererText()
       togglerenderer = gtk.CellRendererToggle()
@@ -1491,9 +1492,12 @@ class gui:
         selectedcolumn = gtk.TreeViewColumn('')
         #selectedcolumn.set_sort_column_id(0)
         selectedcolumn.pack_start(togglerenderer)
-        selectedcolumn.set_attributes(togglerenderer, active=0)
+        selectedcolumn.set_attributes(togglerenderer, active=1)
+        selectedcolumn.set_clickable(True)
+        selectedcolumn.connect('clicked', self.on_treeview_column_clicked, l,\
+            1)
         
-        namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=1)
+        namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=2)
         #namecolumn.set_sort_column_id(1)
         #namecolumn.pack_start(textrenderer)
         #namecolumn.set_attributes(textrenderer, text=1)
@@ -1502,7 +1506,10 @@ class gui:
         ##repocolumn.set_sort_column_id(2)
         #repocolumn.pack_start(textrenderer)
         #repocolumn.set_attributes(textrenderer, text=2)
+        invisiblecolumn = gtk.TreeViewColumn('', None)
+        invisiblecolumn.set_visible(False)
 
+        fresh_updates_treeview.append_column(invisiblecolumn)
         fresh_updates_treeview.append_column(selectedcolumn)
         fresh_updates_treeview.append_column(namecolumn)
         #fresh_updates_treeview.append_column(repocolumn)
@@ -1523,12 +1530,12 @@ class gui:
           repo = pkg.get_database().get_tree_name()
 
           #print 'name \'%s\' ver \'%s\' \'%s\'' % (pkg_name, pkg_ver, pkg_desc)
-          text = '<big><b>%s</b> - %s - <i>%s</i></big>\n<i>%s</i>' % (pkg_name, pkg_ver,\
+          text = '<b>%s</b> - %s - <i>%s</i>\n<i>%s</i>' % (pkg_name, pkg_ver,\
               repo, pkg_desc)
           #text = cgi.escape(text)
           #print 'appending \'%s\'' % text
           #l.append([False, text, repo])
-          l.append([False, text])
+          l.append([pkg_name, False, text])
         
         fresh_updates_treeview.set_model(l)
 
@@ -1543,7 +1550,7 @@ class gui:
           if self.init_transaction:
             self.init_transaction = False
 
-          upgrades = self.get_all_selected_packages(l)
+          upgrades = self.get_all_selected_packages(l, boolean_col=1, name_col=0)
 
           self.shell.alpm_transaction_release()
           self.busy_status_label.set_markup('<i>Please wait...</i>')
@@ -1845,10 +1852,11 @@ class gui:
       pkg_str2 = pkg_str[:pkg_str.rindex('-')]
 
       pkg_name = pkg_str2[:pkg_str2.rindex('-')]
+      pkg_name = cgi.escape(pkg_name)
       pkg_ver = pkg_str[pkg_str[:pkg_str.rindex('-')].rindex('-')+1:]
+      pkg_ver = cgi.escape(pkg_ver)
 
       text = '<b>%s</b>\n%s' % (pkg_name, pkg_ver)
-      text = cgi.escape(text)
       store.append([text])
 
     install_remove_treeview.set_model(store)
@@ -2357,7 +2365,8 @@ class gui:
     emptycolumn.pack_start(togglerenderer)
     emptycolumn.set_attributes(togglerenderer, active=0)
     emptycolumn.set_clickable(True)
-    emptycolumn.connect('clicked', self.on_treeview_column_clicked, self.liststore)
+    emptycolumn.connect('clicked', self.on_treeview_column_clicked,\
+        self.liststore, 0)
     
     repositorycolumn = gtk.TreeViewColumn('Repository')
     repositorycolumn.set_sort_column_id(4)
@@ -3596,19 +3605,21 @@ class gui:
     return uid == 0
   # }}}
 
-  # def get_all_selected_packages(tree_model): {{{
-  def get_all_selected_packages(self, tree_model):
+  # def get_all_selected_packages(self, tree_model, boolean_col = 0, {{{
+  #     name_col = 1):
+  def get_all_selected_packages(self, tree_model, boolean_col = 0,\
+      name_col = 1):
     n = len(tree_model)
     
     names = []
     has_children = False
     for row in tree_model:
       for child_row in row.iterchildren():
-        if child_row[0]:
+        if child_row[boolean_col]:
           has_children = True
-          names.append(child_row[1])
-      if not has_children and row[0]:
-        names.append(row[1])
+          names.append(child_row[name_col])
+      if not has_children and row[boolean_col]:
+        names.append(row[name_col])
 
     return names
   # }}}
