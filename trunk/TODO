@@ -1,7 +1,5 @@
 0.0.5
 =====
-* use treemodelfilter instead of creating and setting all those times the
-  treestores for the treeviews, check the tutorial
 * add package name and a little description (N chars) like in the Add dialog in the gnome panel
   (with pango markup), instead of a column with description
 * remove the browse button from the preferences dialog when setting browser
@@ -9,6 +7,8 @@
 
 0.0.6
 =====
+* use treemodelfilter instead of creating and setting all those times the
+  treestores for the treeviews, check the tutorial
 * add icons and stuff to pkg lists and something like that (this is done with
   two cellrenderers per column)
 * make a splash screen showing work being done when starting up

@@ -505,6 +505,7 @@ class gui:
     # waiting for thread to finish
     while not self.shell.th_ended_event.isSet():
       self.shell.th_ended_event.wait(0.01)
+      print 'PING?'
       while gtk.events_pending():
         gtk.main_iteration(False)
     self.shell.th_ended_event.clear()
@@ -554,16 +555,16 @@ class gui:
     length = len(dict)
     if length == 1:
       repo = dict.keys()[0]
-      return (repo, dict[repo][1])
+      return (repo, dict[repo][1], dict[repo][2])
     else:
       v = None
-      for _, (repo, version, _) in dict.iteritems():
+      for _, (repo, version, desc) in dict.iteritems():
         if repo != 'local':
           if v == None:
-            v = repo,version
+            v = repo,version,desc
           else:
             if version > v:
-              v = repo,version
+              v = repo,version,desc
 
       return v
   # }}}
@@ -572,6 +573,7 @@ class gui:
   # pkgs, groups, repo_name = None):
   def alpm_fill_treestore_with_pkgs_and_grps(self, treeview, treestore, pkgs, groups,
       repo_name = None):
+    import cgi
     treeview.set_model(None)
     already_visited_pkgs = {}
     already_visited_grps = {}
@@ -586,14 +588,16 @@ class gui:
           pkg_names = groups[grp_name]
 
           if repo_name:
-            iter = treestore.append(None, [False, grp_name, '', '', repo_name])
+            text = '<b>%s</b>' % grp_name
+            iter = treestore.append(None, [False, text, '', '', repo_name])
           else:
             try:
               repo2 = self.groups[grp_name][0]
             except KeyError:
               repo2 = 'local'
 
-            iter = treestore.append(None, [False, grp_name, '', '',\
+            text = '<b>%s</b>' % grp_name
+            iter = treestore.append(None, [False, text, '', '',\
                 repo2])
 
           for pkg_name in pkg_names:
@@ -607,28 +611,44 @@ class gui:
             #available version
             if repo_name:
               available_version = self.pkgs[pkg_name][repo_name][1]
+              desc = self.pkgs[pkg_name][repo_name][2]
             else:
-              pkg_repo, available_version =\
+              pkg_repo, available_version, desc =\
                 self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
+              pkg_repo = cgi.escape(pkg_repo)
               if pkg_repo == 'local':
                 available_version = '--'
+
+            if len(desc) > 40:
+              desc = desc[:40]
+              desc += ' ...'
+            desc = cgi.escape(desc)
               
             if repo_name:
-              treestore.append(iter, [False, pkg_name, local_version,
+              #treestore.append(iter, [False, pkg_name, local_version,
+              #    available_version, repo_name])
+              text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
+              treestore.append(iter, [False, text, local_version,
                   available_version, repo_name])
               yield True
             else:
               l = len(self.pkgs[pkg_name].keys())
 
               if l > 1:
-                for repo2 in self.pkgs[pkg_name].keys():
-                  if repo2 != 'local':
-                    treestore.append(iter, [False, pkg_name, local_version,
-                        available_version, repo2])
+                for repo3 in self.pkgs[pkg_name].keys():
+                  if repo3 != 'local':
+                    #treestore.append(iter, [False, pkg_name, local_version,
+                    #    available_version, repo3])
+                    text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
+                    treestore.append(iter, [False, text, local_version,
+                        available_version, repo3])
                     local_info = (iter, [False, pkg_name, local_version,
-                        available_version, repo2])
+                        available_version, repo3])
               else:
-                treestore.append(iter, [False, pkg_name, local_version,
+                #treestore.append(iter, [False, pkg_name, local_version,
+                #    available_version, repo2])
+                text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
+                treestore.append(iter, [False, text, local_version,
                     available_version, repo2])
               yield True
       else: # package
@@ -642,22 +662,35 @@ class gui:
           if repo_name:
             available_version =\
                 self.pkgs[k][repo_name][1]
+            desc = self.pkgs[k][repo_name][2]
           else:
-            pkg_repo, available_version =\
-                self.alpm_get_highest_version_of_pkg(self.pkgs[k])
+            #pkg_repo, available_version, desc =\
+            #    self.alpm_get_highest_version_of_pkg(self.pkgs[k])
+            coisa = self.alpm_get_highest_version_of_pkg(self.pkgs[k])
+            pkg_repo, available_version, desc = coisa
+            desc = cgi.escape(desc)
             if pkg_repo == 'local':
               available_version = '--'
 
-          pkg_name = k
+          if len(desc) > 40:
+            desc = desc[:40]
+            desc += ' ...'
+          pkg_name = cgi.escape(k)
           if repo_name:
-            treestore.append(None, [False, pkg_name, local_version,\
+            #treestore.append(None, [False, pkg_name, local_version,\
+            #    available_version, repo_name])
+            text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
+            treestore.append(None, [False, text, local_version,\
                 available_version, repo_name])
             yield True
           else:
-            for repo2 in self.pkgs[pkg_name].keys():
-              if repo2 != 'local':
-                treestore.append(None, [False, pkg_name, local_version,\
-                    available_version, repo2])
+            for repo3 in self.pkgs[pkg_name].keys():
+              if repo3 != 'local':
+                #treestore.append(None, [False, pkg_name, local_version,\
+                #    available_version, repo3])
+                text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
+                treestore.append(None, [False, text, local_version,\
+                    available_version, repo3])
               yield True
     treeview.set_model(treestore)
     yield False
@@ -709,10 +742,10 @@ class gui:
     self.emptycolumn.connect('clicked', self.on_treeview_column_clicked,\
         self.liststore, 0)
     
-    self.namecolumn = gtk.TreeViewColumn('Name')
-    self.namecolumn.set_sort_column_id(1)
-    self.namecolumn.pack_start(self.textrenderer)
-    self.namecolumn.set_attributes(self.textrenderer, text=1)
+    self.namecolumn = gtk.TreeViewColumn('Name', self.textrenderer, markup=1)
+    #self.namecolumn.set_sort_column_id(1)
+    #self.namecolumn.pack_start(self.textrenderer)
+    #self.namecolumn.set_attributes(self.textrenderer, text=1)
     
     self.installedversioncolumn = gtk.TreeViewColumn('Installed')
     self.installedversioncolumn.set_sort_column_id(2)
@@ -1838,16 +1871,17 @@ class gui:
       namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=0)
 
       install_remove_treeview.append_column(namecolumn)
-    store = gtk.ListStore(str)
+    #store = gtk.ListStore(str)
+    store = gtk.TreeStore(str)
     
     import cgi
-    store.append(['<big><b>Remove</b></big>'])
+    to_remove_iter = store.append(None, ['<big><b>Remove</b></big>'])
     for (pkg_name, pkg_ver) in to_remove:
       text = '<b>%s</b>\n%s' % (pkg_name, pkg_ver)
       text = cgi.escape(text)
-      store.append([text])
+      store.append(to_remove_iter, [text])
 
-    store.append(['<big><b>Install</b></big>'])
+    to_install_iter = store.append(None, ['<big><b>Install</b></big>'])
     for pkg_str in to_install:
       pkg_str2 = pkg_str[:pkg_str.rindex('-')]
 
@@ -1857,9 +1891,10 @@ class gui:
       pkg_ver = cgi.escape(pkg_ver)
 
       text = '<b>%s</b>\n%s' % (pkg_name, pkg_ver)
-      store.append([text])
+      store.append(to_install_iter, [text])
 
     install_remove_treeview.set_model(store)
+    install_remove_treeview.expand_all()
 
     # BACKUP {{{
     #install_remove_pkgs_dialog =\
@@ -2345,6 +2380,7 @@ class gui:
 
   # def on_search_clicked(self, button): {{{
   def on_search_clicked(self, button):
+    import cgi
     already_seen_pkgs = {}
     already_seen_groups = {} # grp name => iter
     self.treeview.set_model(None) # unsetting model to speed things up
@@ -2373,10 +2409,10 @@ class gui:
     repositorycolumn.pack_start(textrenderer)
     repositorycolumn.set_attributes(textrenderer, text=4)
     
-    namecolumn = gtk.TreeViewColumn('Name')
-    namecolumn.set_sort_column_id(1)
-    namecolumn.pack_start(textrenderer)
-    namecolumn.set_attributes(textrenderer, text=1)
+    namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=1)
+    #namecolumn.set_sort_column_id(1)
+    #namecolumn.pack_start(textrenderer)
+    #namecolumn.set_attributes(textrenderer, text=1)
     
     availableversioncolumn = gtk.TreeViewColumn('Available')
     availableversioncolumn.set_sort_column_id(3)
@@ -2434,12 +2470,13 @@ class gui:
               if found:
                 iter, repo_name = already_seen_groups[grp_name]
               else:
-                iter = self.liststore.append(None, [False, grp_name, '', '', grp_repo_name])
+                text = '<b>%s</b>' % grp_name
+                iter = self.liststore.append(None, [False, text, '', '', grp_repo_name])
                 already_seen_groups[grp_name] = (iter, grp_repo_name)
 
               for pkg_name in grp_packages:
                 already_seen_pkgs[pkg_name] = None
-                pkg_repo, available_version =\
+                pkg_repo, available_version, desc =\
                     self.alpm_get_highest_version_of_pkg(self.pkgs[pkg_name])
 
                 try:
@@ -2448,7 +2485,12 @@ class gui:
                   installed_version = '--'
 
                 # put it in the group
-                self.liststore.append(iter, [False, pkg_name, installed_version,\
+                #self.liststore.append(iter, [False, pkg_name, installed_version,\
+                #    available_version, pkg_repo])
+                pkg_name = cgi.escape(pkg_name)
+                desc = cgi.escape(desc)
+                text = '<b>%s</b>\n<i>%s</i>' % (pkg_name, desc)
+                self.liststore.append(iter, [False, text, installed_version,\
                     available_version, pkg_repo])
                 # and outside the group
                 #self.liststore.append(None, [False, pkg_name, installed_version,\
@@ -2472,7 +2514,9 @@ class gui:
                 installed_version = self.local_pkgs[name][1]
               except KeyError:
                 installed_version = '--'
-              self.liststore.append(None, [False, name, installed_version, version,\
+              description = cgi.escape(description)
+              text = '<b>%s</b>\n<i>%s</i>' % (name, description)
+              self.liststore.append(None, [False, text, installed_version, version,\
                   repo])
           
       if not found:
@@ -2494,7 +2538,8 @@ class gui:
                 installed_version = self.local_pkgs[name][1]
               except KeyError:
                 installed_version = '--'
-              self.liststore.append(None, [False, name, installed_version, version,\
+              text = '<b>%s</b>\n<i>%s</i>' % (pkg_name, desc)
+              self.liststore.append(None, [False, text, installed_version, version,\
                   'local'])
 
       self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
