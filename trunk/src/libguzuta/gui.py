@@ -499,13 +499,15 @@ class gui:
 
   # def alpm_run_in_thread_and_wait(self, method, args): {{{
   def alpm_run_in_thread_and_wait(self, method, args):
+    p = 0
     th_obj = None
     self.run_in_thread(method, args)
 
     # waiting for thread to finish
     while not self.shell.th_ended_event.isSet():
       self.shell.th_ended_event.wait(0.01)
-      print 'PING?'
+      p += 1
+      print 'PING %d?' % p
       while gtk.events_pending():
         gtk.main_iteration(False)
     self.shell.th_ended_event.clear()
@@ -588,16 +590,17 @@ class gui:
           pkg_names = groups[grp_name]
 
           if repo_name:
-            text = '<b>%s</b>' % grp_name
-            iter = treestore.append(None, [False, text, '', '', repo_name])
+            text = '<b>%s</b>\n<i>group</i>' % grp_name
+            iter = treestore.append(None, [grp_name, False, text, '', '',\
+                repo_name])
           else:
             try:
               repo2 = self.groups[grp_name][0]
             except KeyError:
               repo2 = 'local'
 
-            text = '<b>%s</b>' % grp_name
-            iter = treestore.append(None, [False, text, '', '',\
+            text = '<b>%s</b>\n<i>group</i>' % grp_name
+            iter = treestore.append(None, [grp_name, False, text, '', '',\
                 repo2])
 
           for pkg_name in pkg_names:
@@ -628,7 +631,7 @@ class gui:
               #treestore.append(iter, [False, pkg_name, local_version,
               #    available_version, repo_name])
               text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
-              treestore.append(iter, [False, text, local_version,
+              treestore.append(iter, [pkg_name, False, text, local_version,
                   available_version, repo_name])
               yield True
             else:
@@ -640,7 +643,7 @@ class gui:
                     #treestore.append(iter, [False, pkg_name, local_version,
                     #    available_version, repo3])
                     text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
-                    treestore.append(iter, [False, text, local_version,
+                    treestore.append(iter, [pkg_name, False, text, local_version,
                         available_version, repo3])
                     local_info = (iter, [False, pkg_name, local_version,
                         available_version, repo3])
@@ -648,7 +651,7 @@ class gui:
                 #treestore.append(iter, [False, pkg_name, local_version,
                 #    available_version, repo2])
                 text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
-                treestore.append(iter, [False, text, local_version,
+                treestore.append(iter, [pkg_name, False, text, local_version,
                     available_version, repo2])
               yield True
       else: # package
@@ -680,7 +683,7 @@ class gui:
             #treestore.append(None, [False, pkg_name, local_version,\
             #    available_version, repo_name])
             text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
-            treestore.append(None, [False, text, local_version,\
+            treestore.append(None, [pkg_name, False, text, local_version,\
                 available_version, repo_name])
             yield True
           else:
@@ -689,7 +692,7 @@ class gui:
                 #treestore.append(None, [False, pkg_name, local_version,\
                 #    available_version, repo3])
                 text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
-                treestore.append(None, [False, text, local_version,\
+                treestore.append(None, [pkg_name, False, text, local_version,\
                     available_version, repo3])
               yield True
     treeview.set_model(treestore)
@@ -712,7 +715,7 @@ class gui:
   # def __setup_pkg_treeview_no_fill__(self, store = None): {{{
   def __setup_pkg_treeview_no_fill__(self, store = None):
     if not store:
-      self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
+      self.liststore = gtk.TreeStore('gchararray', 'gboolean', 'gchararray', 'gchararray',\
           'gchararray', 'gchararray')
 
     self.textrenderer = gtk.CellRendererText()
@@ -737,30 +740,30 @@ class gui:
     self.emptycolumn = gtk.TreeViewColumn('')
     #self.emptycolumn.set_sort_column_id(0)
     self.emptycolumn.pack_start(self.togglerenderer)
-    self.emptycolumn.set_attributes(self.togglerenderer, active=0)
+    self.emptycolumn.set_attributes(self.togglerenderer, active=1)
     self.emptycolumn.set_clickable(True)
     self.emptycolumn.connect('clicked', self.on_treeview_column_clicked,\
-        self.liststore, 0)
+        self.liststore, 1)
     
-    self.namecolumn = gtk.TreeViewColumn('Name', self.textrenderer, markup=1)
+    self.namecolumn = gtk.TreeViewColumn('Name', self.textrenderer, markup=2)
     #self.namecolumn.set_sort_column_id(1)
     #self.namecolumn.pack_start(self.textrenderer)
     #self.namecolumn.set_attributes(self.textrenderer, text=1)
     
     self.installedversioncolumn = gtk.TreeViewColumn('Installed')
-    self.installedversioncolumn.set_sort_column_id(2)
+    self.installedversioncolumn.set_sort_column_id(3)
     self.installedversioncolumn.pack_start(self.textrenderer)
-    self.installedversioncolumn.set_attributes(self.textrenderer, text=2)
+    self.installedversioncolumn.set_attributes(self.textrenderer, text=3)
     
     self.availableversioncolumn = gtk.TreeViewColumn('Available')
-    self.availableversioncolumn.set_sort_column_id(3)
+    self.availableversioncolumn.set_sort_column_id(4)
     self.availableversioncolumn.pack_start(self.textrenderer)
-    self.availableversioncolumn.set_attributes(self.textrenderer, text=3)
+    self.availableversioncolumn.set_attributes(self.textrenderer, text=4)
 
     self.repositorycolumn = gtk.TreeViewColumn('Repository')
-    self.repositorycolumn.set_sort_column_id(4)
+    self.repositorycolumn.set_sort_column_id(5)
     self.repositorycolumn.pack_start(self.textrenderer)
-    self.repositorycolumn.set_attributes(self.textrenderer, text=4)
+    self.repositorycolumn.set_attributes(self.textrenderer, text=5)
     
     self.treeview.append_column(self.emptycolumn)
     self.treeview.append_column(self.namecolumn)
@@ -1296,6 +1299,11 @@ class gui:
 
   # def on_cursor_changed(self, treeview): {{{
   def on_cursor_changed(self, treeview):
+    bool_col = 0
+    name_col = 1
+    if treeview == self.treeview:
+      bool_col = 1
+      name_col = 0
     selection = treeview.get_selection()
     treemodel, iter = selection.get_selected()
     info = ''
@@ -1314,7 +1322,7 @@ class gui:
         return
 
       # treeview of pkgs
-      name = treemodel.get_value(iter, 1)
+      name = treemodel.get_value(iter, name_col)
 
       buffer = gtk.TextBuffer()
       
@@ -1519,7 +1527,7 @@ class gui:
       togglerenderer = gtk.CellRendererToggle()
       togglerenderer.set_active(True)
 
-      togglerenderer.connect('toggled', self.toggled, l)
+      togglerenderer.connect('toggled', self.toggled, l, 1)
 
       if fresh_updates_treeview.get_columns() == []:
         selectedcolumn = gtk.TreeViewColumn('')
@@ -2385,10 +2393,10 @@ class gui:
     already_seen_groups = {} # grp name => iter
     self.treeview.set_model(None) # unsetting model to speed things up
     # selected, name, installed version, available version, repository
-    self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
-        'gchararray', 'gchararray')
+    self.liststore = gtk.TreeStore('gchararray', 'gboolean', 'gchararray',\
+        'gchararray', 'gchararray', 'gchararray')
 
-    # setup the treeview for 4 columns {{{
+    # setup the treeview for 5 columns {{{
     textrenderer = gtk.CellRendererText()
     togglerenderer = gtk.CellRendererToggle()
     togglerenderer.set_active(True)
@@ -2399,30 +2407,30 @@ class gui:
     emptycolumn = gtk.TreeViewColumn('')
     #emptycolumn.set_sort_column_id(0)
     emptycolumn.pack_start(togglerenderer)
-    emptycolumn.set_attributes(togglerenderer, active=0)
+    emptycolumn.set_attributes(togglerenderer, active=1)
     emptycolumn.set_clickable(True)
     emptycolumn.connect('clicked', self.on_treeview_column_clicked,\
-        self.liststore, 0)
+        self.liststore, 1)
     
     repositorycolumn = gtk.TreeViewColumn('Repository')
-    repositorycolumn.set_sort_column_id(4)
+    repositorycolumn.set_sort_column_id(5)
     repositorycolumn.pack_start(textrenderer)
-    repositorycolumn.set_attributes(textrenderer, text=4)
+    repositorycolumn.set_attributes(textrenderer, text=5)
     
-    namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=1)
+    namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=2)
     #namecolumn.set_sort_column_id(1)
     #namecolumn.pack_start(textrenderer)
     #namecolumn.set_attributes(textrenderer, text=1)
     
     availableversioncolumn = gtk.TreeViewColumn('Available')
-    availableversioncolumn.set_sort_column_id(3)
+    availableversioncolumn.set_sort_column_id(4)
     availableversioncolumn.pack_start(textrenderer)
-    availableversioncolumn.set_attributes(textrenderer, text=3)
+    availableversioncolumn.set_attributes(textrenderer, text=4)
     
     installedversioncolumn = gtk.TreeViewColumn('Installed')
-    installedversioncolumn.set_sort_column_id(2)
+    installedversioncolumn.set_sort_column_id(3)
     installedversioncolumn.pack_start(textrenderer)
-    installedversioncolumn.set_attributes(textrenderer, text=2)
+    installedversioncolumn.set_attributes(textrenderer, text=3)
 
     self.treeview.append_column(emptycolumn)
     self.treeview.append_column(namecolumn)
@@ -2470,8 +2478,9 @@ class gui:
               if found:
                 iter, repo_name = already_seen_groups[grp_name]
               else:
-                text = '<b>%s</b>' % grp_name
-                iter = self.liststore.append(None, [False, text, '', '', grp_repo_name])
+                text = '<b>%s</b>\n<i>group</i>' % grp_name
+                iter = self.liststore.append(None, [grp_name, False, text, '',\
+                    '', grp_repo_name])
                 already_seen_groups[grp_name] = (iter, grp_repo_name)
 
               for pkg_name in grp_packages:
@@ -2490,8 +2499,8 @@ class gui:
                 pkg_name = cgi.escape(pkg_name)
                 desc = cgi.escape(desc)
                 text = '<b>%s</b>\n<i>%s</i>' % (pkg_name, desc)
-                self.liststore.append(iter, [False, text, installed_version,\
-                    available_version, pkg_repo])
+                self.liststore.append(iter, [pkg_name, False, text,\
+                    installed_version, available_version, pkg_repo])
                 # and outside the group
                 #self.liststore.append(None, [False, pkg_name, installed_version,\
                 #    available_version, repo])
@@ -2516,8 +2525,8 @@ class gui:
                 installed_version = '--'
               description = cgi.escape(description)
               text = '<b>%s</b>\n<i>%s</i>' % (name, description)
-              self.liststore.append(None, [False, text, installed_version, version,\
-                  repo])
+              self.liststore.append(None, [name, False, text,\
+                  installed_version, version, repo])
           
       if not found:
         # search 'local'
@@ -2539,8 +2548,8 @@ class gui:
               except KeyError:
                 installed_version = '--'
               text = '<b>%s</b>\n<i>%s</i>' % (pkg_name, desc)
-              self.liststore.append(None, [False, text, installed_version, version,\
-                  'local'])
+              self.liststore.append(None, [pkg_name, False, text,\
+                  installed_version, version, 'local'])
 
       self.liststore.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
@@ -3372,12 +3381,12 @@ class gui:
     self.populate_pkgs_by_repo()
   # }}}
 
-  # def toggled(self, toggle_renderer, path, store = None): {{{
-  def toggled(self, toggle_renderer, path, store = None):
+  # def toggled(self, toggle_renderer, path, store = None, col = 0): {{{
+  def toggled(self, toggle_renderer, path, store = None, col = 0):
     treemodelrow = store[path]
     for row in treemodelrow.iterchildren():
-      store[row.path][0] = not store[path][0]
-    store[path][0] = not store[path][0]
+      store[row.path][col] = not store[path][col]
+    store[path][col] = not store[path][col]
   # }}}
 
   # def __add_pkg_info_markuped_to_pkg_info_label__(self, lines, {{{
@@ -3497,8 +3506,8 @@ class gui:
       
     self.column_selected = False
     self.treeview.set_model(None) # unsetting model to speed things up
-    self.liststore = gtk.TreeStore('gboolean', 'gchararray', 'gchararray',\
-        'gchararray', 'gchararray')
+    self.liststore = gtk.TreeStore('gchararray', 'gboolean', 'gchararray',\
+        'gchararray', 'gchararray', 'gchararray')
 
     self.__setup_pkg_treeview_no_fill__(self.liststore)
 
