@@ -499,15 +499,17 @@ class gui:
 
   # def alpm_run_in_thread_and_wait(self, method, args): {{{
   def alpm_run_in_thread_and_wait(self, method, args):
-    p = 0
     th_obj = None
     self.run_in_thread(method, args)
 
     # waiting for thread to finish
     while not self.shell.th_ended_event.isSet():
       self.shell.th_ended_event.wait(0.01)
-      p += 1
-      print 'PING %d?' % p
+
+      now = time.time()
+      if now % 60 == 0:
+        print 'STILL WAITING'
+
       while gtk.events_pending():
         gtk.main_iteration(False)
     self.shell.th_ended_event.clear()
@@ -534,7 +536,8 @@ class gui:
     else:
       self.busy_status_label.set_markup('<i>Downloading \'%s\'...</i>' %
           (self.shell.retrieving))
-    self.busy_progress_bar3.set_fraction(division)
+    if self.busy_progress_bar3:
+      self.busy_progress_bar3.set_fraction(division)
   # }}}
 
   # def alpm_get_group(self, name, repo): {{{
@@ -746,7 +749,7 @@ class gui:
         self.liststore, 1)
     
     self.namecolumn = gtk.TreeViewColumn('Name', self.textrenderer, markup=2)
-    #self.namecolumn.set_sort_column_id(1)
+    self.namecolumn.set_sort_column_id(0)
     #self.namecolumn.pack_start(self.textrenderer)
     #self.namecolumn.set_attributes(self.textrenderer, text=1)
     
@@ -1545,7 +1548,7 @@ class gui:
             1)
         
         namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=2)
-        #namecolumn.set_sort_column_id(1)
+        namecolumn.set_sort_column_id(0)
         #namecolumn.pack_start(textrenderer)
         #namecolumn.set_attributes(textrenderer, text=1)
 
@@ -2429,7 +2432,7 @@ class gui:
     repositorycolumn.set_attributes(textrenderer, text=5)
     
     namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=2)
-    #namecolumn.set_sort_column_id(1)
+    namecolumn.set_sort_column_id(0)
     #namecolumn.pack_start(textrenderer)
     #namecolumn.set_attributes(textrenderer, text=1)
     
