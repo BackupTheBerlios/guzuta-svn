@@ -1894,8 +1894,10 @@ class gui:
     import cgi
     to_remove_iter = store.append(None, ['<big><b>Remove</b></big>'])
     for (pkg_name, pkg_ver) in to_remove:
-      text = '<b>%s</b>\n%s' % (pkg_name, pkg_ver)
-      text = cgi.escape(text)
+      pkg_name = cgi.escape(pkg_name)
+      #pkg_ver = cgi.escape(pkg_ver)
+      #text = '<b>%s</b>\n%s' % (pkg_name, pkg_ver)
+      text = '<b>%s</b>'% pkg_name
       store.append(to_remove_iter, [text])
 
     to_install_iter = store.append(None, ['<big><b>Install</b></big>'])
