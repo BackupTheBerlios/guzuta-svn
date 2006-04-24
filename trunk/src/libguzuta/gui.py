@@ -1861,6 +1861,8 @@ class gui:
 
       pkgname = pkg.get_name()
       pkgver = pkg.get_version()
+      pkg_desc = pkg.get_description()
+      #string = '%s-%s-%s' % (pkgname, pkgver, pkg_desc)
       string = '%s-%s' % (pkgname, pkgver)
       to_install.append(string)
 
@@ -1892,25 +1894,34 @@ class gui:
     store = gtk.TreeStore(str)
     
     import cgi
+    print 'INSTALL REMOVE'
+    # only available in 2.10, tooltips per treeview row
+    #install_remove_tips = gtk.Tooltips()
     to_remove_iter = store.append(None, ['<big><b>Remove</b></big>'])
     for (pkg_name, pkg_ver) in to_remove:
       pkg_name = cgi.escape(pkg_name)
-      #pkg_ver = cgi.escape(pkg_ver)
-      #text = '<b>%s</b>\n%s' % (pkg_name, pkg_ver)
-      text = '<b>%s</b>'% pkg_name
-      store.append(to_remove_iter, [text])
+      pkg_ver = cgi.escape(pkg_ver)
+      text = '<b>%s</b>\n%s' % (pkg_name, pkg_ver)
+      #text = '<b>%s</b>'% pkg_name
+      treeiter = store.append(to_remove_iter, [text])
+      #install_remove_tips.set_tip(treeiter, pkg_name)
 
     to_install_iter = store.append(None, ['<big><b>Install</b></big>'])
     for pkg_str in to_install:
       pkg_str2 = pkg_str[:pkg_str.rindex('-')]
+      pkg_desc = pkg_str2[pkg_str2.rindex('-')+1:]
 
       pkg_name = pkg_str2[:pkg_str2.rindex('-')]
       pkg_name = cgi.escape(pkg_name)
       pkg_ver = pkg_str[pkg_str[:pkg_str.rindex('-')].rindex('-')+1:]
+      #pkg_ver = pkg_str2[pkg_str2.rindex('-')+1:]
       pkg_ver = cgi.escape(pkg_ver)
 
       text = '<b>%s</b>\n%s' % (pkg_name, pkg_ver)
-      store.append(to_install_iter, [text])
+      treeiter = store.append(to_install_iter, [text])
+      #install_remove_tips.set_tip(treeiter, pkg_desc)
+
+    #install_remove_tips.enable()
 
     install_remove_treeview.set_model(store)
     install_remove_treeview.expand_all()
