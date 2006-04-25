@@ -509,6 +509,7 @@ class gui:
       now = time.time()
       if now % 60 == 0:
         print 'STILL WAITING'
+      #print 'NOW IS ', now
 
       while gtk.events_pending():
         gtk.main_iteration(False)
@@ -2650,7 +2651,7 @@ class gui:
     if not iter:
       return 
 
-    name = treemodel.get_value(iter, 1)
+    name = treemodel.get_value(iter, 0)
     pkgs_to_install = [name]
     self.alpm_install_targets(pkgs_to_install)
   # }}}
@@ -2687,7 +2688,7 @@ class gui:
       if not iter:
         return 
 
-      name = treemodel.get_value(iter, 1)
+      name = treemodel.get_value(iter, 0)
       pkgs_to_install = [name]
       self.alpm_install_targets(pkgs_to_install, repo_to_use)
     else:
@@ -2701,7 +2702,7 @@ class gui:
     if not iter:
       return 
 
-    name = treemodel.get_value(iter, 1)
+    name = treemodel.get_value(iter, 0)
     pkgs_to_remove = [name]
     self.alpm_remove_targets(pkgs_to_remove)
   # }}}
@@ -2713,7 +2714,7 @@ class gui:
     if not iter:
       return 
 
-    name = treemodel.get_value(iter, 1)
+    name = treemodel.get_value(iter, 0)
     
     pkg_files_dialog = self.all_widgets.get_widget('pkg_files_dialog')
 

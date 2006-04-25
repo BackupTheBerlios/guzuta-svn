@@ -1,9 +1,6 @@
-0.0.5
-=====
-* add repository information to the pkgs treeview
-
 0.0.6
 =====
+* show orphaned packages, like pacman -Qe
 * use wget to download pkgs, because pkg downloads keep getting corrupt
 * use treemodelfilter instead of creating and setting all those times the
   treestores for the treeviews, check the tutorial

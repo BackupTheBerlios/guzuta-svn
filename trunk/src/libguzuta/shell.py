@@ -438,11 +438,12 @@ the terms of the GNU General Public License'''
     for sync in self.pmc_syncs:
       try:
         sync["db"] = self.alpm.register_db(sync["treename"])
-        self.dbs_by_name[sync["treename"]] = sync["db"]
-        self.db_names.append(sync["treename"])
       except RuntimeError:
         print "could not register ", sync["treename"]
         sys.exit(1)
+      else:
+        self.dbs_by_name[sync["treename"]] = sync["db"]
+        self.db_names.append(sync["treename"])
     self.dbs_by_name["local"] = self.alpm.register_db("local")
   # }}}
 
