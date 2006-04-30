@@ -1,5 +1,11 @@
+0.0.5
+=====
+* There is a bug in pynealpm/libalpm: sometimes when upgrading a package, it
+  stops upgrading.
 0.0.6
 =====
+* ADD A CANCEL BUTTON TO THE BUSY WINDOW!!!
+* support forcing install/remove, etc...
 * show orphaned packages, like pacman -Qe
 * use wget to download pkgs, because pkg downloads keep getting corrupt
 * use treemodelfilter instead of creating and setting all those times the

@@ -172,8 +172,7 @@ class gui:
   def gui_trans_cb_conv(self, event, data1, data2, data3):
     self.response = None
     response = 0
-    id = gobject.idle_add(self.gui_trans_cb_conv2, event, data1, data2, data3,
-        response)
+    id = gobject.idle_add(self.gui_trans_cb_conv2, event, data1, data2, data3)
     while not self.dialog_ended_event.isSet():
       while gtk.events_pending():
         gtk.main_iteration(False)
@@ -183,8 +182,8 @@ class gui:
     return self.response
   # }}}
 
-  # def gui_trans_cb_conv2(self, event, data1, data2, data3, response): {{{
-  def gui_trans_cb_conv2(self, event, data1, data2, data3, response):
+  # def gui_trans_cb_conv2(self, event, data1, data2, data3): {{{
+  def gui_trans_cb_conv2(self, event, data1, data2, data3):
     # return > 0 means to go ahead and replace/install ignoring, etc
     # return == 0 means to stop
     print 'Question:', (event, data1, data2, data3)
@@ -457,6 +456,16 @@ class gui:
     self.busy_window = None
     self.busy_window_hidden = True
 
+    try:
+      self.guzuta_icon =\
+        gtk.gdk.pixbuf_new_from_file(self.cwd + \
+          '/share/guzuta/guzuta_icon_transparent.png')
+    except gobject.GError:
+      self.guzuta_icon =\
+          gtk.gdk.pixbuf_new_from_file(\
+            '/usr/share/guzuta/guzuta_icon_transparent.png'\
+          )
+    self.main_window.set_icon(self.guzuta_icon)
     self.main_window.show()
 
     self.__build_trayicon__()
@@ -497,23 +506,25 @@ class gui:
       self.th.join()
   # }}}
 
+  def alpm_debug_cb(self):
+    #print 'STILL ALIVE'
+    return True
+
   # def alpm_run_in_thread_and_wait(self, method, args): {{{
   def alpm_run_in_thread_and_wait(self, method, args):
     th_obj = None
     self.run_in_thread(method, args)
 
+    cb_id = gobject.timeout_add(10, self.alpm_debug_cb)
     # waiting for thread to finish
     while not self.shell.th_ended_event.isSet():
       self.shell.th_ended_event.wait(0.01)
 
-      now = time.time()
-      if now % 60 == 0:
-        print 'STILL WAITING'
-      #print 'NOW IS ', now
 
       while gtk.events_pending():
         gtk.main_iteration(False)
     self.shell.th_ended_event.clear()
+    gobject.source_remove(cb_id)
   # }}}
 
   # def alpm_urllib_report_hook(self, blocks_so_far, block_size_bytes, {{{
@@ -594,18 +605,22 @@ class gui:
           pkg_names = groups[grp_name]
 
           if repo_name:
-            text = '<b>%s</b>\n<small><i>group</i></small>' % grp_name
+            text = '<b>%s</b>\n<small><i>group</i></small>' %\
+              cgi.escape(grp_name)
+            text_repo_name = '<b>%s</b>' % cgi.escape(repo_name)
             iter = treestore.append(None, [grp_name, False, text, '', '',\
-                repo_name])
+                text_repo_name])
           else:
             try:
               repo2 = self.groups[grp_name][0]
             except KeyError:
               repo2 = 'local'
 
-            text = '<b>%s</b>\n<small><i>group</i></small>' % grp_name
+            text = '<b>%s</b>\n<small><i>group</i></small>' %\
+              cgi.escape(grp_name)
+            text_repo_name = '<b>%s</b>' % cgi.escape(repo2)
             iter = treestore.append(None, [grp_name, False, text, '', '',\
-                repo2])
+                text_repo_name])
 
           for pkg_name in pkg_names:
             already_visited_pkgs[pkg_name] = None
@@ -634,9 +649,14 @@ class gui:
             if repo_name:
               #treestore.append(iter, [False, pkg_name, local_version,
               #    available_version, repo_name])
+              pkg_name = cgi.escape(pkg_name)
+              desc = cgi.escape(desc)
               text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
-              treestore.append(iter, [pkg_name, False, text, local_version,
-                  available_version, repo_name])
+              text_local_ver = '<b>%s</b>' % cgi.escape(local_version)
+              text_avai_ver = '<b>%s</b>' % cgi.escape(available_version)
+              text_repo_name = '<b>%s</b>' % cgi.escape(repo_name)
+              treestore.append(iter, [pkg_name, False, text,text_local_ver,
+                  text_avai_ver, text_repo_name])
               yield True
             else:
               l = len(self.pkgs[pkg_name].keys())
@@ -646,17 +666,28 @@ class gui:
                   if repo3 != 'local':
                     #treestore.append(iter, [False, pkg_name, local_version,
                     #    available_version, repo3])
+                    pkg_name = cgi.escape(pkg_name)
+                    desc = cgi.escape(desc)
                     text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
-                    treestore.append(iter, [pkg_name, False, text, local_version,
-                        available_version, repo3])
+                    text_local_ver = '<b>%s</b>' % cgi.escape(local_version)
+                    text_avai_ver = '<b>%s</b>' % cgi.escape(available_version)
+                    text_repo_name = '<b>%s</b>' % cgi.escape(repo3)
+                    treestore.append(iter, [pkg_name, False, text,
+                        text_local_ver,
+                        text_avai_ver, text_repo_name])
                     local_info = (iter, [False, pkg_name, local_version,
                         available_version, repo3])
               else:
                 #treestore.append(iter, [False, pkg_name, local_version,
                 #    available_version, repo2])
+                pkg_name = cgi.escape(pkg_name)
+                desc = cgi.escape(desc)
                 text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
-                treestore.append(iter, [pkg_name, False, text, local_version,
-                    available_version, repo2])
+                text_local_ver = '<b>%s</b>' % cgi.escape(local_version)
+                text_avai_ver = '<b>%s</b>' % cgi.escape(available_version)
+                text_repo_name = '<b>%s</b>' % cgi.escape(repo2)
+                treestore.append(iter, [pkg_name, False, text,
+                    text_local_ver, text_avai_ver, text_repo_name])
               yield True
       else: # package
         if k not in already_visited_pkgs:
@@ -686,18 +717,28 @@ class gui:
           if repo_name:
             #treestore.append(None, [False, pkg_name, local_version,\
             #    available_version, repo_name])
+            pkg_name = cgi.escape(pkg_name)
+            desc = cgi.escape(desc)
             text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
-            treestore.append(None, [pkg_name, False, text, local_version,\
-                available_version, repo_name])
+            text_local_ver = '<b>%s</b>' % cgi.escape(local_version)
+            text_avai_ver = '<b>%s</b>' % cgi.escape(available_version)
+            text_repo_name = '<b>%s</b>' % cgi.escape(repo_name)
+            treestore.append(None, [pkg_name, False, text,
+              text_local_ver, text_avai_ver, text_repo_name])
             yield True
           else:
             for repo3 in self.pkgs[pkg_name].keys():
               if repo3 != 'local':
                 #treestore.append(None, [False, pkg_name, local_version,\
                 #    available_version, repo3])
+                pkg_name = cgi.escape(pkg_name)
+                desc = cgi.escape(desc)
                 text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
-                treestore.append(None, [pkg_name, False, text, local_version,\
-                    available_version, repo3])
+                text_local_ver = '<b>%s</b>' % cgi.escape(local_version)
+                text_avai_ver = '<b>%s</b>' % cgi.escape(available_version)
+                text_repo_name = '<b>%s</b>' % cgi.escape(repo3)
+                treestore.append(None, [pkg_name, False, text,
+                    text_local_ver, text_avai_ver, text_repo_name])
               yield True
     treeview.set_model(treestore)
     yield False
@@ -742,7 +783,6 @@ class gui:
       self.treeview.remove_column(column)
 
     self.emptycolumn = gtk.TreeViewColumn('')
-    #self.emptycolumn.set_sort_column_id(0)
     self.emptycolumn.pack_start(self.togglerenderer)
     self.emptycolumn.set_attributes(self.togglerenderer, active=1)
     self.emptycolumn.set_clickable(True)
@@ -751,23 +791,24 @@ class gui:
     
     self.namecolumn = gtk.TreeViewColumn('Name', self.textrenderer, markup=2)
     self.namecolumn.set_sort_column_id(0)
-    #self.namecolumn.pack_start(self.textrenderer)
-    #self.namecolumn.set_attributes(self.textrenderer, text=1)
     
     self.installedversioncolumn = gtk.TreeViewColumn('Installed')
     self.installedversioncolumn.set_sort_column_id(3)
     self.installedversioncolumn.pack_start(self.textrenderer)
-    self.installedversioncolumn.set_attributes(self.textrenderer, text=3)
+    #self.installedversioncolumn.set_attributes(self.textrenderer, text=3)
+    self.installedversioncolumn.set_attributes(self.textrenderer, markup=3)
     
     self.availableversioncolumn = gtk.TreeViewColumn('Available')
     self.availableversioncolumn.set_sort_column_id(4)
     self.availableversioncolumn.pack_start(self.textrenderer)
-    self.availableversioncolumn.set_attributes(self.textrenderer, text=4)
+    #self.availableversioncolumn.set_attributes(self.textrenderer, text=4)
+    self.availableversioncolumn.set_attributes(self.textrenderer, markup=4)
 
     self.repositorycolumn = gtk.TreeViewColumn('Repository')
     self.repositorycolumn.set_sort_column_id(5)
     self.repositorycolumn.pack_start(self.textrenderer)
-    self.repositorycolumn.set_attributes(self.textrenderer, text=5)
+    #self.repositorycolumn.set_attributes(self.textrenderer, text=5)
+    self.repositorycolumn.set_attributes(self.textrenderer, markup=5)
     
     self.treeview.append_column(self.emptycolumn)
     self.treeview.append_column(self.namecolumn)
@@ -782,20 +823,15 @@ class gui:
     self.treestore_repos = gtk.TreeStore(str, str)
 
     self.textrenderer_repos = gtk.CellRendererText()
-    self.textrenderer_repos.set_property('weight', 400)
 
     self.repocolumn = gtk.TreeViewColumn('Repositories',\
         self.textrenderer_repos, markup = 1)
-    #self.repocolumn.set_sort_column_id(1)
-    #self.repocolumn.pack_start(self.textrenderer_repos)
-    #self.repocolumn.set_attributes(self.textrenderer_repos, text=0)
     
     self.treeview_repos.append_column(self.repocolumn)
     
-    #self.treestore_repos.set_sort_column_id(0, gtk.SORT_ASCENDING)
 
     iter0 = self.treestore_repos.append(None,\
-        ['Pseudo Repos', '<i>Pseudo Repos</i>'])
+        ['Pseudo Repos', 'Pseudo Repos'])
     self.treestore_repos.append(iter0, ['All', 'All'])
     self.treestore_repos.append(iter0, ['Installed', 'Installed'])
     self.treestore_repos.append(iter0, ['Not Installed',\
@@ -806,7 +842,7 @@ class gui:
     #self.treestore_repos.append(iter0, ['Last Uninstalled'])
 
     iter1 = self.treestore_repos.append(None,\
-        ['Repos', '<i>Repos</i>'])
+        ['Repos', 'Repos'])
     
     for repo in self.db_names:
       repo = repo.capitalize()
@@ -2107,7 +2143,6 @@ class gui:
     # Step 3: actually perform the installation
     #try:
       #self.shell.alpm_transaction_commit()
-    #print 'RUNNING COMMIT'
     self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_commit, {})
 
     #except alpm.ConflictingFilesTransactionException, conflict_list:
@@ -2425,46 +2460,50 @@ class gui:
         'gchararray', 'gchararray', 'gchararray')
 
     # setup the treeview for 5 columns {{{
+    #self.__setup_pkg_treeview_no_fill__()
     textrenderer = gtk.CellRendererText()
     togglerenderer = gtk.CellRendererToggle()
     togglerenderer.set_active(True)
 
-    for col in self.treeview.get_columns():
-      self.treeview.remove_column(col)
+    #for col in self.treeview.get_columns():
+    #  self.treeview.remove_column(col)
 
-    emptycolumn = gtk.TreeViewColumn('')
-    #emptycolumn.set_sort_column_id(0)
-    emptycolumn.pack_start(togglerenderer)
-    emptycolumn.set_attributes(togglerenderer, active=1)
-    emptycolumn.set_clickable(True)
-    emptycolumn.connect('clicked', self.on_treeview_column_clicked,\
-        self.liststore, 1)
-    
-    repositorycolumn = gtk.TreeViewColumn('Repository')
-    repositorycolumn.set_sort_column_id(5)
-    repositorycolumn.pack_start(textrenderer)
-    repositorycolumn.set_attributes(textrenderer, text=5)
-    
-    namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=2)
-    namecolumn.set_sort_column_id(0)
-    #namecolumn.pack_start(textrenderer)
-    #namecolumn.set_attributes(textrenderer, text=1)
-    
-    availableversioncolumn = gtk.TreeViewColumn('Available')
-    availableversioncolumn.set_sort_column_id(4)
-    availableversioncolumn.pack_start(textrenderer)
-    availableversioncolumn.set_attributes(textrenderer, text=4)
-    
-    installedversioncolumn = gtk.TreeViewColumn('Installed')
-    installedversioncolumn.set_sort_column_id(3)
-    installedversioncolumn.pack_start(textrenderer)
-    installedversioncolumn.set_attributes(textrenderer, text=3)
+    if self.treeview.get_columns() == []:
+      emptycolumn = gtk.TreeViewColumn('')
+      #emptycolumn.set_sort_column_id(0)
+      emptycolumn.pack_start(togglerenderer)
+      emptycolumn.set_attributes(togglerenderer, active=1)
+      emptycolumn.set_clickable(True)
+      emptycolumn.connect('clicked', self.on_treeview_column_clicked,\
+          self.liststore, 1)
+      
+      repositorycolumn = gtk.TreeViewColumn('Repository')
+      repositorycolumn.set_sort_column_id(5)
+      repositorycolumn.pack_start(textrenderer)
+      repositorycolumn.set_attributes(textrenderer, text=5)
+      
+      namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=2)
+      namecolumn.set_sort_column_id(0)
+      #namecolumn.pack_start(textrenderer)
+      #namecolumn.set_attributes(textrenderer, text=1)
+      
+      availableversioncolumn = gtk.TreeViewColumn('Available')
+      availableversioncolumn.set_sort_column_id(4)
+      availableversioncolumn.pack_start(textrenderer)
+      #availableversioncolumn.set_attributes(textrenderer, text=4)
+      availableversioncolumn.set_attributes(textrenderer, markup=4)
+      
+      installedversioncolumn = gtk.TreeViewColumn('Installed')
+      installedversioncolumn.set_sort_column_id(3)
+      installedversioncolumn.pack_start(textrenderer)
+      #installedversioncolumn.set_attributes(textrenderer, text=3)
+      installedversioncolumn.set_attributes(textrenderer, markup=3)
 
-    self.treeview.append_column(emptycolumn)
-    self.treeview.append_column(namecolumn)
-    self.treeview.append_column(installedversioncolumn)
-    self.treeview.append_column(availableversioncolumn)
-    self.treeview.append_column(repositorycolumn)
+      self.treeview.append_column(emptycolumn)
+      self.treeview.append_column(namecolumn)
+      self.treeview.append_column(installedversioncolumn)
+      self.treeview.append_column(availableversioncolumn)
+      self.treeview.append_column(repositorycolumn)
     # }}}
 
     if regexp_text[0] == '*':
@@ -2505,9 +2544,12 @@ class gui:
               if found:
                 iter, repo_name = already_seen_groups[grp_name]
               else:
+                grp_name = cgi.escape(grp_name)
                 text = '<b>%s</b>\n<small><i>group</i></small>' % grp_name
+                grp_repo_name = cgi.escape(grp_repo_name)
+                text_grp_repo = '<b>%s</b>' % grp_repo_name
                 iter = self.liststore.append(None, [grp_name, False, text, '',\
-                    '', grp_repo_name])
+                    '', text_grp_repo])
                 already_seen_groups[grp_name] = (iter, grp_repo_name)
 
               for pkg_name in grp_packages:
@@ -2529,8 +2571,15 @@ class gui:
                   desc = desc[:40]
                   desc += ' ...'
                 text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
+                ver_markup = '<b>%s</b>'
+                installed_version = cgi.escape(installed_version)
+                available_version = cgi.escape(available_version)
+                pkg_repo = cgi.escape(pkg_repo)
+                text_local_ver = ver_markup % installed_version
+                text_avai_ver = ver_markup % available_version
+                text_pkg_repo = ver_markup % pkg_repo
                 self.liststore.append(iter, [pkg_name, False, text,\
-                    installed_version, available_version, pkg_repo])
+                    text_local_ver, text_avai_ver, text_pkg_repo])
                 # and outside the group
                 #self.liststore.append(None, [False, pkg_name, installed_version,\
                 #    available_version, repo])
@@ -2557,9 +2606,19 @@ class gui:
               if len(description) > 40:
                 description = description[:40]
                 description += ' ...'
+
+              name = cgi.escape(name)
+              description = cgi.escape(description)
+              installed_version = cgi.escape(installed_version)
+              version = cgi.escape(version)
+              repo = cgi.escape(repo)
+              text_local_ver = ver_markup % installed_version
+              text_avai_ver = ver_markup % available_version
+              text_pkg_repo = ver_markup % repo
+              
               text = '<b>%s</b>\n<small><i>%s</i></small>' % (name, description)
               self.liststore.append(None, [name, False, text,\
-                  installed_version, version, repo])
+                  text_local_ver, text_avai_ver, text_pkg_repo])
           
       if not found:
         # search 'local'
@@ -2584,9 +2643,18 @@ class gui:
               if len(description) > 40:
                 description = description[:40]
                 description += ' ...'
+
+              name = cgi.escape(name)
+              description = cgi.escape(description)
+              installed_version = cgi.escape(installed_version)
+              version = cgi.escape(version)
+              repo = cgi.escape(repo)
+              text_local_ver = ver_markup % installed_version
+              text_avai_ver = ver_markup % available_version
+              
               text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, description)
               self.liststore.append(None, [pkg_name, False, text,\
-                  installed_version, version, 'local'])
+                  text_local_ver, text_avai_ver, '<b>local</b>'])
 
       if self.toggle_handler_id:
         if not self.togglerenderer.handler_is_connected(self.toggle_handler_id):
@@ -2876,24 +2944,25 @@ class gui:
     
     textrenderer = gtk.CellRendererText()
 
-    pkg_cache_name_column = gtk.TreeViewColumn('Name')
-    pkg_cache_name_column.set_sort_column_id(0)
-    pkg_cache_name_column.pack_start(textrenderer)
-    pkg_cache_name_column.set_attributes(textrenderer, text=0)
+    if cache_treeview.get_columns() == []:
+      pkg_cache_name_column = gtk.TreeViewColumn('Name')
+      pkg_cache_name_column.set_sort_column_id(0)
+      pkg_cache_name_column.pack_start(textrenderer)
+      pkg_cache_name_column.set_attributes(textrenderer, text=0)
 
-    pkg_cache_version_column = gtk.TreeViewColumn('Version')
-    pkg_cache_version_column.set_sort_column_id(1)
-    pkg_cache_version_column.pack_start(textrenderer)
-    pkg_cache_version_column.set_attributes(textrenderer, text=1)
+      pkg_cache_version_column = gtk.TreeViewColumn('Version')
+      pkg_cache_version_column.set_sort_column_id(1)
+      pkg_cache_version_column.pack_start(textrenderer)
+      pkg_cache_version_column.set_attributes(textrenderer, text=1)
 
-    pkg_cache_days_column = gtk.TreeViewColumn('Days')
-    pkg_cache_days_column.set_sort_column_id(2)
-    pkg_cache_days_column.pack_start(textrenderer)
-    pkg_cache_days_column.set_attributes(textrenderer, text=2)
+      pkg_cache_days_column = gtk.TreeViewColumn('Days')
+      pkg_cache_days_column.set_sort_column_id(2)
+      pkg_cache_days_column.pack_start(textrenderer)
+      pkg_cache_days_column.set_attributes(textrenderer, text=2)
 
-    cache_treeview.append_column(pkg_cache_name_column)
-    cache_treeview.append_column(pkg_cache_version_column)
-    #cache_treeview.append_column(pkg_cache_days_column)
+      cache_treeview.append_column(pkg_cache_name_column)
+      cache_treeview.append_column(pkg_cache_version_column)
+      #cache_treeview.append_column(pkg_cache_days_column)
     
     self.alpm_run_in_thread_and_wait(self.get_cache_pkgs, {})
     cache_pkgs = self.prev_return
@@ -3351,20 +3420,20 @@ class gui:
     
     img = gtk.Image()
     #img.set_from_stock(gtk.STOCK_MISSING_IMAGE, gtk.ICON_SIZE_MENU)
-    try:
-      pixbuf =\
-        gtk.gdk.pixbuf_new_from_file(self.cwd + \
-          '/share/guzuta/guzuta_icon_transparent.png')
-    except gobject.GError:
-      try:
-        pixbuf =\
-            gtk.gdk.pixbuf_new_from_file(\
-              '/usr/share/guzuta/guzuta_icon_transparent.png'\
-            )
-      except gobject.GError:
-        print 'systray icon not found, bailing out'
-        sys.exit(1)
-    img.set_from_pixbuf(pixbuf)
+    #try:
+    #  pixbuf =\
+    #    gtk.gdk.pixbuf_new_from_file(self.cwd + \
+    #      '/share/guzuta/guzuta_icon_transparent.png')
+    #except gobject.GError:
+    #  try:
+    #    pixbuf =\
+    #        gtk.gdk.pixbuf_new_from_file(\
+    #          '/usr/share/guzuta/guzuta_icon_transparent.png'\
+    #        )
+    #  except gobject.GError:
+    #    print 'systray icon not found, bailing out'
+    #    sys.exit(1)
+    img.set_from_pixbuf(self.guzuta_icon)
     self.systray_eventbox.add(img)
     
     self.trayicon.add(self.systray_eventbox)
