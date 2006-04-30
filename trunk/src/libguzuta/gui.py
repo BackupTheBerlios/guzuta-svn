@@ -96,68 +96,83 @@ class gui:
     append_text = False
     print 'event: ', event, self.busy_dialog, self.busy_progress_bar3
     if event == alpm.PM_TRANS_EVT_CHECKDEPS_START:
+      print 'PM_TRANS_EVT_CHECKDEPS_START'
       print 'Checking dependencies... '
       text = 'checking dependencies... '
     
     elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_START:
+      print 'PM_TRANS_EVT_FILECONFLICTS_START'
       print 'checking for file conflicts... '
       text = 'checking for file conflicts... '
     
     elif event == alpm.PM_TRANS_EVT_RESOLVEDEPS_START:
+      print 'PM_TRANS_EVT_RESOLVEDEPS_START'
       print 'resolving dependencies'
       text = 'resolving dependencies... '
     
     elif event == alpm.PM_TRANS_EVT_INTERCONFLICTS_START:
+      print 'PM_TRANS_EVT_INTERCONFLICTS_START'
       print 'looking for inter-conflicts... '
       text = 'looking for inter-conflicts... '
     
     elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_START:
+      print 'PM_TRANS_EVT_FILECONFLICTS_START'
       print 'checking for file conflicts... '
       text = 'checking for file conflicts... '
     
     elif event == alpm.PM_TRANS_EVT_CHECKDEPS_DONE:
+      print 'PM_TRANS_EVT_CHECKDEPS_DONE'
       print 'done.'
       text = 'done'
       append_text = True
     
     elif event == alpm.PM_TRANS_EVT_FILECONFLICTS_DONE:
+      print 'PM_TRANS_EVT_FILECONFLICTS_DONE'
       print 'done.'
       text = 'done'
       append_text = True
     
     elif event == alpm.PM_TRANS_EVT_RESOLVEDEPS_DONE:
+      print 'PM_TRANS_EVT_RESOLVEDEPS_DONE'
       print 'done.'
       text = 'done'
       append_text = True
     
     elif event == alpm.PM_TRANS_EVT_INTERCONFLICTS_DONE:
+      print 'PM_TRANS_EVT_INTERCONFLICTS_DONE'
       print 'done.'
       text = 'done'
       append_text = True
     
     elif event == alpm.PM_TRANS_EVT_ADD_START:
+      print 'PM_TRANS_EVT_ADD_START'
       print 'installing %s... ' % package1.get_name()
       text = 'installing %s... ' % package1.get_name()
     
     elif event == alpm.PM_TRANS_EVT_ADD_DONE:
+      print 'PM_TRANS_EVT_ADD_DONE'
       print 'done.'
       text = 'done'
       append_text = True
 
     elif event == alpm.PM_TRANS_EVT_REMOVE_START:
+      print 'PM_TRANS_EVT_REMOVE_START'
       print 'removing %s... ' % package1.get_name()
       text = 'removing %s... ' % package1.get_name()
     
     elif event == alpm.PM_TRANS_EVT_REMOVE_DONE:
+      print 'PM_TRANS_EVT_REMODE_DONE'
       print 'done.'
       text = 'done'
       append_text = True
     
     elif event == alpm.PM_TRANS_EVT_UPGRADE_START:
+      print 'PM_TRANS_EVT_UPGRADE_START'
       print 'upgrading %s... ' % package1.get_name()
       text = 'upgrading %s... ' % package1.get_name()
     
     elif event == alpm.PM_TRANS_EVT_UPGRADE_DONE:
+      print 'PM_TRANS_EVT_UPGRADE_DONE'
       print 'done.'
       text = 'done'
       append_text = True
@@ -1117,6 +1132,7 @@ class gui:
     pkg_filechooser_dialog =\
       self.all_widgets.get_widget('pkg_filechooser_dialog')
     self.current_dialog = pkg_filechooser_dialog
+    pkg_filechooser_dialog.set_select_multiple(True)
     
     filter = gtk.FileFilter()
     filter.set_name('Pacman Files')
@@ -1134,37 +1150,86 @@ class gui:
       #pathname = pkg_filechooser_dialog.get_filename()
       path_list = pkg_filechooser_dialog.get_filenames()
       
-      install_pkg_are_you_sure_dialog =\
-        self.all_widgets.get_widget('install_pkg_are_you_sure_dialog')
-      self.current_dialog = install_pkg_are_you_sure_dialog
+      pkg_are_you_sure_dialog =\
+        self.all_widgets.get_widget('pkg_are_you_sure_dialog2')
 
-      install_are_you_sure_label =\
-        self.all_widgets.get_widget('install_are_you_sure_label')
-      
-      label_text = ''
-      pkgs = []
+      self.are_you_sure_treeview =\
+          self.all_widgets.get_widget('pkgs_treeview')
+
+      liststore = gtk.ListStore('gchararray')
+      textrenderer = gtk.CellRendererText()
+
+      cols = self.are_you_sure_treeview.get_columns()
+      if cols == []:
+        namecolumn = gtk.TreeViewColumn('Name')
+        namecolumn.set_sort_column_id(0)
+        namecolumn.pack_start(textrenderer)
+        namecolumn.set_attributes(textrenderer, text=0)
+
+        self.are_you_sure_treeview.append_column(namecolumn)
+
+      are_you_sure_message_label =\
+          self.all_widgets.get_widget('are_you_sure_message_label')
+
+      are_you_sure_message_label.set_text(\
+          'Do you wish to remove these packages?')
+
       for pathname in path_list:
         index = pathname.rfind('/')
-
         pkg = pathname[index+1:]
-        pkg = pkg[:pkg.find('.')]
         pkg = pkg[:pkg.rfind('-')]
+        pkg = pkg[:pkg.rfind('-')]
+      #for pkg_name in targets:
+        liststore.append([pkg])
 
-        pkgs.append(pkg)
+      liststore.set_sort_column_id(0, gtk.SORT_ASCENDING)
 
-        if label_text == '':
-          label_text = pkg
-        else:
-          label_text = label_text + pkg + '\n'
-
-      install_are_you_sure_label.set_text(label_text)
+      self.are_you_sure_treeview.set_model(liststore)
 
       self.current_dialog_on = True
-      response = install_pkg_are_you_sure_dialog.run()
-      install_pkg_are_you_sure_dialog.hide()
-      self.current_dialog_on = False
+      response = pkg_are_you_sure_dialog.run()
+      pkg_are_you_sure_dialog.hide()
+
+      #install_pkg_are_you_sure_dialog =\
+      #  self.all_widgets.get_widget('install_pkg_are_you_sure_dialog')
+      #self.current_dialog = install_pkg_are_you_sure_dialog
+
+      #install_are_you_sure_label =\
+      #  self.all_widgets.get_widget('install_are_you_sure_label')
+      #
+      #label_text = ''
+      #pkgs = []
+      #for pathname in path_list:
+      #  index = pathname.rfind('/')
+
+      #  pkg = pathname[index+1:]
+      #  pkg = pkg[:pkg.find('.')]
+      #  pkg = pkg[:pkg.rfind('-')]
+
+      #  pkgs.append(pkg)
+
+      #  if label_text == '':
+      #    label_text = pkg
+      #  else:
+      #    label_text = label_text + pkg + '\n'
+
+      #install_are_you_sure_label.set_text(label_text)
+
+      #self.current_dialog_on = True
+      #response = install_pkg_are_you_sure_dialog.run()
+      #install_pkg_are_you_sure_dialog.hide()
+      #self.current_dialog_on = False
 
       if response == gtk.RESPONSE_OK:
+        self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+        self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+        self.busy_progress_bar3.set_text('')
+        self.busy_progress_bar3.set_fraction(0.0)
+        self.busy_dialog.show_now()
+
+        self.fraction_increment = 1.0 / (4 + 2 * len(path_list))
+        self.current_fraction = 0.0
+
         selection = self.treeview.get_selection()
         treemodel, iter = selection.get_selected()
 
@@ -1179,6 +1244,7 @@ class gui:
           except alpm.PackageNotFoundTransactionException, inst:
             print inst
             self.shell.alpm_transaction_release()
+            self.busy_dialog.hide()
             return
         # Step 2: compute the transaction
         self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_prepare, {})
@@ -1199,6 +1265,7 @@ class gui:
             conflicts_error_dialog.hide()
 
             self.shell.alpm_transaction_release()
+            self.busy_dialog.hide()
             return
           elif self.shell.last_exception[0] == 2:
             conflict_list = self.shell.last_exception[1]
@@ -1218,6 +1285,7 @@ class gui:
             conflicts_error_dialog.hide()
 
             self.shell.alpm_transaction_release()
+            self.busy_dialog.hide()
             return
           elif self.shell.last_exception[0] == 4:
             conflict_list = self.shell.last_exception[1]
@@ -1243,6 +1311,7 @@ class gui:
             conflicts_error_dialog.hide()
 
             self.shell.alpm_transaction_release()
+            self.busy_dialog.hide()
             return
 
         # Step 3: actually perform the installation
@@ -1262,7 +1331,14 @@ class gui:
             conflicts_error_dialog.hide()
 
             self.shell.alpm_transaction_release()
+            self.busy_dialog.hide()
             return
+          else:
+            self.shell.alpm_transaction_release()
+            self.busy_dialog.hide()
+        else:
+          self.shell.alpm_transaction_release()
+          self.busy_dialog.hide()
       else:
         return 
     else:
@@ -2465,45 +2541,46 @@ class gui:
     togglerenderer = gtk.CellRendererToggle()
     togglerenderer.set_active(True)
 
-    #for col in self.treeview.get_columns():
-    #  self.treeview.remove_column(col)
+    for col in self.treeview.get_columns():
+      self.treeview.remove_column(col)
 
-    if self.treeview.get_columns() == []:
-      emptycolumn = gtk.TreeViewColumn('')
-      #emptycolumn.set_sort_column_id(0)
-      emptycolumn.pack_start(togglerenderer)
-      emptycolumn.set_attributes(togglerenderer, active=1)
-      emptycolumn.set_clickable(True)
-      emptycolumn.connect('clicked', self.on_treeview_column_clicked,\
-          self.liststore, 1)
-      
-      repositorycolumn = gtk.TreeViewColumn('Repository')
-      repositorycolumn.set_sort_column_id(5)
-      repositorycolumn.pack_start(textrenderer)
-      repositorycolumn.set_attributes(textrenderer, text=5)
-      
-      namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=2)
-      namecolumn.set_sort_column_id(0)
-      #namecolumn.pack_start(textrenderer)
-      #namecolumn.set_attributes(textrenderer, text=1)
-      
-      availableversioncolumn = gtk.TreeViewColumn('Available')
-      availableversioncolumn.set_sort_column_id(4)
-      availableversioncolumn.pack_start(textrenderer)
-      #availableversioncolumn.set_attributes(textrenderer, text=4)
-      availableversioncolumn.set_attributes(textrenderer, markup=4)
-      
-      installedversioncolumn = gtk.TreeViewColumn('Installed')
-      installedversioncolumn.set_sort_column_id(3)
-      installedversioncolumn.pack_start(textrenderer)
-      #installedversioncolumn.set_attributes(textrenderer, text=3)
-      installedversioncolumn.set_attributes(textrenderer, markup=3)
+    #if self.treeview.get_columns() == []:
+    emptycolumn = gtk.TreeViewColumn('')
+    #emptycolumn.set_sort_column_id(0)
+    emptycolumn.pack_start(togglerenderer)
+    emptycolumn.set_attributes(togglerenderer, active=1)
+    emptycolumn.set_clickable(True)
+    emptycolumn.connect('clicked', self.on_treeview_column_clicked,\
+        self.liststore, 1)
+    
+    repositorycolumn = gtk.TreeViewColumn('Repository')
+    repositorycolumn.set_sort_column_id(5)
+    repositorycolumn.pack_start(textrenderer)
+    #repositorycolumn.set_attributes(textrenderer, text=5)
+    repositorycolumn.set_attributes(textrenderer, markup=5)
+    
+    namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=2)
+    namecolumn.set_sort_column_id(0)
+    #namecolumn.pack_start(textrenderer)
+    #namecolumn.set_attributes(textrenderer, text=1)
+    
+    availableversioncolumn = gtk.TreeViewColumn('Available')
+    availableversioncolumn.set_sort_column_id(4)
+    availableversioncolumn.pack_start(textrenderer)
+    #availableversioncolumn.set_attributes(textrenderer, text=4)
+    availableversioncolumn.set_attributes(textrenderer, markup=4)
+    
+    installedversioncolumn = gtk.TreeViewColumn('Installed')
+    installedversioncolumn.set_sort_column_id(3)
+    installedversioncolumn.pack_start(textrenderer)
+    #installedversioncolumn.set_attributes(textrenderer, text=3)
+    installedversioncolumn.set_attributes(textrenderer, markup=3)
 
-      self.treeview.append_column(emptycolumn)
-      self.treeview.append_column(namecolumn)
-      self.treeview.append_column(installedversioncolumn)
-      self.treeview.append_column(availableversioncolumn)
-      self.treeview.append_column(repositorycolumn)
+    self.treeview.append_column(emptycolumn)
+    self.treeview.append_column(namecolumn)
+    self.treeview.append_column(installedversioncolumn)
+    self.treeview.append_column(availableversioncolumn)
+    self.treeview.append_column(repositorycolumn)
     # }}}
 
     if regexp_text[0] == '*':
@@ -2612,8 +2689,9 @@ class gui:
               installed_version = cgi.escape(installed_version)
               version = cgi.escape(version)
               repo = cgi.escape(repo)
+              ver_markup = '<b>%s</b>'
               text_local_ver = ver_markup % installed_version
-              text_avai_ver = ver_markup % available_version
+              text_avai_ver = ver_markup % version
               text_pkg_repo = ver_markup % repo
               
               text = '<b>%s</b>\n<small><i>%s</i></small>' % (name, description)
