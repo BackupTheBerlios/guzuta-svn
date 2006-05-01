@@ -2530,6 +2530,17 @@ class gui:
     self.search(regexp_text)
   # }}}
 
+  # def on_search_changed(self, editable): {{{
+  def on_search_changed(self, editable):
+    regexp_text = editable.get_text()
+
+    if regexp_text == '':
+      self.__fill_treeview_with_pkgs_from_repo__('installed')
+      return
+
+    self.search(regexp_text)
+  # }}}
+
   # def search(self, regexp_text): {{{
   def search(self, regexp_text):
     import cgi
@@ -2778,16 +2789,6 @@ class gui:
       no_search_selected_dialog.run()
       no_search_selected_dialog.hide()
       self.current_dialog_on = False
-  # }}}
-
-  # def on_search_changed(self, editable): {{{
-  def on_search_changed(self, editable):
-    regexp_text = editable.get_text()
-
-    if regexp_text == '':
-      return
-
-    self.search(regexp_text)
   # }}}
 
   # def on_clear_clicked(self, button): {{{
