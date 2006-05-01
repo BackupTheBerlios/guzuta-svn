@@ -555,7 +555,7 @@ class gui:
       total_blocks = math.ceil(float(total_size)/float(block_size_bytes))
     division = float(blocks_so_far) / float(total_blocks)
     #self.busy_progress_bar3.set_text('Downloading ' + self.shell.retrieving + ' ' + str(division * 100) + '%')
-    self.busy_progress_bar3.set_text('%.2f %%' % (division * 100))
+    self.busy_progress_bar3.set_text('%f %%' % (division * 100))
     #self.busy_progress_bar3.set_text('%d out of %d bytes' %\
     #    ((blocks_so_far * block_size_bytes), total_size))
     if self.downloading_db:
@@ -3881,13 +3881,13 @@ class gui:
     n = len(tree_model)
     
     names = []
-    has_children = False
     for row in tree_model:
+      has_children = False
       for child_row in row.iterchildren():
+        has_children = True
         if child_row[boolean_col]:
-          has_children = True
           names.append(child_row[name_col])
-      if not has_children and row[boolean_col]:
+      if (has_children == False) and (row[boolean_col]):
         names.append(row[name_col])
 
     return names

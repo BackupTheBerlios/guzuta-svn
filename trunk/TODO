@@ -1,13 +1,15 @@
 0.0.5
 =====
 * There is a bug in pynealpm/libalpm: sometimes when upgrading a package, it
-  stops upgrading.
+  stops upgrading - maybe this works, just takes a long time? try to install 
+  xchat-gnome. takes a long time but installs.
 0.0.6
 =====
 * ADD A CANCEL BUTTON TO THE BUSY WINDOW!!!
 * support forcing install/remove, etc...
 * show orphaned packages, like pacman -Qe
-* use wget to download pkgs, because pkg downloads keep getting corrupt
+* use wget to download pkgs, because pkg downloads keep getting corrupt -
+  maybe, confirm this???
 * use treemodelfilter instead of creating and setting all those times the
   treestores for the treeviews, check the tutorial
 * add icons and stuff to pkg lists and something like that (this is done with
