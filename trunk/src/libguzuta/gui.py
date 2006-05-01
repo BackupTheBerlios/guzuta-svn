@@ -2600,7 +2600,7 @@ class gui:
     found = False
     if where_to_search != None:
       # search local groups
-      if where_to_search == 'Name':
+      if where_to_search == 'Name' or where_to_search == 'All':
         for grp_repo_name, repo_list in self.groups_by_repo.iteritems():
           for grp_name, grp_packages in repo_list:
             match = regexp.match(grp_name)
@@ -2664,16 +2664,25 @@ class gui:
       # search current, community, extra, etc...
       for repo, repo_list in self.pkgs_by_repo.iteritems():
         for name, version, description in repo_list:
+          matched = False
           if where_to_search == 'Version':
             match = regexp.match(version)
+            matched = (match != None)
           elif where_to_search == 'Name':
             match = regexp.match(name)
-          else: # description
+            matched = (match != None)
+          elif where_to_search == 'Description':
             match = regexp.match(description)
-          if match:
+            matched = (match != None)
+          elif where_to_search == 'All':
+            matched = (regexp.match(version) != None\
+              or regexp.match(name) != None\
+              or regexp.match(description) != None)
+          if matched:
             if name not in already_seen_pkgs:
-              if (where_to_search == 'Name' or\
-                  where_to_search == 'Description') and not found:
+              if (where_to_search == 'Name'\
+                  or where_to_search == 'Description')\
+                  or where_to_search == 'All' and not found:
                 found = True
               try:
                 installed_version = self.local_pkgs[name][1]
@@ -2704,13 +2713,21 @@ class gui:
           if name not in already_seen_pkgs:
             version = self.local_pkgs[name][1]
             description = self.local_pkgs[name][2]
+            matched = False
             if where_to_search == 'Version':
               match = regexp.match(version)
+              matched = match != None
             elif where_to_search == 'Name':
               match = regexp.match(name)
-            else: # description
+              matched = match != None
+            elif where_to_search == 'Description':
               match = regexp.match(description)
-            if match:
+              matched = match != None
+            elif where_to_search == 'All':
+              matched = regexp.match(version) != None\
+                  or regexp.match(name) != None\
+                  or regexp.match(description) != None
+            if matched:
               if not found:
                 found = True
               try:

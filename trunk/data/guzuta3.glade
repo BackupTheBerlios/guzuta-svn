@@ -2087,7 +2087,8 @@ of this License.
 		  <child>
 		    <widget class="GtkComboBox" id="search_combobox">
 		      <property name="visible">True</property>
-		      <property name="items" translatable="yes">Name
+		      <property name="items" translatable="yes">All
+Name
 Version
 Description</property>
 		      <property name="add_tearoffs">False</property>
