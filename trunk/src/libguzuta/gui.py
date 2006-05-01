@@ -311,7 +311,8 @@ class gui:
     'on_install_pkg_popup_destroy': self.on_install_pkg_popup_destroy,
     'on_search_clicked': self.on_search_clicked,
     'on_clear_clicked': self.on_clear_clicked,
-    'on_search_entry_activate': self.on_search_clicked,
+    #'on_search_entry_activate': self.on_search_clicked,
+    'on_search_entry_changed': self.on_search_changed,
     'on_about_activate': self.on_about_activate,
     'on_install_pkg_from_file_button_clicked':\
         self.on_install_pkg_from_file_activate,
@@ -2522,13 +2523,18 @@ class gui:
 
   # def on_search_clicked(self, button): {{{
   def on_search_clicked(self, button):
-    import cgi
-    already_seen_pkgs = {}
-    already_seen_groups = {} # grp name => iter
-
     regexp_text = self.search_entry.get_text()
     if regexp_text == '':
       return
+
+    self.search(regexp_text)
+  # }}}
+
+  # def search(self, regexp_text): {{{
+  def search(self, regexp_text):
+    import cgi
+    already_seen_pkgs = {}
+    already_seen_groups = {} # grp name => iter
 
     self.treeview.set_model(None) # unsetting model to speed things up
     # selected, name, installed version, available version, repository
@@ -2772,6 +2778,16 @@ class gui:
       no_search_selected_dialog.run()
       no_search_selected_dialog.hide()
       self.current_dialog_on = False
+  # }}}
+
+  # def on_search_changed(self, editable): {{{
+  def on_search_changed(self, editable):
+    regexp_text = editable.get_text()
+
+    if regexp_text == '':
+      return
+
+    self.search(regexp_text)
   # }}}
 
   # def on_clear_clicked(self, button): {{{

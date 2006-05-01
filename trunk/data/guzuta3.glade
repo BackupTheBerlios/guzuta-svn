@@ -2116,28 +2116,12 @@ Description</property>
 		      <property name="invisible_char">*</property>
 		      <property name="activates_default">False</property>
 		      <signal name="activate" handler="on_search_entry_activate" last_modification_time="Tue, 16 Aug 2005 21:59:23 GMT"/>
+		      <signal name="changed" handler="on_search_entry_changed" last_modification_time="Mon, 01 May 2006 14:19:12 GMT"/>
 		    </widget>
 		    <packing>
 		      <property name="padding">0</property>
 		      <property name="expand">True</property>
 		      <property name="fill">True</property>
-		    </packing>
-		  </child>
-
-		  <child>
-		    <widget class="GtkButton" id="search">
-		      <property name="visible">True</property>
-		      <property name="can_focus">True</property>
-		      <property name="label">gtk-find</property>
-		      <property name="use_stock">True</property>
-		      <property name="relief">GTK_RELIEF_NORMAL</property>
-		      <property name="focus_on_click">True</property>
-		      <signal name="clicked" handler="on_search_clicked" last_modification_time="Tue, 16 Aug 2005 21:59:34 GMT"/>
-		    </widget>
-		    <packing>
-		      <property name="padding">0</property>
-		      <property name="expand">False</property>
-		      <property name="fill">False</property>
 		    </packing>
 		  </child>
 
