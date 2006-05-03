@@ -1890,7 +1890,7 @@ of this License.
 	      <property name="tooltip" translatable="yes">Install selected packages.</property>
 	      <property name="label" translatable="yes">Install</property>
 	      <property name="use_underline">True</property>
-	      <property name="stock_id">gtk-yes</property>
+	      <property name="stock_id">gtk-jump-to</property>
 	      <property name="visible_horizontal">True</property>
 	      <property name="visible_vertical">True</property>
 	      <property name="is_important">False</property>
@@ -1905,9 +1905,10 @@ of this License.
 	  <child>
 	    <widget class="GtkToolButton" id="install_from_repo_button">
 	      <property name="sensitive">False</property>
+	      <property name="tooltip" translatable="yes">Install package from repository.</property>
 	      <property name="label" translatable="yes">Install from...</property>
 	      <property name="use_underline">True</property>
-	      <property name="stock_id">gtk-yes</property>
+	      <property name="stock_id">gtk-jump-to</property>
 	      <property name="visible_horizontal">True</property>
 	      <property name="visible_vertical">True</property>
 	      <property name="is_important">False</property>
@@ -1925,7 +1926,7 @@ of this License.
 	      <property name="tooltip" translatable="yes">Install package from file.</property>
 	      <property name="label" translatable="yes">Install from file...</property>
 	      <property name="use_underline">True</property>
-	      <property name="stock_id">gtk-yes</property>
+	      <property name="stock_id">gtk-jump-to</property>
 	      <property name="visible_horizontal">True</property>
 	      <property name="visible_vertical">True</property>
 	      <property name="is_important">False</property>

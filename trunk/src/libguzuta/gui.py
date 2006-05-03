@@ -259,6 +259,11 @@ class gui:
   # def __init__(self): {{{
   def __init__(self):
     gtk.gdk.threads_init()
+    self.report_hook_started = False
+    self.report_hook_start = None
+    self.report_hook_now = None
+    
+
     self.th = None
     self.prev_return = None
 
@@ -549,13 +554,31 @@ class gui:
       total_size):
     #FIXME: maybe turn this sleep on to make things more visible
     #time.sleep(0.5)
+
+    if not self.report_hook_started:
+      self.report_hook_started = True
+      self.report_hook_start = time.time()
+      print 'self.report_hook_start is: ', self.report_hook_start
+    else:
+      self.report_hook_now = time.time()
+      print 'self.report_hook_now is: ', self.report_hook_now
+
     if total_size < block_size_bytes:
       total_blocks = 1
     else:
       total_blocks = math.ceil(float(total_size)/float(block_size_bytes))
+
+    bytes_so_far = blocks_so_far * block_size_bytes
+    if self.report_hook_now == None:
+      seconds_so_far = 0
+      kbps = 0
+    else:
+      seconds_so_far = self.report_hook_now - self.report_hook_start
+      # kb/s = kbs downloaded so far / seconds elapsed
+      kbps = (bytes_so_far / 1024) / seconds_so_far
     division = float(blocks_so_far) / float(total_blocks)
     #self.busy_progress_bar3.set_text('Downloading ' + self.shell.retrieving + ' ' + str(division * 100) + '%')
-    self.busy_progress_bar3.set_text('%.1f %%' % (division * 100))
+    self.busy_progress_bar3.set_text('%.1f %% - %.1f kb/s' % (division * 100, kbps))
     #self.busy_progress_bar3.set_text('%d out of %d bytes' %\
     #    ((blocks_so_far * block_size_bytes), total_size))
     if self.downloading_db:
