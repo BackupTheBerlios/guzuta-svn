@@ -555,7 +555,7 @@ class gui:
       total_blocks = math.ceil(float(total_size)/float(block_size_bytes))
     division = float(blocks_so_far) / float(total_blocks)
     #self.busy_progress_bar3.set_text('Downloading ' + self.shell.retrieving + ' ' + str(division * 100) + '%')
-    self.busy_progress_bar3.set_text('%f %%' % (division * 100))
+    self.busy_progress_bar3.set_text('%.1f %%' % (division * 100))
     #self.busy_progress_bar3.set_text('%d out of %d bytes' %\
     #    ((blocks_so_far * block_size_bytes), total_size))
     if self.downloading_db:
