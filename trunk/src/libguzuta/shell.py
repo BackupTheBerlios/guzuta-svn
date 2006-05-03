@@ -1013,6 +1013,8 @@ the terms of the GNU General Public License'''
       db_name = self.alpm_get_pkg_dbname(pkg_name, 'local')
     else:
       db_name = self.alpm_get_pkg_dbname(pkg_name, repo_name)
+      if not db_name:
+        return None
 
     db = self.dbs_by_name['local']
 
@@ -1026,10 +1028,16 @@ the terms of the GNU General Public License'''
 
   # def alpm_get_pkg_dbname(self, pkg_name, repo_name): {{{
   def alpm_get_pkg_dbname(self, pkg_name, repo_name):
+    ret = None
     try:
       self.pkgs[pkg_name][repo_name][0]
     except KeyError:
-      return self.local_pkgs[pkg_name][0]
+      try:
+        ret =  self.local_pkgs[pkg_name][0]
+      except KeyError:
+        return None
+      else:
+        return ret
   # }}}
 
   # def alpm_get_pkg_version(self, pkg_name, repo_name): {{{
