@@ -984,7 +984,6 @@ the terms of the GNU General Public License'''
   # TODO: show kb/s if possible
   # def alpm_download_file(self, url, destination, report_hook = None): {{{
   def alpm_download_file(self, url, destination, report_hook = None):
-    #time.sleep(2)
     try:
       is_db = True
       if not report_hook:
@@ -996,6 +995,12 @@ the terms of the GNU General Public License'''
         except ValueError:
           is_db = False
 
+        import urllib2
+        try:
+          ret = urllib2.urlopen(url)
+        except urllib2.HTTPError, inst:
+          print inst
+          return None
         if is_db:
           self.retrieving = url[url.rindex("/")+1:url.rindex(".db.tar.gz")]
         else:
@@ -1120,6 +1125,14 @@ the terms of the GNU General Public License'''
           + server_record['path'] + package_name + '-' + version + '.pkg.tar.gz'
 
       filename = self.alpm_download_file(url, destination, report_hook)
+      if filename == None:
+        continue
+
+      f = open(filename, 'r')
+      f.seek(0, 2)
+      if f.tell() <= 0:
+        # file with 0 bytes
+        continue
 
       print '%s downloaded to %s' % (package_name, filename)
 
