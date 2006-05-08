@@ -509,13 +509,34 @@ class gui:
     gtk.main()
   # }}}
   
+  # def toggled(self, toggle_renderer, path, store = None, col = 0): {{{
+  def toggled(self, toggle_renderer, path, store = None, col = 0):
+    treemodelrow = store[path]
+    for row in treemodelrow.iterchildren():
+      store[row.path][col] = not store[path][col]
+    store[path][col] = not store[path][col]
+  # }}}
+
   # def on_treeview_column_clicked(self, treeviewcolumn, liststore, {{{
   #     col):
   def on_treeview_column_clicked(self, treeviewcolumn, store, col):
     self.column_selected = not self.column_selected
     
     for row in store:
+      #print row.iterchildren()
+      for child_row in row.iterchildren():
+        #store[row.path[col] = self.column_selected
+        store[child_row.path][col] = self.column_selected
       store[row.path][col] = self.column_selected
+    
+    #print '-------------------------'
+    #for row in store:
+    #  for child_row in row.iterchildren():
+    #    if store[child_row.path][col] == True:
+    #      print store[child_row.path][0]
+    #  if store[row.path][col] == True:
+    #    print store[row.path][0]
+    #print '--------------END---------'
     return True
   # }}}
 
@@ -3618,14 +3639,6 @@ class gui:
   def populate_pkg_lists(self):
     self.populate_local_pkg_list()
     self.populate_pkgs_by_repo()
-  # }}}
-
-  # def toggled(self, toggle_renderer, path, store = None, col = 0): {{{
-  def toggled(self, toggle_renderer, path, store = None, col = 0):
-    treemodelrow = store[path]
-    for row in treemodelrow.iterchildren():
-      store[row.path][col] = not store[path][col]
-    store[path][col] = not store[path][col]
   # }}}
 
   # def __add_pkg_info_markuped_to_pkg_info_label__(self, lines, {{{
