@@ -1148,11 +1148,6 @@ the terms of the GNU General Public License'''
     return False
   # }}}
 
-  # def alpm_transaction_init(self): {{{
-  #def alpm_transaction_init(self):
-  #  self.trans = self.alpm.transaction_init(alpm.PM_TRANS_TYPE_SYNC, 0, trans_cb_ev)
-  # }}}
-
   # def alpm_transaction_init(self, type, flags, cb_event, cb_conversation): {{{
   def alpm_transaction_init(self, type, flags, cb_event, cb_conversation=None):
     if cb_conversation != None:
@@ -1167,8 +1162,8 @@ the terms of the GNU General Public License'''
     return self.trans.get_targets()
   # }}}
 
-  # def alpm_refresh_dbs(self, report_hook = None): {{{
-  def alpm_refresh_dbs(self, report_hook = None):
+  # def alpm_refresh_dbs(self, report_hook = None, cancel_cb = None): {{{
+  def alpm_refresh_dbs(self, report_hook = None, cancel_cb = None):
     for pmc in self.pmc_syncs:
       treename = pmc['treename']
       db = pmc['db']
@@ -1176,6 +1171,9 @@ the terms of the GNU General Public License'''
       destination = '/tmp/' + gzfile
       servers = pmc['servers']
       for server in servers:
+        if cancel_cb():
+          print 'CANCELLING!'
+          return
         url = server['protocol'] + '://' + server['server'] + server['path'] +\
           gzfile
         filename = self.alpm_download_file(url, destination, report_hook)

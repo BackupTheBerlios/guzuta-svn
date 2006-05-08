@@ -263,7 +263,7 @@ class gui:
     self.report_hook_start = None
     self.report_hook_now = None
     
-
+    self.cancel_operation = False
     self.th = None
     self.prev_return = None
 
@@ -351,14 +351,16 @@ class gui:
         self.on_cache_menu_activate,
     'on_view_files_popup_menu_activate':\
         self.on_view_files_popup_menu_activate,
-    'on_cancel_busy_button_clicked':\
-        self.on_cancel_busy_button_clicked,
+    #'on_cancel_busy_button_clicked':\
+    #    self.on_cancel_busy_button_clicked,
     'on_information_text_motion_notify_event':\
         self.motion_notify_event,
     'on_information_text_visibility_notify_event':\
         self.visibility_notify_event,
     'on_information_text_event_after':\
-        self.event_after
+        self.event_after,
+    'on_busy_cancel_button_clicked':\
+        self.on_busy_cancel_button_clicked
     #'on_browse_preferences_button_clicked':\
     #    self.on_browse_preferences_button_clicked,
     #'on_information_text_leave_notify_event':\
@@ -523,9 +525,7 @@ class gui:
     self.column_selected = not self.column_selected
     
     for row in store:
-      #print row.iterchildren()
       for child_row in row.iterchildren():
-        #store[row.path[col] = self.column_selected
         store[child_row.path][col] = self.column_selected
       store[row.path][col] = self.column_selected
     
@@ -540,6 +540,11 @@ class gui:
     return True
   # }}}
 
+  # def cancel_cb(self): {{{
+  def cancel_cb(self):
+    return self.cancel_operation
+  # }}}
+
   # def run_in_thread(self, method, args_dict, wait=False): {{{
   def run_in_thread(self, method, args_dict, wait=False):
     self.th = threading.Thread(target=method, kwargs=args_dict)
@@ -548,9 +553,11 @@ class gui:
       self.th.join()
   # }}}
 
+  # def alpm_debug_cb(self): {{{
   def alpm_debug_cb(self):
     #print 'STILL ALIVE'
     return True
+  # }}}
 
   # def alpm_run_in_thread_and_wait(self, method, args): {{{
   def alpm_run_in_thread_and_wait(self, method, args):
@@ -562,9 +569,9 @@ class gui:
     while not self.shell.th_ended_event.isSet():
       self.shell.th_ended_event.wait(0.01)
 
-
       while gtk.events_pending():
         gtk.main_iteration(False)
+
     self.shell.th_ended_event.clear()
     gobject.source_remove(cb_id)
   # }}}
@@ -1266,8 +1273,13 @@ class gui:
       #self.current_dialog_on = False
 
       if response == gtk.RESPONSE_OK:
-        self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
-        self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+        #self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+        self.busy_dialog = self.all_widgets.get_widget('busy_dialog2')
+        self.busy_cancel_button =\
+        self.all_widgets.get_widget('busy_cancel_button')
+        #self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+        self.busy_progress_bar3 =\
+        self.all_widgets.get_widget('busy_progress_bar4')
         self.busy_progress_bar3.set_text('')
         self.busy_progress_bar3.set_fraction(0.0)
         self.busy_dialog.show_now()
@@ -1293,6 +1305,10 @@ class gui:
             return
         # Step 2: compute the transaction
         self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_prepare, {})
+        if self.cancel_operation:
+          self.shell.alpm_transaction_release()
+          self.busy_dialog.hide()
+          return
         if self.shell.last_exception:
           if self.shell.last_exception[0] == 1:
             depmiss_list = self.shell.last_exception[1]
@@ -1361,6 +1377,10 @@ class gui:
 
         # Step 3: actually perform the installation
         self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_commit, {})
+        if self.cancel_operation:
+          self.shell.alpm_transaction_release()
+          self.busy_dialog.hide()
+          return
         if self.shell.last_exception:
           if self.shell.last_exception[0] == 3:
 
@@ -1600,9 +1620,14 @@ class gui:
     if button == self.update_db:
       self.init_transaction = False
 
-      self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
-      self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
-      self.busy_status_label = self.all_widgets.get_widget('busy_status_label')
+      #self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+      self.busy_dialog = self.all_widgets.get_widget('busy_dialog2')
+      self.busy_cancel_button =\
+      self.all_widgets.get_widget('busy_cancel_button')
+      #self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+      self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar4')
+      #self.busy_status_label = self.all_widgets.get_widget('busy_status_label')
+      self.busy_status_label = self.all_widgets.get_widget('busy_status_label2')
       self.busy_progress_bar3.set_text('')
       self.current_fraction = 0.0
       self.fraction_increment = 1 / (1.0 + (2.0 * 2.0))
@@ -1622,12 +1647,22 @@ class gui:
         self.init_transaction = True
 
         self.alpm_run_in_thread_and_wait(self.shell.alpm_refresh_dbs,
-            {'report_hook': self.alpm_urllib_report_hook})
+            {'report_hook': self.alpm_urllib_report_hook,
+              'cancel_cb':  self.cancel_cb})
+        if self.cancel_operation:
+          if self.shell.trans:
+            self.shell.alpm_transaction_release()
+          self.busy_dialog.hide()
+          return
 
         self.busy_status_label.set_markup('<i>Please wait...</i>')
         self.alpm_run_in_thread_and_wait(self.shell.alpm_update_databases,\
             {'flags': 0, 'cb_ev': self.gui_trans_cb_ev,\
             'cb_conv': self.gui_trans_cb_conv})
+        if self.cancel_operation:
+          self.shell.alpm_transaction_release()
+          self.busy_dialog.hide()
+          return
 
         if self.shell.last_exception and self.shell.last_exception[0]:
           # TODO: present a nice dialog
@@ -1892,8 +1927,12 @@ class gui:
     if response == gtk.RESPONSE_CANCEL:
       return False
 
-    self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
-    self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+    #self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+    self.busy_dialog = self.all_widgets.get_widget('busy_dialog2')
+    self.busy_cancel_button =\
+    self.all_widgets.get_widget('busy_cancel_button')
+    #self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+    self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar4')
     self.busy_progress_bar3.set_text('')
     self.busy_progress_bar3.set_fraction(0.0)
     self.busy_dialog.show_now()
@@ -1913,6 +1952,10 @@ class gui:
     # Step 2: compute the transaction
     #try:
     self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_prepare, {})
+    if self.cancel_operation:
+      self.shell.alpm_transaction_release()
+      self.busy_dialog.hide()
+      return
     if self.shell.last_exception:
       if self.shell.last_exception[0] == 1:
         # alpm.UnsatisfiedDependenciesTransactionException
@@ -2219,6 +2262,10 @@ class gui:
         'report_hook': self.alpm_urllib_report_hook}
       self.alpm_run_in_thread_and_wait(self.shell.alpm_download_packages,
           kwargs)
+      if self.cancel_operation:
+        self.shell.alpm_transaction_release()
+        self.busy_dialog.hide()
+        return
       filenames = self.shell.get_prev_return()
       print 'DONE DOWNLOADING: ', filenames
       self.busy_status_label.set_markup('<i>Please wait...</i>')
@@ -2265,6 +2312,10 @@ class gui:
     #try:
       #self.shell.alpm_transaction_commit()
     self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_commit, {})
+    if self.cancel_operation:
+      self.shell.alpm_transaction_release()
+      self.busy_dialog.hide()
+      return
 
     #except alpm.ConflictingFilesTransactionException, conflict_list:
     if self.shell.last_exception:
@@ -2395,8 +2446,12 @@ class gui:
     if response == gtk.RESPONSE_CANCEL:
       return
     else:
-      self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
-      self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+      #self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+      self.busy_dialog = self.all_widgets.get_widget('busy_dialog2')
+      self.busy_cancel_button =\
+      self.all_widgets.get_widget('busy_cancel_button')
+      #self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+      self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar4')
       self.busy_progress_bar3.set_text('')
       self.busy_progress_bar3.set_fraction(0.0)
       self.busy_dialog.show_now()
@@ -2414,6 +2469,10 @@ class gui:
 
       # Step 2: prepare the transaction
       self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_prepare,{})
+      if self.cancel_operation:
+        self.shell.alpm_transaction_release()
+        self.busy_dialog.hide()
+        return
       if self.shell.last_exception:
         if self.shell.last_exception[0] == 1:
           # alpm.UnsatisfiedDependenciesTransactionException
@@ -2465,6 +2524,10 @@ class gui:
       
       # Step 3: actually perform the removal
       self.alpm_run_in_thread_and_wait(self.shell.alpm_transaction_commit, {})
+      if self.cancel_operation:
+        self.shell.alpm_transaction_release()
+        self.busy_dialog.hide()
+        return
       if self.shell.last_exception:
         if self.shell.last_exception[0] == 3:
           inst = self.shell.last_exception[1]
@@ -3214,19 +3277,21 @@ class gui:
   # }}}
 
   # def on_cancel_busy_button_clicked(self, button): {{{
-  def on_cancel_busy_button_clicked(self, button):
-    if self.th:
-      self.cancelled = True
-      #print 'MAIN: acquiring lock...'
-      self.lock.acquire()
-    
-      #print 'MAIN: waiting for thread to finish'
-      while self.th.isAlive():
-        while gtk.events_pending():
-          gtk.main_iteration(False)
-        time.sleep(0.1)
-      #print 'MAIN: thread finished, releasing lock'
-      self.lock.release()
+  def on_busy_cancel_button_clicked(self, button):
+    #if self.th:
+    #  self.cancelled = True
+    #  #print 'MAIN: acquiring lock...'
+    #  self.lock.acquire()
+    #
+    #  #print 'MAIN: waiting for thread to finish'
+    #  while self.th.isAlive():
+    #    while gtk.events_pending():
+    #      gtk.main_iteration(False)
+    #    time.sleep(0.1)
+    #  #print 'MAIN: thread finished, releasing lock'
+    #  self.lock.release()
+    self.busy_cancel_button.set_sensitive(False)
+    self.cancel_operation = True
   # }}}
   # }}}
   
@@ -3311,11 +3376,17 @@ class gui:
       generic_treeview_dialog.hide()
 
       if response == gtk.RESPONSE_OK:
-        self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+        #self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+        self.busy_dialog = self.all_widgets.get_widget('busy_dialog2')
+        self.busy_cancel_button =\
+        self.all_widgets.get_widget('busy_cancel_button')
 
-        self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+        #self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+        self.busy_progress_bar3 =\
+        self.all_widgets.get_widget('busy_progress_bar4')
         self.busy_progress_bar3.set_fraction(0.0)
-        self.busy_status_label = self.all_widgets.get_widget('busy_status_label')
+        #self.busy_status_label = self.all_widgets.get_widget('busy_status_label')
+        self.busy_status_label = self.all_widgets.get_widget('busy_status_label2')
         self.busy_status_label.set_markup('<i>Please wait...</i>')
 
         # old {{{
@@ -3517,9 +3588,13 @@ class gui:
     downloaded_pkgs_label =\
         self.all_widgets.get_widget('downloaded_pkgs_label')
 
-    self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+    #self.busy_dialog = self.all_widgets.get_widget('busy_dialog')
+    self.busy_dialog = self.all_widgets.get_widget('busy_dialog2')
+    self.busy_cancel_button =\
+    self.all_widgets.get_widget('busy_cancel_button')
 
-    self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+    #self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar3')
+    self.busy_progress_bar3 = self.all_widgets.get_widget('busy_progress_bar4')
     self.busy_progress_bar3.set_fraction(0.0)
 
     self.main_window.set_sensitive(False)
@@ -3531,6 +3606,10 @@ class gui:
     kwargs = {'files': list, 'progress_bar': self.busy_progress_bar3,\
       'report_hook': self.alpm_urllib_report_hook}
     self.alpm_run_in_thread_and_wait(self.shell.alpm_download_packages, kwargs)
+    if self.cancel_operation:
+      self.shell.alpm_transaction_release()
+      self.busy_dialog.hide()
+      return
     filenames = self.shell.get_prev_return()
     print filenames
 
