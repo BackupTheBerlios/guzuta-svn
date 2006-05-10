@@ -580,8 +580,8 @@ class gui:
   #   total_size):
   def alpm_urllib_report_hook(self, blocks_so_far, block_size_bytes,
       total_size):
-    #FIXME: maybe turn this sleep on to make things more visible
-    #time.sleep(0.5)
+    # magical sleep, without this, guzuta crashes cairo
+    time.sleep(0.02)
 
     if not self.report_hook_started:
       self.report_hook_started = True
