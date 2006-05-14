@@ -567,7 +567,7 @@ class gui:
     cb_id = gobject.timeout_add(10, self.alpm_debug_cb)
     # waiting for thread to finish
     while not self.shell.th_ended_event.isSet():
-      self.shell.th_ended_event.wait(0.01)
+      self.shell.th_ended_event.wait(0.001)
 
       while gtk.events_pending():
         gtk.main_iteration(False)
@@ -581,7 +581,7 @@ class gui:
   def alpm_urllib_report_hook(self, blocks_so_far, block_size_bytes,
       total_size):
     # magical sleep, without this, guzuta crashes cairo
-    time.sleep(0.02)
+    time.sleep(0.002)
 
     if not self.report_hook_started:
       self.report_hook_started = True
@@ -606,15 +606,20 @@ class gui:
       kbps = (bytes_so_far / 1024) / seconds_so_far
     division = float(blocks_so_far) / float(total_blocks)
     #self.busy_progress_bar3.set_text('Downloading ' + self.shell.retrieving + ' ' + str(division * 100) + '%')
-    self.busy_progress_bar3.set_text('%.1f %% - %.1f kb/s' % (division * 100, kbps))
+    #self.busy_progress_bar3.set_text('%.1f %% - %.1f kb/s' % (division * 100, kbps))
     #self.busy_progress_bar3.set_text('%d out of %d bytes' %\
     #    ((blocks_so_far * block_size_bytes), total_size))
     if self.downloading_db:
+      self.busy_progress_bar3.set_text('%.1f %% - %.1f kb/s' % (division * 100, kbps))
       self.busy_status_label.set_markup('<i>Downloading database \'%s\'...</i>' %
           (self.shell.retrieving))
     else:
-      self.busy_status_label.set_markup('<i>Downloading \'%s\'...</i>' %
-          (self.shell.retrieving))
+      string = ('<i>Downloading \'%s\'...</i>' % self.shell.retrieving)
+      #print 'SETTING STATUS LABEL TO: ', string
+      #print 'busy_status_label: ', self.busy_status_label
+      self.busy_status_label.set_markup(string)
+      #print 'RESULT: <', self.busy_status_label.get_text(), '>'
+      self.busy_progress_bar3.set_text('%.1f %% - %.1f kb/s' % (division * 100, kbps))
     if self.busy_progress_bar3:
       self.busy_progress_bar3.set_fraction(division)
   # }}}
@@ -1881,7 +1886,7 @@ class gui:
   def alpm_install_targets(self, targets, repo = None):
     # TODO: check if there's something searched for or a repo selected, and
     # update the pkg_treeview accordingly
-    self.busy_status_label = self.all_widgets.get_widget('busy_status_label')
+    self.busy_status_label = self.all_widgets.get_widget('busy_status_label2')
     number_pkgs_to_download =\
       self.alpm_get_number_of_packages_to_download(targets)
 
