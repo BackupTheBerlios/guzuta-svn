@@ -3295,7 +3295,7 @@ Description</property>
       <child internal-child="image">
 	<widget class="GtkImage" id="image120">
 	  <property name="visible">True</property>
-	  <property name="stock">gtk-yes</property>
+	  <property name="stock">gtk-jump-to</property>
 	  <property name="icon_size">1</property>
 	  <property name="xalign">0.5</property>
 	  <property name="yalign">0.5</property>
@@ -3310,14 +3310,14 @@ Description</property>
     <widget class="GtkImageMenuItem" id="install_from_popup_menu">
       <property name="visible">True</property>
       <property name="tooltip" translatable="yes">Install package from a specific repository</property>
-      <property name="label" translatable="yes">Install _from...</property>
+      <property name="label" translatable="yes">Install _from</property>
       <property name="use_underline">True</property>
       <signal name="activate" handler="on_install_from_popup_menu_activate" last_modification_time="Sun, 11 Sep 2005 02:14:35 GMT"/>
 
       <child internal-child="image">
 	<widget class="GtkImage" id="image121">
 	  <property name="visible">True</property>
-	  <property name="stock">gtk-yes</property>
+	  <property name="stock">gtk-jump-to</property>
 	  <property name="icon_size">1</property>
 	  <property name="xalign">0.5</property>
 	  <property name="yalign">0.5</property>
@@ -3328,6 +3328,7 @@ Description</property>
     </widget>
   </child>
 
+  <!--
   <child>
     <widget class="GtkMenuItem" id="view_files">
       <property name="visible">True</property>
@@ -3336,7 +3337,29 @@ Description</property>
       <signal name="activate" handler="on_view_files_popup_menu_activate" last_modification_time="Sun, 18 Sep 2005 18:26:59 GMT"/>
     </widget>
   </child>
+  -->
 
+  <child>
+    <widget class="GtkImageMenuItem" id="view_files">
+      <property name="visible">True</property>
+      <property name="tooltip" translatable="yes">View the package&quot;s files</property>
+      <property name="label" translatable="yes">_View files</property>
+      <property name="use_underline">True</property>
+      <signal name="activate" handler="on_view_files_popup_menu_activate" last_modification_time="Sun, 11 Sep 2005 02:14:35 GMT"/>
+
+      <child internal-child="image">
+	<widget class="GtkImage" id="image121">
+	  <property name="visible">True</property>
+	  <property name="stock">gtk-justify-fill</property>
+	  <property name="icon_size">1</property>
+	  <property name="xalign">0.5</property>
+	  <property name="yalign">0.5</property>
+	  <property name="xpad">0</property>
+	  <property name="ypad">0</property>
+	</widget>
+      </child>
+    </widget>
+  </child>
   <child>
     <widget class="GtkImageMenuItem" id="download_pkg_popup_menu">
       <property name="visible">True</property>
