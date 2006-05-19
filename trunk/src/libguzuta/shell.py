@@ -99,6 +99,23 @@ class shell:
     return (False, None)
   # }}}
 
+  # def __cleanup__pmc_syncs__(self, pmc_syncs): {{{
+  def __cleanup__pmc_syncs__(self, pmc_syncs):
+    already_seen = {}
+    new_syncs = []
+    i = 0
+    for sync in pmc_syncs:
+      tn = sync['treename']
+
+      if tn not in already_seen:
+        already_seen[tn] = True
+        new_syncs.append(pmc_syncs[i])
+      i += 1
+
+    return new_syncs
+
+  # }}}
+
   # def __parseconfig__(self, alpm, file, pmc_syncs, config): {{{
   def __parseconfig__(self, alpm, file, pmc_syncs, config):
     linenum = 0
@@ -135,6 +152,7 @@ class shell:
             sync["treename"] = section
             sync["servers"] = []
             pmc_syncs.append(sync)
+
             sync = {}
           else:
             sync = sync_temp
@@ -152,6 +170,7 @@ class shell:
         key = key.strip()
         key = key.upper()
         other = other[1:]
+
         if not len(section) and key != "INCLUDE":
           print "config: line %d: all directives must belong to a section" %\
           linenum
@@ -313,6 +332,7 @@ class shell:
     config["DEBUG"] = debug
 
     self.__parseconfig__(a, config["CONFIGFILE"], pmc_syncs, config)
+    pmc_syncs = self.__cleanup__pmc_syncs__(pmc_syncs)
 
     try:
       config["DBPATH"]
@@ -437,9 +457,11 @@ the terms of the GNU General Public License'''
 
     for sync in self.pmc_syncs:
       try:
+        print 'trying to register: ', sync['treename']
         sync["db"] = self.alpm.register_db(sync["treename"])
-      except RuntimeError:
+      except RuntimeError, inst:
         print "could not register ", sync["treename"]
+        print 'reason: ', inst
         sys.exit(1)
       else:
         self.dbs_by_name[sync["treename"]] = sync["db"]

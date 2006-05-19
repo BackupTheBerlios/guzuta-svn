@@ -862,6 +862,7 @@ class gui:
         self.liststore, 1)
     
     self.namecolumn = gtk.TreeViewColumn('Name', self.textrenderer, markup=2)
+    #self.namecolumn.set_resizable(True)
     self.namecolumn.set_sort_column_id(0)
     
     self.installedversioncolumn = gtk.TreeViewColumn('Installed')
@@ -1219,6 +1220,7 @@ class gui:
       cols = self.are_you_sure_treeview.get_columns()
       if cols == []:
         namecolumn = gtk.TreeViewColumn('Name')
+        #namecolumn.set_resizable(True)
         namecolumn.set_sort_column_id(0)
         namecolumn.pack_start(textrenderer)
         namecolumn.set_attributes(textrenderer, text=0)
@@ -1746,6 +1748,7 @@ class gui:
             1)
         
         namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=2)
+        #namecolumn.set_resizable(True)
         namecolumn.set_sort_column_id(0)
         #namecolumn.pack_start(textrenderer)
         #namecolumn.set_attributes(textrenderer, text=1)
@@ -1907,6 +1910,7 @@ class gui:
       textrenderer = gtk.CellRendererText()
 
       namecolumn = gtk.TreeViewColumn('Name')
+      namecolumn.set_resizable(True)
       namecolumn.set_sort_column_id(0)
       namecolumn.pack_start(textrenderer)
       namecolumn.set_attributes(textrenderer, text=0)
@@ -2094,6 +2098,7 @@ class gui:
     if install_remove_treeview.get_columns() == []:
       textrenderer = gtk.CellRendererText()
       namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=0)
+      #namecolumn.set_resizable(True)
 
       install_remove_treeview.append_column(namecolumn)
     #store = gtk.ListStore(str)
@@ -2423,6 +2428,7 @@ class gui:
     cols = self.are_you_sure_treeview.get_columns()
     if cols == []:
       namecolumn = gtk.TreeViewColumn('Name')
+      #namecolumn.set_resizable(True)
       namecolumn.set_sort_column_id(0)
       namecolumn.pack_start(textrenderer)
       namecolumn.set_attributes(textrenderer, text=0)
@@ -2689,6 +2695,7 @@ class gui:
     repositorycolumn.set_attributes(textrenderer, markup=5)
     
     namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=2)
+    #namecolumn.set_resizable(True)
     namecolumn.set_sort_column_id(0)
     #namecolumn.pack_start(textrenderer)
     #namecolumn.set_attributes(textrenderer, text=1)
@@ -3170,6 +3177,7 @@ class gui:
 
     if cache_treeview.get_columns() == []:
       pkg_cache_name_column = gtk.TreeViewColumn('Name')
+      #pkg_cache_name_column.set_resizable(True)
       pkg_cache_name_column.set_sort_column_id(0)
       pkg_cache_name_column.pack_start(textrenderer)
       pkg_cache_name_column.set_attributes(textrenderer, text=0)
@@ -3369,6 +3377,7 @@ class gui:
         textrenderer = gtk.CellRendererText()
 
         namecolumn = gtk.TreeViewColumn('Name')
+        #namecolumn.set_resizable(True)
         namecolumn.set_sort_column_id(0)
         namecolumn.set_attributes(textrenderer, text=0)
 
