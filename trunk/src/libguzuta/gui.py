@@ -586,10 +586,10 @@ class gui:
     if not self.report_hook_started:
       self.report_hook_started = True
       self.report_hook_start = time.time()
-      print 'self.report_hook_start is: ', self.report_hook_start
+      #print 'self.report_hook_start is: ', self.report_hook_start
     else:
       self.report_hook_now = time.time()
-      print 'self.report_hook_now is: ', self.report_hook_now
+      #print 'self.report_hook_now is: ', self.report_hook_now
 
     if total_size < block_size_bytes:
       total_blocks = 1
@@ -713,9 +713,9 @@ class gui:
               if pkg_repo == 'local':
                 available_version = '--'
 
-            if len(desc) > 40:
-              desc = desc[:40]
-              desc += ' ...'
+            #if len(desc) > 40:
+            #  desc = desc[:40]
+            #  desc += ' ...'
             desc = cgi.escape(desc)
               
             if repo_name:
@@ -782,9 +782,9 @@ class gui:
             if pkg_repo == 'local':
               available_version = '--'
 
-          if len(desc) > 40:
-            desc = desc[:40]
-            desc += ' ...'
+          #if len(desc) > 40:
+          #  desc = desc[:40]
+          #  desc += ' ...'
           pkg_name = cgi.escape(k)
           if repo_name:
             #treestore.append(None, [False, pkg_name, local_version,\
@@ -862,7 +862,9 @@ class gui:
         self.liststore, 1)
     
     self.namecolumn = gtk.TreeViewColumn('Name', self.textrenderer, markup=2)
-    #self.namecolumn.set_resizable(True)
+    self.namecolumn.set_resizable(True)
+    self.namecolumn.set_min_width(300)
+    self.namecolumn.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
     self.namecolumn.set_sort_column_id(0)
     
     self.installedversioncolumn = gtk.TreeViewColumn('Installed')
@@ -1220,7 +1222,9 @@ class gui:
       cols = self.are_you_sure_treeview.get_columns()
       if cols == []:
         namecolumn = gtk.TreeViewColumn('Name')
-        #namecolumn.set_resizable(True)
+        namecolumn.set_resizable(True)
+        namecolumn.set_min_width(300)
+        namecolumn.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
         namecolumn.set_sort_column_id(0)
         namecolumn.pack_start(textrenderer)
         namecolumn.set_attributes(textrenderer, text=0)
@@ -1748,7 +1752,9 @@ class gui:
             1)
         
         namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=2)
-        #namecolumn.set_resizable(True)
+        namecolumn.set_resizable(True)
+        #namecolumn.set_min_width(300)
+        #namecolumn.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
         namecolumn.set_sort_column_id(0)
         #namecolumn.pack_start(textrenderer)
         #namecolumn.set_attributes(textrenderer, text=1)
@@ -1774,9 +1780,9 @@ class gui:
           pkg_ver = cgi.escape(pkg.get_version())
           pkg_desc = pkg.get_description()
 
-          if len(pkg_desc) > 40:
-            pkg_desc = pkg_desc[:40]
-            pkg_desc+= '...'
+          #if len(pkg_desc) > 40:
+          #  pkg_desc = pkg_desc[:40]
+          #  pkg_desc+= '...'
           pkg_desc = cgi.escape(pkg_desc)
           repo = pkg.get_database().get_tree_name()
 
@@ -1911,6 +1917,8 @@ class gui:
 
       namecolumn = gtk.TreeViewColumn('Name')
       namecolumn.set_resizable(True)
+      namecolumn.set_min_width(300)
+      namecolumn.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
       namecolumn.set_sort_column_id(0)
       namecolumn.pack_start(textrenderer)
       namecolumn.set_attributes(textrenderer, text=0)
@@ -2098,7 +2106,9 @@ class gui:
     if install_remove_treeview.get_columns() == []:
       textrenderer = gtk.CellRendererText()
       namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=0)
-      #namecolumn.set_resizable(True)
+      namecolumn.set_resizable(True)
+      namecolumn.set_min_width(300)
+      namecolumn.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
 
       install_remove_treeview.append_column(namecolumn)
     #store = gtk.ListStore(str)
@@ -2428,7 +2438,9 @@ class gui:
     cols = self.are_you_sure_treeview.get_columns()
     if cols == []:
       namecolumn = gtk.TreeViewColumn('Name')
-      #namecolumn.set_resizable(True)
+      namecolumn.set_resizable(True)
+      namecolumn.set_min_width(300)
+      namecolumn.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
       namecolumn.set_sort_column_id(0)
       namecolumn.pack_start(textrenderer)
       namecolumn.set_attributes(textrenderer, text=0)
@@ -2695,7 +2707,9 @@ class gui:
     repositorycolumn.set_attributes(textrenderer, markup=5)
     
     namecolumn = gtk.TreeViewColumn('Name', textrenderer, markup=2)
-    #namecolumn.set_resizable(True)
+    namecolumn.set_resizable(True)
+    namecolumn.set_min_width(300)
+    namecolumn.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
     namecolumn.set_sort_column_id(0)
     #namecolumn.pack_start(textrenderer)
     #namecolumn.set_attributes(textrenderer, text=1)
@@ -2780,9 +2794,9 @@ class gui:
                 #    available_version, pkg_repo])
                 pkg_name = cgi.escape(pkg_name)
                 desc = cgi.escape(desc)
-                if len(desc) > 40:
-                  desc = desc[:40]
-                  desc += ' ...'
+                #if len(desc) > 40:
+                #  desc = desc[:40]
+                #  desc += ' ...'
                 text = '<b>%s</b>\n<small><i>%s</i></small>' % (pkg_name, desc)
                 ver_markup = '<b>%s</b>'
                 installed_version = cgi.escape(installed_version)
@@ -2825,9 +2839,9 @@ class gui:
               except KeyError:
                 installed_version = '--'
               description = cgi.escape(description)
-              if len(description) > 40:
-                description = description[:40]
-                description += ' ...'
+              #if len(description) > 40:
+              #  description = description[:40]
+              #  description += ' ...'
 
               name = cgi.escape(name)
               description = cgi.escape(description)
@@ -2871,9 +2885,9 @@ class gui:
               except KeyError:
                 installed_version = '--'
               description = cgi.escape(description)
-              if len(description) > 40:
-                description = description[:40]
-                description += ' ...'
+              #if len(description) > 40:
+              #  description = description[:40]
+              #  description += ' ...'
 
               name = cgi.escape(name)
               description = cgi.escape(description)
@@ -3177,7 +3191,9 @@ class gui:
 
     if cache_treeview.get_columns() == []:
       pkg_cache_name_column = gtk.TreeViewColumn('Name')
-      #pkg_cache_name_column.set_resizable(True)
+      pkg_cache_name_column.set_resizable(True)
+      #pkg_cache_name_column.set_min_width(300)
+      #pkg_cache_name_column.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
       pkg_cache_name_column.set_sort_column_id(0)
       pkg_cache_name_column.pack_start(textrenderer)
       pkg_cache_name_column.set_attributes(textrenderer, text=0)
@@ -3377,7 +3393,9 @@ class gui:
         textrenderer = gtk.CellRendererText()
 
         namecolumn = gtk.TreeViewColumn('Name')
-        #namecolumn.set_resizable(True)
+        namecolumn.set_resizable(True)
+        namecolumn.set_min_width(300)
+        namecolumn.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
         namecolumn.set_sort_column_id(0)
         namecolumn.set_attributes(textrenderer, text=0)
 
